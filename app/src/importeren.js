@@ -143,9 +143,9 @@ export function importscherm(inhoud, kruimel, meta) {
       <p class="uitleg">${toestand.rijen.length} regels gevonden. Zeg welke kolom van je document bij
       welk veld hoort. Wat het systeem zelf herkende, staat al ingevuld.</p>
       <div class="koppeltabel">
-        <div class="koppelkop">Veld</div><div class="koppelkop">Kolom in het document</div><div class="koppelkop">Eerste regel</div>
+        <div class="koppelkop">Veld</div><div class="koppelkop">Kolom in het document</div><div class="koppelkop">Eerste regel uit het document</div>
         ${VELDEN.map((v) => `
-          <div class="koppelveld">${v.verplicht ? '<span class="ster">*</span> ' : ""}${v.label}
+          <div class="koppelveld"><span class="koppelnaam">${v.verplicht ? '<span class="ster">*</span> ' : ""}${v.label}</span>
             ${v.hint ? `<span class="koppelhint">${ontsnap(v.hint)}</span>` : ""}</div>
           <div><select data-veld="${v.kolom}">
             <option value="-1">— niet gebruiken —</option>
