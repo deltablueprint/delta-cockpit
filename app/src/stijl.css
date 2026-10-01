@@ -618,3 +618,43 @@ body.sleept .lijsttabel { pointer-events: none; }
 .feittabel tr.anders:hover td { color: var(--ink2); }
 .feittabel tr.anders:hover .knop { opacity: 1; }
 .feittabel tr.past td { background: #F3F8FB; }
+
+/* --- de koppeling in beeld ---
+   Twee kanten en wat ertussen beweegt: zichtbaar dat er gegevens van de broker
+   naar de cockpit komen, zonder dat het een kermis wordt. */
+.koppelloader {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 18px 16px;
+}
+.koppelzijde {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 6px; flex: 0 0 auto;
+  font-size: 10px; font-weight: 700; letter-spacing: .3px;
+}
+.koppelzijde.bron { color: var(--ink2); background: var(--b1); border: 1px solid #D8D5CE; }
+.koppelzijde.doel { color: #fff; background: var(--navbg); }
+.koppelpad {
+  position: relative; display: inline-block; width: 86px; height: 2px;
+  background: linear-gradient(to right, #DAD7D0, #DAD7D0);
+  border-radius: 2px; flex: 0 0 auto;
+}
+.koppelpad i {
+  position: absolute; top: -2px; left: 0; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--blue); opacity: 0;
+  animation: koppelstroom 1.8s ease-in-out infinite;
+}
+.koppelpad i:nth-child(2) { animation-delay: .35s; }
+.koppelpad i:nth-child(3) { animation-delay: .7s; }
+@keyframes koppelstroom {
+  0%   { left: 0;   opacity: 0; }
+  12%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { left: 80px; opacity: 0; }
+}
+.koppeltekst { font-size: 12.5px; color: var(--mut); }
+
+@media (prefers-reduced-motion: reduce) {
+  .koppelpad i { animation: none; opacity: .6; }
+  .koppelpad i:nth-child(2) { left: 38px; }
+  .koppelpad i:nth-child(3) { left: 76px; }
+}

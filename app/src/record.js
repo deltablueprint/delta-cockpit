@@ -11,6 +11,12 @@
 import { record as haalRecord, bewaar, maakAan, nieuwSjabloon, lynxPosities } from "./api.js";
 import { lijstscherm } from "./lijst.js";
 import { lees, invoer, ontsnap, toonDatum } from "./veld.js";
+
+// Het merkteken van Delta Blueprint, voor de koppelanimatie.
+const LOGO = `<svg viewBox="0 0 296.1 251.9" width="15" height="13" aria-hidden="true">
+  <polygon points="226.6 133.8 108.7 67.1 148.1 0 226.6 133.8" fill="currentColor"/>
+  <polygon points="296.1 251.9 139.2 251.9 256.9 185.1 296.1 251.9" fill="currentColor"/>
+  <polygon points="76.9 251.9 0 251.9 76.7 121.6 76.9 251.9" fill="currentColor"/></svg>`;
 import { volgLive, stopLive, HARTSLAG } from "./live.js";
 
 const ICOON = {
@@ -273,8 +279,14 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     };
 
     const ophalen = (nogEens = false) => {
-      if (vak) vak.innerHTML = `<p class="brokerleeg">Bezig met ophalen bij Lynx&hellip;${
-        nogEens ? " Het rapport wordt op aanvraag gemaakt; dat duurt soms een halve minuut." : ""}</p>`;
+      if (vak) vak.innerHTML = `
+        <div class="koppelloader">
+          <span class="koppelzijde bron">Lynx</span>
+          <span class="koppelpad" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="koppelzijde doel">${LOGO}</span>
+          <span class="koppeltekst">Gegevens ophalen bij Lynx${
+            nogEens ? " — het rapport wordt op aanvraag gemaakt, dat duurt soms een halve minuut" : ""}</span>
+        </div>`;
       lynxPosities().then((uit) => {
       if (!vak) return;
       const handmatigKnop = `<p class="brokerleeg">
