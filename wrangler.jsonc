@@ -4,6 +4,7 @@
   "main": "worker/index.js",
   "compatibility_date": "2026-09-01",
   "observability": { "enabled": true },
+  "workers_dev": true,
 
   "vars": { "OMGEVING": "productie" },
 
@@ -21,6 +22,7 @@
   "env": {
     "staging": {
       "name": "delta-cockpit-staging",
+      "workers_dev": true,
       "vars": { "OMGEVING": "staging" },
       "d1_databases": [
         {

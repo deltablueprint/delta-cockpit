@@ -4,9 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler deploy --env=\"\"",
     "deploy:staging": "wrangler deploy --env staging",
-    "db:migrate": "wrangler d1 migrations apply delta-cockpit --remote",
+    "db:migrate": "wrangler d1 migrations apply delta-cockpit --remote --env=\"\"",
     "db:migrate:staging": "wrangler d1 migrations apply delta-cockpit-staging --remote --env staging",
     "db:migrate:local": "wrangler d1 migrations apply delta-cockpit --local"
   },
