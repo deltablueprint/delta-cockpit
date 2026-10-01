@@ -208,7 +208,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
           <button class="tandwiel" id="tandwiel" aria-label="Acties op de aangevinkte regels" title="Acties op de aangevinkte regels">${ICOON.tandwiel}</button>
         </th>
         ${kolommen.map((k) => `
-          <th class="${rechtsUit(k) ? "rechts" : ""}" data-kolom="${k.kolom}"
+          <th class="${rechtsUit(k) ? "rechts " : ""}${toestand.sorteer === k.kolom ? "gesorteerd" : ""}" data-kolom="${k.kolom}"
               aria-sort="${toestand.sorteer === k.kolom ? (toestand.richting === "desc" ? "descending" : "ascending") : "none"}">
             <span class="kolomkop">${ICOON.hamburger}<span>${ontsnap(k.label)}</span>${
               toestand.sorteer === k.kolom ? `<span class="pijl">${toestand.richting === "desc" ? "▾" : "▴"}</span>` : ""
@@ -234,7 +234,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
           <td class="vink"><input type="checkbox" aria-label="Selecteer regel"></td>
           ${kolommen.map((k, i) => {
             const tip = platteTekst(k, r[k.kolom], meta);
-            return `<td class="${rechtsUit(k) ? "rechts" : ""}"${tip ? ` title="${ontsnap(tip)}"` : ""}>${
+            return `<td class="${rechtsUit(k) ? "rechts " : ""}${toestand.sorteer === k.kolom ? "gesorteerd" : ""}"${tip ? ` title="${ontsnap(tip)}"` : ""}>${
               i === 0
                 ? `<a href="#/t/${tabelnaam}/${r.id}" class="recordlink">${waarde(k, r[k.kolom], meta)}</a>`
                 : waarde(k, r[k.kolom], meta)

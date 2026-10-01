@@ -96,7 +96,20 @@ button[disabled] { opacity: .6; cursor: default; }
    De lijst — één opmaak, overal dezelfde (BOUWSPEC 10.0c)
    ========================================================================== */
 .lijst { border: 1px solid var(--b1); border-radius: 2px; background: #fff; }
-.lijst.bezig { opacity: .55; transition: opacity .12s; }
+/* Tijdens het ophalen vervaagt de tabel niet. Dat leest als een pagina die
+   herlaadt, terwijl er alleen gesorteerd wordt. Alleen een dun lijntje boven
+   de tabel verraadt dat er iets onderweg is. */
+.lijst { position: relative; }
+.lijst.bezig::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--blue), transparent);
+  background-size: 40% 100%; background-repeat: no-repeat;
+  animation: schuif 1s linear infinite;
+}
+@keyframes schuif {
+  from { background-position: -40% 0; }
+  to   { background-position: 140% 0; }
+}
 
 /* --- toolbar --- */
 .lijstkop {
@@ -162,10 +175,13 @@ button[disabled] { opacity: .6; cursor: default; }
   text-transform: uppercase; cursor: pointer; user-select: none;
 }
 .kopregel th:hover { color: var(--ink2); }
+/* De kolom waarop gesorteerd wordt, laat dat zelf zien — de rest blijft stil. */
+.kopregel th.gesorteerd { background: #DCD9D2; color: var(--ink2); }
 .kopregel th.vink, .kopregel th.icoonkol { cursor: default; }
 .kolomkop { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
 .kopregel th.rechts .kolomkop { flex-direction: row-reverse; }
 .pijl { color: var(--blue); font-size: 9px; }
+td.gesorteerd { background: rgba(19, 98, 137, .035); }
 
 .zoekregel td { padding: 4px 5px; background: var(--soft); border-bottom: 1px solid var(--b1); }
 .zoekregel input { height: 23px; padding: 0 6px; font-size: 11px; color: var(--mut); }
