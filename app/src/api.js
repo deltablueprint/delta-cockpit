@@ -37,3 +37,5 @@ async function haal(pad) {
 export const ik = () => haal("/api/ik");
 export const meta = () => haal("/api/meta");
 export const gezondheid = () => haal("/api/gezondheid");
+export const lijst = (tabel, params) =>
+  haal(`/api/t/${tabel}${params && [...params].length ? "?" + params : ""}`);

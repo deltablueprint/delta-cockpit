@@ -1,6 +1,7 @@
 import { isAangemeld, aanmeldingWissen, ik, meta as haalMeta } from "./api.js";
 import { aanmeldscherm } from "./aanmelden.js";
 import { schil } from "./schil.js";
+import { lijstscherm } from "./lijst.js";
 
 let persoon = null;
 let meta = null;
@@ -11,26 +12,32 @@ function huidigeRoute() {
 
 // Etappe 1 kent nog geen schermen: elke route toont wat er komt.
 // Etappe 2 vult /t/<tabel> met de lijst, etappe 3 het record.
+const lijsttoestand = {};   // onthoudt zoekterm en sortering per tabel
+
 function teken() {
   const route = huidigeRoute();
   const { kruimel, inhoud } = schil(persoon, meta, route, afmelden);
 
+  const lijstRoute = route.match(/^\/t\/([a-z_]+)$/);
+  if (lijstRoute) {
+    const tabelnaam = lijstRoute[1];
+    lijsttoestand[tabelnaam] ||= { q: "", sorteer: null, richting: "asc" };
+    lijstscherm(inhoud, kruimel, tabelnaam, meta, lijsttoestand[tabelnaam]);
+    return;
+  }
+
   const item = meta.menu.flatMap((g) => g.items).find((i) => i.route === route);
   const titel = item ? item.label : "Onbekend scherm";
-  const tabel = item && item.tabel ? meta.tabellen.find((t) => t.naam === item.tabel) : null;
 
   kruimel.textContent = titel;
   inhoud.innerHTML = `
     <div class="titelrij">
       <h1>${titel}</h1>
-      <span class="sub">${tabel ? `tabel ${tabel.naam} · ${tabel.label_mv}` : "scherm zonder tabel"}</span>
+      <span class="sub">scherm zonder tabel</span>
     </div>
     <div class="kaart leeg">
-      ${tabel
-        ? `Dit wordt de lijst van <b>${tabel.label_mv.toLowerCase()}</b>, met het record eronder in tabbladen.
-           Er zijn nog <b>${tabel.velden.length}</b> velden gedefinieerd voor deze tabel.
-           Lijsten komen in etappe 2, het recordscherm in etappe 3.`
-        : `Dit scherm heeft geen tabel; het wordt afgeleid of samengesteld.`}
+      Dit scherm wordt afgeleid of samengesteld en komt later: het dashboard in etappe 12,
+      Mijn taken daarna.
     </div>`;
 }
 

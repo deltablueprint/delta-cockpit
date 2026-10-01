@@ -5,6 +5,8 @@
 //   2. Authenticatie is per persoon: e-mailadres plus wachtwoord. Elke
 //      schrijfactie draagt een identiteit (BOUWSPEC 11). Geen gedeelde sleutel.
 
+import { lijst } from "./lijst.js";
+
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
 function json(data, status = 200, extraKoppen = {}) {
@@ -132,6 +134,17 @@ export default {
       if (pad === "/api/meta") return json(await meta(env));
 
       if (pad === "/api/ik") return json(ik);
+
+      // /api/t/<tabel> — de lijst. Alleen lezen in deze etappe.
+      const lijstPad = pad.match(/^\/api\/t\/([a-z_]+)$/);
+      if (lijstPad) {
+        if (request.method !== "GET") {
+          return json({ fout: "Schrijven kan nog niet; dat komt in etappe 4." }, 405);
+        }
+        const uitkomst = await lijst(env, lijstPad[1], url.searchParams);
+        if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
+        return json(uitkomst);
+      }
 
       return json({ fout: `Onbekend eindpunt: ${pad}` }, 404);
     }
