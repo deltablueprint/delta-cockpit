@@ -263,6 +263,8 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
 .recordacties { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 
 /* Alle knoppen in die balk precies even hoog, ook de links en de icoonknop. */
+[hidden] { display: none !important; }
+
 .knop, .ikoonknop {
   box-sizing: border-box; height: 30px; display: inline-flex; align-items: center;
   justify-content: center; gap: 6px; border-radius: 2px; font-family: inherit;
@@ -557,8 +559,13 @@ body.sleept .lijsttabel { pointer-events: none; }
    je een vergissing ook op. Archiveren, niet verwijderen. */
 .lijsttabel th.vink, .lijsttabel td.vink { padding: 8px 6px 8px 10px; cursor: default; }
 .lijsttabel tr.gekozen td { background: var(--bluebg); }
-.rlweg { margin-left: 2px; }
-.rlweg:hover { color: var(--red); border-color: var(--red); }
+/* De prullenbak is een icoon naast 'Nieuw', geen knop met een kader eromheen:
+   hij hoort pas op te vallen als er iets aangevinkt staat. */
+.rlweg {
+  width: auto; height: 26px; padding: 0 6px; margin-left: 2px;
+  border: 0; background: none; color: var(--mut);
+}
+.rlweg:hover { color: var(--red); border: 0; background: none; }
 .rlselectie { font-size: 11.5px; color: var(--mut); }
 .lijstmelding.vraag {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
