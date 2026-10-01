@@ -220,7 +220,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         <td><input type="checkbox" id="allesaan" aria-label="Alles selecteren"></td>
         ${kolommen.map((k) => `<td><input type="text" data-kolom="${k.kolom}"
             aria-label="Zoeken in ${ontsnap(k.label)}" value="${ontsnap(toestand.filters[k.kolom] || "")}"
-            placeholder="${k.type === "datum" || k.type === "tijdstip" ? "jjjj-mm-dd" : "Zoeken"}"></td>`).join("")}
+            placeholder="Zoeken"${k.type === "datum" || k.type === "tijdstip" ? ' title="Bijvoorbeeld: 2026 · jul · jul 2026 · 6 jul 2026 · 202607 · 6/7/2026"' : ""}></td>`).join("")}
         <td></td>
       </tr>
     </thead>`;

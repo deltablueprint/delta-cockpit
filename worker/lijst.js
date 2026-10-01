@@ -67,8 +67,10 @@ export async function lijst(env, tabelnaam, params) {
     }
 
     if (veld.type === "datum" || veld.type === "tijdstip") {
-      waar.push(`"${kolom}" like ?`);
-      binden.push(`%${datumZoekterm(zoekterm)}%`);
+      const patronen = datumPatronen(zoekterm);
+      if (!patronen.length) continue;
+      waar.push("(" + patronen.map(() => `"${kolom}" like ?`).join(" or ") + ")");
+      binden.push(...patronen);
       continue;
     }
 
@@ -137,27 +139,73 @@ function veiligeSortering(sortering, bestaat) {
   return `"${kolom}" ${(richting || "").toLowerCase() === "desc" ? "desc" : "asc"}`;
 }
 
-// "aug" → "-08-",  "10 aug 2026" → "2026-08-10",  "2026-08" blijft zoals het is.
-const MAANDEN = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
-function datumZoekterm(tekst) {
-  const t = tekst.trim().toLowerCase();
+// ---------------------------------------------------------------- datums
+// Wat iemand intypt in een datumkolom is zelden een complete datum. Deze
+// functie leest er jaar, maand en dag uit — in welke volgorde en notatie ook —
+// en maakt er een patroon van waarin het onbekende deel een joker is:
+//
+//   "2026"          → 2026-__-__      "jul"          → ____-07-__
+//   "202607"        → 2026-07-__      "jul 2026"     → 2026-07-__
+//   "2026-07"       → 2026-07-__      "6 jul 2026"   → 2026-07-06
+//   "6/7/2026"      → 2026-07-06      "20260706"     → 2026-07-06
+//   "7"             → ____-07-__ of ____-__-07 (maand of dag)
+//
+// Lukt dat niet, dan zoeken we gewoon op de letterlijke tekst.
+const MAANDNAMEN = [
+  ["jan","januari"], ["feb","februari"], ["mrt","maart","maa"], ["apr","april"],
+  ["mei"], ["jun","juni"], ["jul","juli"], ["aug","augustus"],
+  ["sep","september","sept"], ["okt","oktober"], ["nov","november"], ["dec","december"],
+];
 
-  const volledig = /^(\d{1,2})\s+([a-z]{3,})\s+(\d{4})$/.exec(t);
-  if (volledig) {
-    const m = MAANDEN.findIndex((x) => volledig[2].startsWith(x));
-    if (m >= 0) return `${volledig[3]}-${String(m + 1).padStart(2, "0")}-${volledig[1].padStart(2, "0")}`;
+function maandUitWoord(woord) {
+  const w = woord.toLowerCase();
+  for (let i = 0; i < 12; i++) {
+    if (MAANDNAMEN[i].some((naam) => naam.startsWith(w) || w.startsWith(naam))) return i + 1;
+  }
+  return null;
+}
+
+const vul = (n, lengte) => String(n).padStart(lengte, "0");
+
+export function datumPatronen(invoer) {
+  const t = invoer.trim().toLowerCase();
+  if (!t) return [];
+
+  let jaar = null, maand = null, dag = null;
+  const losseGetallen = [];
+
+  for (const stuk of t.split(/[\s./-]+/).filter(Boolean)) {
+    if (/^\d+$/.test(stuk)) {
+      if (stuk.length === 8) { jaar = +stuk.slice(0, 4); maand = +stuk.slice(4, 6); dag = +stuk.slice(6, 8); }
+      else if (stuk.length === 6) { jaar = +stuk.slice(0, 4); maand = +stuk.slice(4, 6); }
+      else if (stuk.length === 4) { jaar = +stuk; }
+      else losseGetallen.push(+stuk);
+    } else {
+      const m = maandUitWoord(stuk);
+      if (m) maand = m; else return [`%${t}%`];   // onbekend woord: letterlijk zoeken
+    }
   }
 
-  const maandJaar = /^([a-z]{3,})\s+(\d{4})$/.exec(t);
-  if (maandJaar) {
-    const m = MAANDEN.findIndex((x) => maandJaar[1].startsWith(x));
-    if (m >= 0) return `${maandJaar[2]}-${String(m + 1).padStart(2, "0")}`;
+  // Losse getallen plaatsen: wat al bekend is bepaalt wat het overige betekent.
+  if (losseGetallen.length === 1) {
+    const n = losseGetallen[0];
+    if (maand !== null) dag = n;
+    else if (jaar !== null) { if (n >= 1 && n <= 12) maand = n; else dag = n; }
+    else if (n <= 12) return [`____-${vul(n, 2)}-__%`, `____-__-${vul(n, 2)}%`];
+    else dag = n;
+  } else if (losseGetallen.length >= 2) {
+    // twee getallen zonder maandnaam: dag en maand, in die volgorde (6 7 = 6 juli)
+    const [a, b] = losseGetallen;
+    if (a > 12 && b <= 12) { dag = a; maand = b; }
+    else if (b > 12 && a <= 12) { maand = a; dag = b; }
+    else { dag = a; maand = maand ?? b; }
   }
 
-  const alleenMaand = MAANDEN.findIndex((x) => t.length >= 3 && x.startsWith(t.slice(0, 3)) && /^[a-z]+$/.test(t));
-  if (alleenMaand >= 0) return `-${String(alleenMaand + 1).padStart(2, "0")}-`;
+  if (maand !== null && (maand < 1 || maand > 12)) return [`%${t}%`];
+  if (dag !== null && (dag < 1 || dag > 31)) return [`%${t}%`];
+  if (jaar === null && maand === null && dag === null) return [`%${t}%`];
 
-  return t;
+  return [`${jaar ?? "____"}-${maand === null ? "__" : vul(maand, 2)}-${dag === null ? "__" : vul(dag, 2)}%`];
 }
 
 async function kolomBestaatInDb(env, tabel, kolom) {
