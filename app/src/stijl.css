@@ -631,7 +631,8 @@ body.sleept .lijsttabel { pointer-events: none; }
   width: 30px; height: 30px; border-radius: 6px; flex: 0 0 auto;
   font-size: 10px; font-weight: 700; letter-spacing: .3px;
 }
-.koppelzijde.bron { color: var(--ink2); background: var(--b1); border: 1px solid #D8D5CE; }
+.koppelzijde.bron { overflow: hidden; background: #fff; }
+.koppelzijde.bron img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
 .koppelzijde.doel { color: #fff; background: var(--navbg); }
 .koppelpad {
   position: relative; display: inline-block; width: 86px; height: 2px;

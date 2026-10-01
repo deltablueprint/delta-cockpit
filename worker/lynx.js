@@ -22,7 +22,10 @@ const SEND = [
   "https://www.interactivebrokers.com/Universal/servlet/FlexStatementService.SendRequest",
 ];
 const GET_TERUGVAL = "https://www.interactivebrokers.com/Universal/servlet/FlexStatementService.GetStatement";
-const KOP = { "user-agent": "Java/DeltaBlueprintCockpit", accept: "application/xml" };
+// IBKR laat programmatische toegang alleen door met een van de door hen
+// genoemde user-agents. Een eigen naam levert bij het oude adres een
+// 'Access Denied' van hun firewall op.
+const KOP = { "user-agent": "Java", accept: "application/xml" };
 
 // Het antwoord is XML met gegevens in attributen. Een volledige parser is hier
 // niet nodig en in een worker ook niet voorhanden: we lezen de elementen die
@@ -83,6 +86,11 @@ export async function haalRapport(env, ruw = false) {
     laatste = `${antwoord.status} van ${new URL(adres).host}`;
     code = tussen(aanvraag, "ReferenceCode");
     if (code) break;
+
+    // Antwoordt dit adres wél in XML, dan is het bericht van IBKR zelf en
+    // niet van een firewall onderweg: dan is het andere adres proberen
+    // zinloos, en zou de melding die jij ziet van het verkeerde adres komen.
+    if (aanvraag.includes("<FlexStatementResponse") || tussen(aanvraag, "ErrorMessage")) break;
   }
 
   if (!code) {

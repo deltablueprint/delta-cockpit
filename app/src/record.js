@@ -281,7 +281,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     const ophalen = (nogEens = false) => {
       if (vak) vak.innerHTML = `
         <div class="koppelloader">
-          <span class="koppelzijde bron">Lynx</span>
+          <span class="koppelzijde bron"><img src="/lynx.png" alt="Lynx" width="30" height="30"></span>
           <span class="koppelpad" aria-hidden="true"><i></i><i></i><i></i></span>
           <span class="koppelzijde doel">${LOGO}</span>
           <span class="koppeltekst">Gegevens ophalen bij Lynx${
