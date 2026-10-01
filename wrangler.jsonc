@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "delta-cockpit",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-09-01",
+  "observability": { "enabled": true },
+
+  "vars": { "OMGEVING": "productie" },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "delta-cockpit",
+      "database_id": "VUL_IN_NA_WRANGLER_D1_CREATE",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  "env": {
+    "staging": {
+      "name": "delta-cockpit-staging",
+      "vars": { "OMGEVING": "staging" },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "delta-cockpit-staging",
+          "database_id": "VUL_IN_NA_WRANGLER_D1_CREATE",
+          "migrations_dir": "migrations"
+        }
+      ]
+    }
+  }
+}
