@@ -453,29 +453,20 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     }
 
     if (wegknop) {
-      wegknop.addEventListener("click", () => {
+      // Geen tussenvraag: je hebt al aangevinkt en op de prullenbak geklikt.
+      // Archiveren is ook niet onomkeerbaar — de regels blijven bestaan en
+      // staan met wie ze weghaalde in de audit trail.
+      wegknop.addEventListener("click", async () => {
         const ids = gekozen();
         if (!ids.length) return;
-        const vak = inhoud.querySelector("#lijstmelding");
-        vak.hidden = false;
-        vak.className = "lijstmelding vraag";
-        vak.innerHTML = `
-          <span>${ids.length === 1 ? "Deze regel" : `Deze ${ids.length} regels`} archiveren?
-            Hij verdwijnt uit de lijst maar blijft bestaan — niets wordt verwijderd.</span>
-          <button class="knop klein" id="wegja">Archiveren</button>
-          <button class="knop klein tweede" id="wegnee">Annuleren</button>`;
-        vak.querySelector("#wegnee").addEventListener("click", () => { vak.hidden = true; });
-        vak.querySelector("#wegja").addEventListener("click", async () => {
-          vak.querySelector("#wegja").disabled = true;
-          try {
-            await archiveer(tabelnaam, ids);
-            vak.hidden = true;
-            lijstscherm(inhoud, kruimel, tabelnaam, meta, { ...toestand, offset: 0 });
-          } catch (fout) {
-            vak.className = "lijstmelding fouttekst";
-            vak.textContent = fout.message;
-          }
-        });
+        wegknop.disabled = true;
+        try {
+          await archiveer(tabelnaam, ids);
+          lijstscherm(inhoud, kruimel, tabelnaam, meta, { ...toestand, offset: 0 });
+        } catch (fout) {
+          wegknop.disabled = false;
+          meld(fout.message, "fouttekst");
+        }
       });
     }
   }
