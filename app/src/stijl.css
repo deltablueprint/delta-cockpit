@@ -348,10 +348,9 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
 .hartslag.stil { background: transparent; }
 
 /* --- inlezen uit een document --- */
-.stappen { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-.stapje { font-size: 11.5px; color: var(--mut); background: var(--head); border: 1px solid var(--b1); border-radius: 2px; padding: 3px 10px; }
-.stapje.nu { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 700; }
-.stapje.gedaan { background: #BBD6E5; border-color: #BBD6E5; color: #0B425F; }
+/* Losse chevronbalk: dezelfde vorm als op een record, maar zonder de rand
+   eromheen omdat hij hier niet onder een recordbalk hangt. */
+.chevrons.los { border: 1px solid var(--b1); border-radius: 3px; margin-bottom: 10px; }
 .kaart { background: #fff; border: 1px solid var(--b1); border-radius: 3px; padding: 14px 16px; }
 .leeg { color: var(--mut); line-height: 1.6; }
 .uitleg { font-size: 12.5px; color: var(--ink3); line-height: 1.55; margin: 0 0 10px; }

@@ -91,10 +91,13 @@ export function importscherm(inhoud, kruimel, meta) {
 
   function omhulsel(stap, binnenin) {
     const stappen = ["Bestand", "Kolommen koppelen", "Botsingen", "Klaar"];
+    const vink = `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12l4 4 10-10"/></svg>`;
     return `
       <div class="titelrij"><h1>Events inlezen uit een document</h1></div>
-      <div class="stappen">${stappen.map((s, i) => `
-        <span class="stapje ${i + 1 === stap ? "nu" : i + 1 < stap ? "gedaan" : ""}">${i + 1}. ${s}</span>`).join("")}</div>
+      <div class="chevrons los">${stappen.map((naam, i) => {
+        const stand = i + 1 < stap ? "gedaan" : i + 1 === stap ? "nu" : "straks";
+        return `<span class="chevron ${stand}">${naam}${stand === "gedaan" ? vink : ""}</span>`;
+      }).join("")}</div>
       <div class="kaart">${binnenin}</div>`;
   }
 
