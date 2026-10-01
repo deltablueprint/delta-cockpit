@@ -193,7 +193,55 @@ export function leesPosities(xml) {
 const CACHESLEUTEL = "https://delta-blueprint.intern/lynx/posities";
 const CACHE_SECONDEN = 300;
 
+// Het laatst aangeleverde rapport, met wanneer het binnenkwam.
+export async function laatsteRapport(env) {
+  try {
+    return await env.DB.prepare(
+      "select xml, opgehaald_op from lynx_rapport order by id desc limit 1"
+    ).first();
+  } catch {
+    return null;
+  }
+}
+
+// Het rapport aannemen. Alleen met de afgesproken sleutel, en alleen lezen uit
+// de inhoud: er is geen weg terug naar de broker.
+export async function neemRapportAan(env, xml, bron = "script") {
+  if (!xml || !xml.includes("<FlexQueryResponse")) {
+    return { fout: "Dat is geen Flex-rapport.", status: 400 };
+  }
+  if (xml.length > 2000000) return { fout: "Het rapport is te groot.", status: 413 };
+
+  let regels = 0;
+  try {
+    regels = leesPosities(xml).length;
+  } catch { /* onleesbaar rapport bewaren we toch, dan is het te onderzoeken */ }
+
+  await env.DB.batch([
+    env.DB.prepare("insert into lynx_rapport (xml, bron, regels) values (?, ?, ?)").bind(xml, bron, regels),
+    // Eén rapport is genoeg; de vorige hoeven we niet te bewaren.
+    env.DB.prepare("delete from lynx_rapport where id not in (select id from lynx_rapport order by id desc limit 3)"),
+  ]);
+
+  return { ok: true, posities: regels };
+}
+
 export async function openPosities(env) {
+  const bewaardRapport = await laatsteRapport(env);
+  if (bewaardRapport) {
+    try {
+      return {
+        koppeling: true,
+        opgehaald_op: bewaardRapport.opgehaald_op,
+        posities: leesPosities(bewaardRapport.xml),
+      };
+    } catch (fout) {
+      return { koppeling: false, reden: `Het rapport van Lynx was niet te lezen: ${fout.message}`, posities: [] };
+    }
+  }
+
+  // Niets aangeleverd: dan proberen we het nog zelf, voor het geval deze
+  // omgeving wél bij IBKR mag.
   const cache = caches.default;
   const bewaard = await cache.match(CACHESLEUTEL).catch(() => null);
   if (bewaard) {

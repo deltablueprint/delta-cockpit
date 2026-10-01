@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Elk kwartier het Flex-rapport ophalen en afleveren bij de cockpit.
+
+     Installeren:
+       cp scripts/lynx-ophalen.plist ~/Library/LaunchAgents/nl.deltablueprint.lynx.plist
+       (pas het pad naar de repo aan als die ergens anders staat)
+       launchctl load ~/Library/LaunchAgents/nl.deltablueprint.lynx.plist
+
+     Stoppen:
+       launchctl unload ~/Library/LaunchAgents/nl.deltablueprint.lynx.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>nl.deltablueprint.lynx</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/Users/simondejonghe/Delta Blueprint/scripts/lynx-ophalen.mjs</string>
+  </array>
+  <key>StartInterval</key><integer>900</integer>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>/tmp/delta-lynx.log</string>
+  <key>StandardErrorPath</key><string>/tmp/delta-lynx.log</string>
+</dict>
+</plist>

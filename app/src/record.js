@@ -299,7 +299,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         return;
       }
       if (!uit.posities.length) {
-        vak.innerHTML = `<p class="brokerleeg">Er staat niets open bij Lynx.</p>${handmatigKnop}`;
+        vak.innerHTML = `<p class="brokerleeg">Er staat niets open bij Lynx${
+          uit.opgehaald_op ? ` (rapport van ${ontsnap(uit.opgehaald_op)})` : ""}.</p>${handmatigKnop}`;
         knoppenAansluiten();
         return;
       }
@@ -345,6 +346,10 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
            ${besluitExpiratie ? toonDatum(besluitExpiratie) : "—"}. Kies de regel die het geworden is, of vul met de hand in.</p>`);
       }
 
+      if (uit.opgehaald_op) {
+        vak.insertAdjacentHTML("beforeend",
+          `<p class="brokerleeg feitmeta">Rapport van ${ontsnap(uit.opgehaald_op)}.</p>`);
+      }
       vak.insertAdjacentHTML("beforeend", handmatigKnop);
       knoppenAansluiten();
 

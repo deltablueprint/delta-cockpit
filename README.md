@@ -45,6 +45,25 @@ npm run db:proef-inzendingen:staging  # twee verstuurde inzendingen (Pieter, Jac
 De twee laatste commando's zetten **proefdata** op staging. Ze staan bewust niet in
 `migrations/` en raken productie nooit aan; opnieuw draaien mag, ze ruimen eerst op.
 
+## De koppeling met Lynx
+
+IBKR weigert verzoeken die van Cloudflare komen, dus de worker haalt het
+Flex-rapport niet zelf op: een machine met een gewoon IP levert het af.
+
+```
+npx wrangler secret put LYNX_PUSH_SLEUTEL --env staging   # een zelfbedachte sleutel
+```
+
+Daarna op die machine `~/.delta-lynx.env` maken met `LYNX_FLEX_TOKEN`,
+`LYNX_FLEX_QUERY`, `COCKPIT_URL` en dezelfde `LYNX_PUSH_SLEUTEL`, en:
+
+```
+node scripts/lynx-ophalen.mjs          # één keer, om te testen
+```
+
+Elk kwartier laten draaien: zie `scripts/lynx-ophalen.plist`. De cockpit belt
+nooit naar de broker en er is geen eindpunt dat iets terug kan sturen.
+
 ## Aanmelden
 
 Aanmelden gaat met **e-mailadres en wachtwoord**, per persoon. Het wachtwoord

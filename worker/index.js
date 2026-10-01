@@ -10,7 +10,7 @@ import { wijzig, archiveer, dupliceer, maakAan, sjabloon } from "./schrijf.js";
 import { record } from "./record.js";
 import { voorbereiden, uitvoeren } from "./import.js";
 import { stand, startMoment, versturen, uitkomst as gonogoUitkomst } from "./gonogo.js";
-import { openPosities, haalRapport } from "./lynx.js";
+import { openPosities, haalRapport, neemRapportAan, laatsteRapport } from "./lynx.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
@@ -237,6 +237,24 @@ async function behandel(request, env) {
 
       // Wat er bij de broker open staat. Lezend; het systeem plaatst nooit
       // zelf een order.
+      // Het rapport wordt aangeleverd door een machine die wél bij IBKR mag.
+      // Eigen sleutel, los van de aanmelding: dit is geen mens maar een script.
+      if (pad === "/api/lynx/rapport" && request.method === "POST") {
+        const sleutel = request.headers.get("x-lynx-sleutel") || "";
+        const verwacht = env.LYNX_PUSH_SLEUTEL || "";
+        if (!verwacht || !gelijkInVasteTijd(sleutel, verwacht)) {
+          return json({ fout: "Niet herkend." }, 401);
+        }
+        const xml = await request.text();
+        const uit = await neemRapportAan(env, xml, "script");
+        if (uit.fout) return json(uit, uit.status || 400);
+        return json(uit);
+      }
+      if (pad === "/api/lynx/rapport" && request.method === "GET") {
+        const r = await laatsteRapport(env);
+        return json({ aangeleverd: Boolean(r), opgehaald_op: r ? r.opgehaald_op : null });
+      }
+
       if (pad === "/api/lynx/posities" && request.method === "GET") {
         return json(await openPosities(env));
       }
