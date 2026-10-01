@@ -41,6 +41,25 @@ npm run deploy:staging       # uitrollen naar staging
 `GET /api/gezondheid` geeft de omgeving en de schemaversie terug.
 Zegt dat veld `schema versie 1`, dan staan de worker en de database goed.
 
+## Takken en uitrollen
+
+| Tak | Rolt uit naar | Hoe |
+| --- | --- | --- |
+| `staging` | `delta-cockpit-staging` | automatisch bij elke push |
+| `main` | `delta-cockpit` | automatisch bij elke push |
+
+Werkwijze: wijzigingen gaan eerst naar `staging`, worden daar bekeken, en pas daarna
+naar `main` gemerged. Migraties worden met de hand toegepast (`npm run db:migrate:staging`
+en `npm run db:migrate`) vóórdat de code die ze nodig heeft wordt uitgerold — een build
+voert geen migraties uit.
+
+## Live
+
+| Omgeving | URL |
+| --- | --- |
+| Productie | https://delta-cockpit.dejonghe-simon.workers.dev |
+| Staging | https://delta-cockpit-staging.dejonghe-simon.workers.dev |
+
 ## Regels bij het bouwen
 
 - Niets wordt verwijderd: geen DELETE-route, records krijgen een archiefstatus.
