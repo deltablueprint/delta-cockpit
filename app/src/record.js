@@ -237,6 +237,10 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     }
   }
 
+  // Bedragen schrijven we zoals ze hier gelezen worden: komma, twee cijfers.
+  const euro = (n) => Number(n).toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const punten = (n) => Number(n).toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+
   // ---- wat er bij de broker open staat ----
   if (toonBroker) {
     const vak = inhoud.querySelector("#brokerinhoud");
@@ -257,7 +261,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
           <tr><td class="feitnaam">${ontsnap(p.contract)}</td><td>${ontsnap(p.strike ?? "—")}</td>
             <td>${p.expiratiedatum ? toonDatum(p.expiratiedatum) : "—"}</td>
             <td>${ontsnap(p.aantal ?? "—")}${p.richting === "gekocht" ? ' <span class="faint">gekocht</span>' : ""}</td>
-            <td>${p.premie_eur === null || p.premie_eur === undefined ? "—" : `€ ${ontsnap(p.premie_eur)}`}</td>
+            <td>${p.premie_eur === null || p.premie_eur === undefined ? "—"
+                 : `€ ${euro(p.premie_eur)}${p.premie_pt ? ` <span class="faint">· ${punten(p.premie_pt)} pt</span>` : ""}`}</td>
             <td>${ontsnap(p.uitvoering_op || p.rapportdatum || "—")}</td>
             <td><button class="knop klein" data-kies="${i}">Deze nemen</button></td></tr>`).join("")}
         </tbody></table>`;
