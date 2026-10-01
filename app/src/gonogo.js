@@ -161,7 +161,7 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
          <div class="formsectiekop">Mijn inzending — verstuurd en vastgezet</div>
          <div class="formkolommen">
            <div class="formkolom">
-             <span class="veldlabel">Positie</span><div class="veldwaarde">${badge(mijn.positie || "—", mijn.positie === "go" ? "groen" : "rood")}</div>
+             <span class="veldlabel">Beslissing</span><div class="veldwaarde">${badge(mijn.positie || "—", mijn.positie === "go" ? "groen" : "rood")}</div>
              <span class="veldlabel">Strike</span><div class="veldwaarde"><span class="alleenlezen">${toon(mijn.strike)}</span></div>
              <span class="veldlabel">Expiratiedatum</span><div class="veldwaarde"><span class="alleenlezen">${mijn.expiratiedatum ? toonDatum(mijn.expiratiedatum) : "—"}</span></div>
            </div>
@@ -181,7 +181,7 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
          <div class="formsectiekop">Mijn oordeel</div>
          <div class="formkolommen">
            <div class="formkolom">
-             <label class="veldlabel" for="positie"><span class="ster">*</span> Positie</label>
+             <label class="veldlabel" for="positie"><span class="ster">*</span> Beslissing</label>
              <div class="veldwaarde">
                <select id="positie" data-kolom="positie">
                  <option value="">&mdash;</option>
@@ -189,16 +189,16 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
                  <option value="no-go">No-go</option>
                </select>
              </div>
-             <label class="veldlabel" for="strike">Strike</label>
-             <div class="veldwaarde"><input id="strike" data-kolom="strike" type="number" step="25"></div>
-             <label class="veldlabel" for="expiratiedatum">Expiratiedatum</label>
-             <div class="veldwaarde"><input id="expiratiedatum" data-kolom="expiratiedatum" type="date"></div>
+             <label class="veldlabel" for="reden" data-alleen="no-go" hidden>Reden bij no-go</label>
+             <div class="veldwaarde" data-alleen="no-go" hidden><input id="reden" data-kolom="reden" type="text"></div>
+             <label class="veldlabel" for="strike" data-alleen="go" hidden><span class="ster">*</span> Strike</label>
+             <div class="veldwaarde" data-alleen="go" hidden><input id="strike" data-kolom="strike" type="number" step="25"></div>
            </div>
            <div class="formkolom">
-             <label class="veldlabel" for="inzet_pct">Inzet in % van het kapitaal</label>
-             <div class="veldwaarde"><input id="inzet_pct" data-kolom="inzet_pct" type="number" step="0.1"></div>
-             <label class="veldlabel" for="reden">Reden bij no-go</label>
-             <div class="veldwaarde"><input id="reden" data-kolom="reden" type="text"></div>
+             <label class="veldlabel" for="expiratiedatum" data-alleen="go" hidden><span class="ster">*</span> Expiratiedatum</label>
+             <div class="veldwaarde" data-alleen="go" hidden><input id="expiratiedatum" data-kolom="expiratiedatum" type="date"></div>
+             <label class="veldlabel" for="inzet_pct" data-alleen="go" hidden>Inzet in % van het kapitaal</label>
+             <div class="veldwaarde" data-alleen="go" hidden><input id="inzet_pct" data-kolom="inzet_pct" type="number" step="0.1"></div>
            </div>
          </div>
          <div class="formbreed">
@@ -308,6 +308,20 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
     ${open ? `<div class="formulier">${alVerstuurd ? mijnHtml : ""}${uitkomstHtml}</div>` : ""}`;
 
   const melding = inhoud.querySelector("#gmelding");
+
+  // Wat je kiest bepaalt wat er verder gevraagd wordt: bij een go de positie,
+  // bij een no-go de reden. Velden die niet van toepassing zijn, staan er niet
+  // — ze leiden alleen maar af van de keuze die je maakt.
+  const keuze = inhoud.querySelector("#positie");
+  if (keuze) {
+    const toonBijKeuze = () => {
+      inhoud.querySelectorAll("[data-alleen]").forEach((el) => {
+        el.hidden = el.dataset.alleen !== keuze.value;
+      });
+    };
+    keuze.addEventListener("change", toonBijKeuze);
+    toonBijKeuze();
+  }
 
   const verstuurknop = inhoud.querySelector("#versturen");
   if (verstuurknop) {
