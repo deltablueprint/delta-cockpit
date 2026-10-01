@@ -1,6 +1,6 @@
 # Delta Blueprint — bouwspecificatie operationeel dashboard
 
-**Versie 3.4 · 1 oktober 2026**
+**Versie 3.5 · 1 oktober 2026**
 
 Dit bestand is de geconsolideerde bron waarop het bouwen zich baseert. Besluiten worden genomen in het bouwplan-document en in het go/no-go-protocol van Jacqueline; dit bestand is het resultaat daarvan, bijgewerkt zodra er iets verandert. Wijkt dit bestand af van een genomen besluit, dan is dit bestand verouderd en moet het worden bijgewerkt — niet het besluit.
 
@@ -731,11 +731,22 @@ De applicatie kent een klein aantal **vaste componenten**. Wie een scherm bouwt 
 
 **De lijst** (één vorm voor elke tabel, zoals *Posities*):
 
-- **Werkbalk**: menu-icoon, naam van de tabel, primaire knop *Nieuw*, het woord *Zoeken* met een kolomkeuze en een zoekveld, en rechts de paginateller (“1 tot 5 van 19”) met een pijl.
+- **Werkbalk**: menu-icoon, naam van de tabel, de acties van de lijst, het woord *Zoeken* met een kolomkeuze en een zoekveld, en rechts de paginateller (“1 tot 50 van 70”) met knoppen om te bladeren.
 - **Filterbalk**: trechtericoon, *Alle*, de actieve voorwaarden als chips, *+ voorwaarde*, en rechts ruimte voor één toelichtende zin.
 - **Kolomkop**: grijze balk met selectievakje, zoekicoon, en per kolom een greepje, de kolomnaam in kleinkapitaal en een sorteerpijl op de gesorteerde kolom.
 - **Filterrij**: per kolom een smal invoerveld met *Zoeken*.
-- **Rijen**: selectievakje, info-icoon, daarna de cellen. De eerste kolom is een link naar het record; een rij die aandacht vraagt krijgt een zachte gele achtergrond.
+- **Rijen**: de cellen, zonder selectievakje of info-icoon — die leidden nergens heen. De eerste kolom is een link naar het record; een rij die aandacht vraagt krijgt een zachte gele achtergrond. Dubbelklikken op een cel bewerkt haar ter plekke.
+- **Kolombreedte** komt uit `db_field.breedte`, en wat iemand zelf versleept wordt per persoon onthouden in `gebruiker_voorkeur` — het is een voorkeur, geen eigenschap van de gegevens.
+
+**Waar een actieknop staat.** Dit onderscheid is bindend, want het zegt waar je moet kijken:
+
+| Soort scherm | Waar de actie staat |
+| --- | --- |
+| **Lijst** | in de **werkbalk van de lijst**, direct naast de naam van de tabel (*Nieuw*, *Inlezen uit document*) |
+| **Record** | **rechtsboven in de recordbalk**, naast de naam van het record (*Opslaan*, *Terug naar …*, *Bijlage*) |
+| **Gerelateerde lijst** | in de kop van die lijst, rechts (*Nieuw*, met de ouder al ingevuld) |
+
+De vorm van de knop is overal dezelfde — één hoogte, één stijl, primair donkerblauw en secundair wit. Alleen de plaats verschilt, en die volgt uit het soort scherm. Een lijst heeft geen recordbalk, dus daar hoort de actie in de werkbalk; een record heeft er een, dus daar hoort hij rechtsboven.
 
 **De gerelateerde lijst** (één vorm voor elk recordscherm, zoals op de cyclus):
 
