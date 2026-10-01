@@ -30,6 +30,15 @@ async function kolominfo(env, tabelnaam) {
   }
 }
 
+// Standaardwaarden uit de definitielaag. Twee woorden hebben een betekenis in
+// plaats van een waarde: 'vandaag' en 'nu'. Een datum die vandaag is, hoef je
+// niet in te typen.
+function standaardwaarde(w) {
+  if (w === "vandaag") return new Date().toISOString().slice(0, 10);
+  if (w === "nu") return new Date().toISOString().slice(0, 16).replace("T", " ");
+  return w;
+}
+
 async function tabelVan(env, tabelnaam) {
   return await env.DB.prepare(
     "select * from db_table where naam = ? and actief = 1"
@@ -385,7 +394,7 @@ export async function maakAan(env, ik, tabelnaam, body) {
   for (const veld of velden.filter((v) => v.verplicht)) {
     const leeg = nieuw[veld.kolom] === undefined || nieuw[veld.kolom] === null || nieuw[veld.kolom] === "";
     if (!leeg) continue;
-    if (veld.standaard) { nieuw[veld.kolom] = veld.standaard; continue; }
+    if (veld.standaard) { nieuw[veld.kolom] = standaardwaarde(veld.standaard); continue; }
 
     const kolom = info[veld.kolom];
     if (kolom && (kolom.dflt_value !== null || !kolom.notnull)) {
@@ -437,7 +446,7 @@ export async function sjabloon(env, tabelnaam, ouder) {
   ).bind(tabelnaam).all()).results;
 
   const waarden = {};
-  for (const v of velden) waarden[v.kolom] = v.standaard ?? null;
+  for (const v of velden) waarden[v.kolom] = standaardwaarde(v.standaard) ?? null;
 
   let ouderkolom = null;
   let ouderInfo = null;
