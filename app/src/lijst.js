@@ -178,7 +178,11 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   for (const [k, v] of Object.entries(toestand.filters)) if (v) params.set(`f.${k}`, v);
   for (const [k, v] of Object.entries(toestand.idfilters || {})) if (v) params.set(`fid.${k}`, v);
 
-  const bestaand = inhoud.querySelector(".lijst");
+  // Alleen een lijst die rechtstreeks in dit vak staat telt als 'dezelfde
+  // lijst'. Stond er een recordscherm met een gerelateerde lijst erin, dan
+  // werd díé even grijs gemaakt voordat het scherm verwisselde — dat zag je
+  // als een flikkering bij het klikken op Cycli.
+  const bestaand = inhoud.querySelector(":scope > .lijst");
   if (bestaand) bestaand.classList.add("bezig");
   else inhoud.innerHTML = `<div class="kaart leeg">Bezig met laden&hellip;</div>`;
 
