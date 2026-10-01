@@ -322,8 +322,15 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
 }
 .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .persoon { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
-.avatarknop { padding: 0; background: none; border: none; cursor: pointer; display: inline-flex; border-radius: 50%; }
-.avatarknop:hover { outline: 2px solid var(--navact); outline-offset: 1px; }
+.avatarknop {
+  position: relative; padding: 0; background: none; border: none; cursor: pointer;
+  display: inline-flex; border-radius: 50%; line-height: 0;
+}
+/* De ring volgt de bol zelf, in plaats van er als los blokje omheen te staan. */
+.avatarknop .avatar { transition: box-shadow .12s, filter .12s; }
+.avatarknop:hover .avatar { box-shadow: 0 0 0 2px rgba(255,255,255,.55); filter: brightness(1.12); }
+.avatarknop:focus-visible { outline: none; }
+.avatarknop:focus-visible .avatar { box-shadow: 0 0 0 2px #fff; }
 
 /* --- live velden: alleen hier beweegt iets --- */
 .hartje-vak { display: inline-flex; align-items: center; color: var(--grnm, #17805A); flex-shrink: 0; }

@@ -3,8 +3,9 @@
 
 import { ontsnap } from "./veld.js";
 
+// Eén letter: de eerste van de naam.
 export function initialen(naam) {
-  return String(naam || "?").split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  return String(naam || "?").trim().charAt(0).toUpperCase() || "?";
 }
 
 export function avatar(persoon, maat = 22) {
