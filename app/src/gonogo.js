@@ -47,31 +47,33 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
     <span class="pijlje">&rsaquo;</span> <span>${titel}</span>`;
   document.title = `${titel} · ${cyclus.label}`;
 
-  // ---- geen moment geopend: één knop om te beginnen ----
+  // ---- nog geen moment ----
+  // Staat de cyclus al op *go / no-go*, dan is het moment er alleen nog niet
+  // omdat deze cyclus van vóór die regel is: dan openen we het stilletjes.
+  // Staat de cyclus ergens anders, dan hoort hier geen knop maar uitleg — de
+  // stap begint op het cyclusrecord, niet hier.
   if (!moment) {
+    if (cyclus.status === "go-nogo") {
+      try {
+        await gonogoMoment(cyclusId);
+        gonogoscherm(inhoud, kruimel, cyclusId, meta);
+      } catch (fout) {
+        inhoud.innerHTML = `<div class="fout">${ontsnap(fout.message)}</div>`;
+      }
+      return;
+    }
+
     inhoud.innerHTML = `
       <div class="recordbalk">
         <span class="recordnaam">${ontsnap(cyclus.label)}</span>
         <span class="recordacties">
           <a class="knop tweede" href="#/t/cyclus/${cyclus.id}">Terug naar ${ontsnap(cyclus.label)}</a>
-          <button class="knop" id="startmoment">Beoordelingsmoment openen</button>
         </span>
       </div>
       <div class="kaart leeg">
-        Er loopt nog geen beoordelingsmoment op deze cyclus. Openen zet de cyclus op
-        <em>go / no-go</em> en zet de inzendingen klaar; ieder stuurt daarna zijn eigen
-        oordeel blind in.
+        Deze cyclus staat op <em>${ontsnap(cyclus.status)}</em>. Een go/no-go begint op het
+        cyclusrecord: zet de status op <em>go / no-go</em>, en het beoordelingsmoment staat klaar.
       </div>`;
-    inhoud.querySelector("#startmoment").addEventListener("click", async (e) => {
-      e.target.disabled = true;
-      try {
-        await gonogoMoment(cyclusId);
-        gonogoscherm(inhoud, kruimel, cyclusId, meta);
-      } catch (fout) {
-        e.target.disabled = false;
-        alert(fout.message);
-      }
-    });
     return;
   }
 

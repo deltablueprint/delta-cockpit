@@ -6,6 +6,7 @@
 
 import { toets } from "./regels.js";
 import { vulEventsBij, vulCyclitBij } from "./events.js";
+import { startMoment } from "./gonogo.js";
 
 async function veldenVan(env, tabelnaam) {
   return (await env.DB.prepare(
@@ -101,6 +102,15 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
   if (tabelnaam === "cyclus" &&
       teSchrijven.some((t) => ["geopend_op", "doelexpiratie", "afgesloten_op"].includes(t.veld.kolom))) {
     await vulEventsBij(env, id);
+  }
+
+  // Een cyclus op *go / no-go* zetten ís het openen van een beoordelingsmoment.
+  // Daar nog een aparte knop voor vragen zou betekenen dat je twee keer
+  // hetzelfde zegt — en tot die tweede klik zou de cyclus in een stap staan
+  // waar niets onder hangt.
+  if (tabelnaam === "cyclus" &&
+      teSchrijven.some((t) => t.veld.kolom === "status" && t.nieuweWaarde === "go-nogo")) {
+    await startMoment(env, ik, id);
   }
 
   return {
