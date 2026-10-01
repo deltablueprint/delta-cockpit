@@ -29,56 +29,69 @@ export async function record(env, tabelnaam, id, ik) {
       order by t.volgorde`
   ).bind(tabelnaam).all()).results;
 
-  const relaties = [];
-  for (const k of kinderen) {
+  // Alles wat het recordscherm nodig heeft, wordt naast elkaar opgevraagd in
+  // plaats van na elkaar. Eén vraag per ding blijft het, maar wachten op de
+  // vorige hoeft niet — dat scheelde seconden op een record met veel
+  // gerelateerde lijsten.
+  const relatiewerk = kinderen
     // Een veld dat naar de eigen tabel wijst is een verwijzing naar een
     // zusterrecord, geen kindlijst: 'doorgerold naar' maakt van de opvolger
-    // geen onderdeel van deze tranche. Zulke verwijzingen staan als veld op
-    // het formulier en niet als tabblad eronder.
-    if (k.tabel === tabelnaam) continue;
-    // De teller telt wat je in de lijst ziet: gearchiveerde regels horen daar
-    // niet bij. Stond er 2 terwijl er één regel stond, dan klopte er iets —
-    // en een teller waarin je niet gelooft, is erger dan geen teller.
-    let aantal = 0;
-    try {
-      const r = await env.DB.prepare(
-        `select count(*) as n from "${k.tabel}" where "${k.kolom}" = ? and archief = 0`
-      ).bind(id).first();
-      aantal = r ? r.n : 0;
-    } catch {
+    // geen onderdeel van deze tranche.
+    .filter((k) => k.tabel !== tabelnaam)
+    .map(async (k) => {
+      // De teller telt wat je in de lijst ziet: gearchiveerde regels horen
+      // daar niet bij.
+      let aantal = 0;
       try {
         const r = await env.DB.prepare(
-          `select count(*) as n from "${k.tabel}" where "${k.kolom}" = ?`
+          `select count(*) as n from "${k.tabel}" where "${k.kolom}" = ? and archief = 0`
         ).bind(id).first();
         aantal = r ? r.n : 0;
       } catch {
-        continue;   // tabel bestaat nog niet; dan tonen we hem ook niet
+        try {
+          const r = await env.DB.prepare(
+            `select count(*) as n from "${k.tabel}" where "${k.kolom}" = ?`
+          ).bind(id).first();
+          aantal = r ? r.n : 0;
+        } catch {
+          return null;   // tabel bestaat nog niet; dan tonen we hem ook niet
+        }
       }
-    }
-    // Of je in deze lijst iets mag aanmaken, hangt soms van het record af.
-    // Een tranche bestaat niet zonder goedgekeurd besluit.
-    let magNieuw = true;
-    if (k.tabel === "positie" && tabelnaam === "cyclus") {
-      magNieuw = await magTrancheAanmaken(env, id);
-    }
-    if (k.tabel === "exitregel") magNieuw = false;   // die zet het systeem klaar
 
-    relaties.push({ tabel: k.tabel, kolom: k.kolom, label: k.label_mv, aantal, magNieuw });
-  }
+      // Of je in deze lijst iets mag aanmaken, hangt soms van het record af.
+      // Een tranche bestaat niet zonder goedgekeurd besluit.
+      let magNieuw = true;
+      if (k.tabel === "positie" && tabelnaam === "cyclus") magNieuw = await magTrancheAanmaken(env, id);
+      if (k.tabel === "exitregel") magNieuw = false;   // die zet het systeem klaar
+
+      return { tabel: k.tabel, kolom: k.kolom, label: k.label_mv, aantal, magNieuw };
+    });
 
   // Verwijzingen omzetten naar iets leesbaars: niet 'simon' maar 'Simon DeJonghe'.
-  const labels = {};
-  for (const v of velden.results.filter((v) => v.type === "verwijzing" && rij[v.kolom])) {
-    const doel = await env.DB.prepare("select naam from db_table where naam = ?").bind(v.verwijst_naar).first();
-    if (!doel) continue;
-    const t = await env.DB.prepare("select titel_veld from db_table where naam = ?").bind(v.verwijst_naar).first();
+  const verwijsvelden = velden.results.filter((v) => v.type === "verwijzing" && rij[v.kolom]);
+  const labelwerk = verwijsvelden.map(async (v) => {
+    const doel = await env.DB.prepare(
+      "select naam, titel_veld from db_table where naam = ?"
+    ).bind(v.verwijst_naar).first();
+    if (!doel) return null;
     try {
       const r = await env.DB.prepare(
-        `select "${t.titel_veld}" as titel from "${v.verwijst_naar}" where id = ?`
+        `select "${doel.titel_veld}" as titel from "${doel.naam}" where id = ?`
       ).bind(rij[v.kolom]).first();
-      if (r) labels[v.kolom] = r.titel;
-    } catch { /* verwijzing naar een tabel zonder id-kolom: laat staan */ }
-  }
+      return r ? { kolom: v.kolom, titel: r.titel } : null;
+    } catch {
+      return null;   // verwijzing naar een tabel zonder id-kolom: laat staan
+    }
+  });
+
+  const [relatieuitkomst, labeluitkomst] = await Promise.all([
+    Promise.all(relatiewerk),
+    Promise.all(labelwerk),
+  ]);
+
+  const relaties = relatieuitkomst.filter(Boolean);
+  const labels = {};
+  for (const l of labeluitkomst) if (l) labels[l.kolom] = l.titel;
 
   // De ouder van dit record, voor de breadcrumb en de terugknop.
   let ouder = null;
@@ -106,16 +119,14 @@ export async function record(env, tabelnaam, id, ik) {
     if (stappen.length) proces = { veld: tabel.proces_veld, nu: rij[tabel.proces_veld], stappen };
   }
 
-  // Keuzelijsten voor verwijzingen die je mag kiezen (db_field.keuzelijst).
-  // Ze blijven binnen hetzelfde ouderrecord: een tranche hoort bij een besluit
-  // van zijn eigen cyclus.
+  // Keuzelijsten voor verwijzingen die je mag kiezen (db_field.keuzelijst) en
+  // de actieknop rechtsboven: allebei tegelijk, want ze weten niets van elkaar.
   const opties = {};
-  if (tabelnaam === "positie" && rij.cyclus) {
-    opties.beoordelingsmoment = await besluitOpties(env, rij.cyclus);
-  }
-
-  // De actieknop rechtsboven: die van de stap waar dit record nu in staat.
-  const actie = await actieVoor(env, tabelnaam, rij, tabel, ik);
+  const [keuzes, actie] = await Promise.all([
+    tabelnaam === "positie" && rij.cyclus ? besluitOpties(env, rij.cyclus) : null,
+    actieVoor(env, tabelnaam, rij, tabel, ik),
+  ]);
+  if (keuzes) opties.beoordelingsmoment = keuzes;
 
   return {
     ouder,

@@ -165,7 +165,35 @@ export function leesPosities(xml) {
     });
 }
 
+// Het rapport bij IBKR wordt op aanvraag gemaakt en dat duurt seconden. Twee
+// keer achter elkaar hetzelfde scherm openen hoort niet twee keer te wachten,
+// dus het antwoord blijft vijf minuten in de cache van de worker staan. Het is
+// toch rapportage: verser dan de bron wordt het er niet van.
+const CACHESLEUTEL = "https://delta-blueprint.intern/lynx/posities";
+const CACHE_SECONDEN = 300;
+
 export async function openPosities(env) {
+  const cache = caches.default;
+  const bewaard = await cache.match(CACHESLEUTEL).catch(() => null);
+  if (bewaard) {
+    try {
+      return { ...(await bewaard.json()), uit_cache: true };
+    } catch { /* kapot bewaard antwoord: gewoon opnieuw ophalen */ }
+  }
+
+  const uitkomst = await openPositiesVers(env);
+  if (uitkomst.koppeling) {
+    await cache.put(
+      CACHESLEUTEL,
+      new Response(JSON.stringify(uitkomst), {
+        headers: { "content-type": "application/json", "cache-control": `max-age=${CACHE_SECONDEN}` },
+      })
+    ).catch(() => {});
+  }
+  return uitkomst;
+}
+
+async function openPositiesVers(env) {
   const uit = await haalRapport(env);
   if (uit.fout) return { koppeling: false, reden: uit.fout, posities: [] };
   try {
