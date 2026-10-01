@@ -597,3 +597,13 @@ body.sleept .lijsttabel { pointer-events: none; }
 .formsectie.nadruk select, .formsectie.nadruk input {
   background: #fff; border-color: #BFD5E0;
 }
+
+/* Wat er bij de broker open staat: kiezen in plaats van overtypen. */
+.brokervak { background: #fff; border: 1px solid var(--b1); border-top: none; }
+.brokerkop {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 9px 16px; background: var(--soft); border-bottom: 1px solid var(--b1);
+  font-size: 10px; font-weight: 700; letter-spacing: 1.4px; color: var(--dim); text-transform: uppercase;
+}
+.brokerkop .feitmeta { text-transform: none; letter-spacing: 0; }
+.brokerleeg { margin: 0; padding: 14px 16px; font-size: 12.5px; color: var(--mut); line-height: 1.5; }

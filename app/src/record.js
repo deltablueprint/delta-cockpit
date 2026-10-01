@@ -8,7 +8,7 @@
 //   · onderaan de gerelateerde lijsten
 // ============================================================================
 
-import { record as haalRecord, bewaar, maakAan, nieuwSjabloon } from "./api.js";
+import { record as haalRecord, bewaar, maakAan, nieuwSjabloon, lynxPosities } from "./api.js";
 import { lijstscherm } from "./lijst.js";
 import { lees, invoer, ontsnap } from "./veld.js";
 import { volgLive, stopLive, HARTSLAG } from "./live.js";
@@ -79,8 +79,15 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   // én leeg is, vertelt niets: die laten we weg in plaats van een rij
   // streepjes te tonen.
   const alleSecties = data.secties.length ? data.secties : [{ naam: "algemeen", label: data.tabel.label }];
+  const standNu = data.proces ? data.waarden[data.proces.veld] : null;
   const secties = alleSecties.filter((sectie) => {
     if (isNieuw && sectie.verbergen_bij_nieuw) return false;
+    // Een sectie kan bij bepaalde standen horen (db_sectie.standen). Leeg
+    // staan wachten op iets wat nog niet gebeurd is, is geen informatie.
+    if (sectie.standen) {
+      const bij = String(sectie.standen).split(",").map((w) => w.trim());
+      if (isNieuw || !bij.includes(String(standNu))) return false;
+    }
     const eigen = velden.filter((v) => (v.sectie || "algemeen") === sectie.naam);
     if (!eigen.length) return false;
     const allesLeegEnVast = eigen.every(
@@ -153,6 +160,12 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
        <div id="relatievak" class="relatieinhoud"></div></div>`
     : `<div class="relatieblok">${relaties.map((r) => `<div id="relatie-${r.tabel}" class="relatieinhoud los"></div>`).join("")}</div>`;
 
+  // Op een tranche die nog niet uitgevoerd is, hoort het kader met wat er bij
+  // de broker open staat: daar kies je de positie in plaats van haar over te
+  // typen.
+  const toonBroker = tabelnaam === "positie" &&
+    ["besluit goedgekeurd", "order bij lynx"].includes(String(data.waarden.status || ""));
+
   const terugNaar = data.ouder
     ? { href: `#/t/${data.ouder.tabel}/${data.ouder.id}`, label: `Terug naar ${data.ouder.titel}` }
     : { href: `#/t/${tabelnaam}`, label: "Terug naar de lijst" };
@@ -171,6 +184,10 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       </span>
     </div>
     ${procesHtml}
+    ${toonBroker ? `<div class="brokervak" id="brokervak">
+      <div class="brokerkop">Open posities bij Lynx<span class="feitmeta">lezend — het systeem plaatst nooit zelf een order</span></div>
+      <div class="brokerinhoud" id="brokerinhoud">Bezig met ophalen&hellip;</div>
+    </div>` : ""}
     <div class="formulier">${sectieHtml}</div>
     ${relatieHtml}`;
 
@@ -214,6 +231,47 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
                  toonTelling: !tabbladen, magNieuw: r.magNieuw !== false },
       });
     }
+  }
+
+  // ---- wat er bij de broker open staat ----
+  if (toonBroker) {
+    const vak = inhoud.querySelector("#brokerinhoud");
+    lynxPosities().then((uit) => {
+      if (!vak) return;
+      if (!uit.koppeling) {
+        vak.innerHTML = `<p class="brokerleeg">${ontsnap(uit.reden || "Geen koppeling met Lynx.")}</p>`;
+        return;
+      }
+      if (!uit.posities.length) {
+        vak.innerHTML = `<p class="brokerleeg">Er staat niets open bij Lynx.</p>`;
+        return;
+      }
+      vak.innerHTML = `<table class="feittabel"><thead><tr>
+          <th>Contract</th><th>Strike</th><th>Expiratie</th><th>Aantal</th><th>Premie</th><th></th>
+        </tr></thead><tbody>${uit.posities.map((p, i) => `
+          <tr><td class="feitnaam">${ontsnap(p.contract)}</td><td>${ontsnap(p.strike)}</td>
+            <td>${ontsnap(p.expiratiedatum)}</td><td>${ontsnap(p.aantal)}</td>
+            <td>${ontsnap(p.premie_eur ?? "")}</td>
+            <td><button class="knop klein" data-kies="${i}">Deze nemen</button></td></tr>`).join("")}
+        </tbody></table>`;
+      vak.querySelectorAll("[data-kies]").forEach((knop) => {
+        knop.addEventListener("click", () => {
+          const p = uit.posities[Number(knop.dataset.kies)];
+          const zet = (kolom, waarde) => {
+            const el = inhoud.querySelector(`.veldwaarde [data-kolom="${kolom}"]`);
+            if (el && waarde !== null && waarde !== undefined) el.value = waarde;
+          };
+          zet("strike", p.strike);
+          zet("expiratiedatum", p.expiratiedatum);
+          zet("aantal", p.aantal);
+          zet("ontvangen_premie_eur", p.premie_eur);
+          zet("uitvoering_op", p.uitvoering_op);
+          zet("herkomst", "broker");
+        });
+      });
+    }).catch(() => {
+      if (vak) vak.innerHTML = `<p class="brokerleeg">De koppeling met Lynx is niet bereikbaar.</p>`;
+    });
   }
 
   // ---- een andere keuze, andere gegevens ----

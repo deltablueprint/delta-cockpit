@@ -10,6 +10,7 @@ import { wijzig, archiveer, dupliceer, maakAan, sjabloon } from "./schrijf.js";
 import { record } from "./record.js";
 import { voorbereiden, uitvoeren } from "./import.js";
 import { stand, startMoment, versturen, uitkomst as gonogoUitkomst } from "./gonogo.js";
+import { openPosities } from "./lynx.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
@@ -232,6 +233,12 @@ async function behandel(request, env) {
         const uitkomst = await sjabloon(env, nieuwPad[1], ouder);
         if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
         return json(uitkomst);
+      }
+
+      // Wat er bij de broker open staat. Lezend; het systeem plaatst nooit
+      // zelf een order.
+      if (pad === "/api/lynx/posities" && request.method === "GET") {
+        return json(await openPosities(env));
       }
 
       // ---- de go/no-go (etappe 10) ----

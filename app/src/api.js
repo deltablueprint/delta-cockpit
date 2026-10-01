@@ -90,3 +90,6 @@ export const gonogoVersturen = (cyclus, body) =>
   haal(`/api/gonogo/${cyclus}/versturen`, { methode: "POST", body });
 export const gonogoUitkomst = (cyclus, body) =>
   haal(`/api/gonogo/${cyclus}/uitkomst`, { methode: "POST", body });
+
+// Wat er bij de broker open staat (etappe 11). Lezend.
+export const lynxPosities = () => haal("/api/lynx/posities");
