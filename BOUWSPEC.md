@@ -557,7 +557,18 @@ Bovenaan staat altijd hetzelfde formulier: tranche, cyclus, status, expiratie, c
 - **bewaken** — het exitplan als vier regels met hun stand (stop loss ask 60,0 · winstanker · break-even · eventregel), en de gerelateerde lijst **Metingen**: laatprijs, biedprijs, onderliggende, buffer, resultaat en de barometerstand die eruit volgt.
 - **uitkomst vastleggen** — wat de koppeling zag, de vier uitkomsten met het voorstel van het systeem, de velden om vast te leggen en wat het vastleggen in gang zet.
 
-Gerelateerde lijsten op de positie: **Metingen · Uitvoeringen · Publicaties · Historie**. Het exitplan staat als velden op het record, niet als aparte tabel: het hoort bij deze ene tranche en wordt vóór de order vastgelegd.
+Gerelateerde lijsten op de positie: **Exitplan · Metingen · Uitvoeringen · Publicaties · Historie**.
+
+**Het exitplan is een gerelateerde lijst van vier regels** (`exitregel`), geen blok velden. Tijdens de looptijd is het namelijk geen plan maar vier afspraken die ieder hun eigen stand hebben: niet geraakt, waarschuwingszone, geraakt, uitgevoerd of vervallen. Het systeem zet ze klaar zodra de tranche bestaat:
+
+| Regel | Niveau | Waar het vandaan komt |
+| --- | --- | --- |
+| **Stoploss** | ask 60,0 | Vast (6) |
+| **Winstanker** | 30 % van de ontvangen premie als laatprijs | 70 % van de premie verdiend |
+| **Break-even** | strike − ontvangen premie | Rekenwerk |
+| **Eventregel** | — | Een afspraak tussen mensen; blijft leeg tot iemand hem invult |
+
+Verandert de ontvangen premie of de strike, dan rekent het systeem winstanker en break-even opnieuw — behalve voor een regel die al geraakt is: die hoort bij wat er toen gebeurde. **De tranche komt de stand *besluit goedgekeurd* niet uit** zolang het stoplossniveau of de eventregel ontbreekt, en de stoploss laat zich daarna wel aanscherpen maar niet verruimen.
 
 ### 10.0g Eén woord per begrip
 

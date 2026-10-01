@@ -70,6 +70,7 @@ export async function uitBesluit(env, ik, moment) {
 
   await audit(env, ik, "positie", rij.id, "gebeurtenis",
               { gebeurtenis: "ontstaan uit een goedgekeurd besluit" }).run();
+  await zetExitplanKlaar(env, ik, rij.id, { strike: moment.strike });
   return rij.id;
 }
 
@@ -140,4 +141,99 @@ export function contractnaam(rij) {
   if (!m) return null;
   const strike = Number(rij.strike);
   return `OESX ${m[3]}${MAAND[Number(m[2]) - 1]}${m[1].slice(2)} ${Number.isInteger(strike) ? strike : strike.toFixed(1)} PUT`;
+}
+
+// --------------------------------------------------- het exitplan
+// Vier afspraken, klaargezet zodra de tranche bestaat. Het systeem vult in wat
+// het kan uitrekenen; wat een afspraak tussen mensen is — welke events
+// voortijdig sluiten — blijft leeg tot iemand het invult. Leeg laten kan niet:
+// zonder stoploss en zonder eventregel komt de tranche de eerste stand niet uit.
+export function exitplanVoor(rij) {
+  const premie = Number(rij.ontvangen_premie_pt);
+  const strike = Number(rij.strike);
+  const heeftPremie = Number.isFinite(premie) && premie > 0;
+
+  return [
+    {
+      volgorde: 10, soort: "stoploss", eenheid: "ask",
+      omschrijving: "Sluiten zodra de laatprijs van de optie op 60,0 staat",
+      niveau: 60,
+    },
+    {
+      volgorde: 20, soort: "winstanker", eenheid: "ask",
+      omschrijving: "Terugkopen bij 70 % van de ontvangen premie — dat is een laatprijs van 30 %",
+      niveau: heeftPremie ? Math.round(premie * 0.3 * 10) / 10 : null,
+    },
+    {
+      volgorde: 30, soort: "break-even", eenheid: "punten",
+      omschrijving: "Onder dit niveau van de index kost de tranche geld",
+      niveau: Number.isFinite(strike) && heeftPremie ? Math.round((strike - premie) * 10) / 10 : null,
+    },
+    {
+      volgorde: 40, soort: "eventregel", eenheid: null,
+      omschrijving: "Welke events sluiten deze tranche voortijdig",
+      niveau: null,
+    },
+  ];
+}
+
+export async function zetExitplanKlaar(env, ik, positieId, rij) {
+  let bestaat = null;
+  try {
+    bestaat = await env.DB.prepare(
+      "select count(*) as n from exitregel where positie = ?"
+    ).bind(positieId).first();
+  } catch {
+    return;   // de tabel bestaat nog niet in deze omgeving
+  }
+  if (bestaat && bestaat.n) return;
+
+  await env.DB.batch([
+    ...exitplanVoor(rij || {}).map((r) =>
+      env.DB.prepare(
+        `insert into exitregel (positie, volgorde, soort, omschrijving, niveau, eenheid)
+         values (?, ?, ?, ?, ?, ?)`
+      ).bind(positieId, r.volgorde, r.soort, r.omschrijving, r.niveau, r.eenheid)
+    ),
+    audit(env, ik, "positie", positieId, "gebeurtenis", { gebeurtenis: "exitplan klaargezet" }),
+  ]);
+}
+
+// Het exitplan ligt er vóór de order: de stoploss heeft een niveau en de
+// eventregel is ingevuld. Volgorde, geen waarschuwing (6).
+export async function exitplanCompleet(env, positieId) {
+  try {
+    const regels = (await env.DB.prepare(
+      "select soort, omschrijving, niveau from exitregel where positie = ? and archief = 0"
+    ).bind(positieId).all()).results;
+    if (!regels.length) return "Het exitplan staat nog niet klaar.";
+
+    const stop = regels.find((r) => r.soort === "stoploss");
+    if (!stop || stop.niveau === null || stop.niveau === undefined) {
+      return "Het exitplan gaat vóór de order: zet eerst het stoplossniveau in het exitplan.";
+    }
+    const event = regels.find((r) => r.soort === "eventregel");
+    if (!event || !String(event.omschrijving || "").trim()) {
+      return "Zet in het exitplan welke events deze tranche voortijdig sluiten.";
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Verandert de ontvangen premie of de strike, dan kloppen het winstanker en
+// break-even niet meer. Regels die al geraakt zijn blijven staan: die horen
+// bij wat er toen gebeurde.
+export async function herberekenExitplan(env, positieId, rij) {
+  try {
+    for (const r of exitplanVoor(rij)) {
+      if (r.soort !== "winstanker" && r.soort !== "break-even") continue;
+      if (r.niveau === null) continue;
+      await env.DB.prepare(
+        `update exitregel set niveau = ?, revisie = revisie + 1
+          where positie = ? and soort = ? and stand = 'niet geraakt' and archief = 0`
+      ).bind(r.niveau, positieId, r.soort).run();
+    }
+  } catch { /* geen exitplan in deze omgeving */ }
 }

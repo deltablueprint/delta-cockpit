@@ -8,7 +8,8 @@ import { toets } from "./regels.js";
 import { vulEventsBij, vulCyclitBij } from "./events.js";
 import { startMoment } from "./gonogo.js";
 import { instelling, wijktAf, stoplossVerruimd, noteerGeweigerdeStoploss,
-         volgendeTranche, contractnaam } from "./positie.js";
+         volgendeTranche, contractnaam, zetExitplanKlaar, exitplanCompleet,
+         herberekenExitplan } from "./positie.js";
 
 async function veldenVan(env, tabelnaam) {
   return (await env.DB.prepare(
@@ -78,17 +79,26 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
   const straks = { ...huidig };
   for (const t of teSchrijven) straks[t.veld.kolom] = t.nieuweWaarde;
 
-  if (tabelnaam === "positie") {
-    // De stoploss wordt niet verruimd tijdens de looptijd. Aanscherpen mag;
-    // verruimen wordt geweigerd en genoteerd (BOUWSPEC 6).
-    const stop = teSchrijven.find((t) => t.veld.kolom === "stoploss_ask");
+  // De stoploss wordt niet verruimd tijdens de looptijd. Aanscherpen mag;
+  // verruimen wordt geweigerd en genoteerd (BOUWSPEC 6).
+  if (tabelnaam === "exitregel" && huidig.soort === "stoploss") {
+    const stop = teSchrijven.find((t) => t.veld.kolom === "niveau");
     if (stop && stoplossVerruimd(stop.oudeWaarde, stop.nieuweWaarde)) {
-      await noteerGeweigerdeStoploss(env, ik, id, stop.oudeWaarde, stop.nieuweWaarde);
+      await noteerGeweigerdeStoploss(env, ik, huidig.positie, stop.oudeWaarde, stop.nieuweWaarde);
       return {
-        fout: `De stoploss staat op ask ${stop.oudeWaarde} en mag tijdens de looptijd niet verruimd worden. Aanscherpen mag wel.`,
-        veld: "stoploss_ask",
+        fout: `De stoploss staat op ${stop.oudeWaarde} en mag tijdens de looptijd niet verruimd worden. Aanscherpen mag wel.`,
+        veld: "niveau",
         status: 409,
       };
+    }
+  }
+
+  if (tabelnaam === "positie") {
+    // Het exitplan ligt er vóór de order.
+    if (teSchrijven.some((t) => t.veld.kolom === "status") &&
+        huidig.status === "besluit goedgekeurd" && straks.status !== "besluit goedgekeurd") {
+      const mist = await exitplanCompleet(env, id);
+      if (mist) return { fout: mist, veld: "status", status: 422 };
     }
 
     // Een tranche geldt pas als uitgevoerd wanneer een afwijking geduid is.
@@ -165,6 +175,11 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
   if (tabelnaam === "cyclus" &&
       teSchrijven.some((t) => ["geopend_op", "doelexpiratie", "afgesloten_op"].includes(t.veld.kolom))) {
     await vulEventsBij(env, id);
+  }
+
+  if (tabelnaam === "positie" &&
+      teSchrijven.some((t) => ["ontvangen_premie_pt", "strike"].includes(t.veld.kolom))) {
+    await herberekenExitplan(env, id, straks);
   }
 
   // De cyclus volgt zijn tranches. Loopt er één in de markt, dan staat de
@@ -349,6 +364,7 @@ export async function maakAan(env, ik, tabelnaam, body) {
   ).bind(...kolommen.map((k) => nieuw[k])).first();
 
   await auditregel(env, ik, tabelnaam, rij.id, "gebeurtenis", { gebeurtenis: "aangemaakt" }).run();
+  if (tabelnaam === "positie") await zetExitplanKlaar(env, ik, rij.id, nieuw);
   if (tabelnaam === "cyclus") await vulEventsBij(env, rij.id);
   if (tabelnaam === "event") await vulCyclitBij(env, rij.id);
   return { id: rij.id, waarschuwingen: uitslag.waarschuwingen };
