@@ -248,7 +248,7 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
              <span class="veldlabel">Expiratiedatum</span><div class="veldwaarde"><span class="alleenlezen">${moment.expiratiedatum ? toonDatum(moment.expiratiedatum) : "—"}</span></div>
            </div>
            <div class="formkolom">
-             <span class="veldlabel">Aantal contracten</span><div class="veldwaarde"><span class="alleenlezen">${toon(moment.aantal_contracten)}</span></div>
+             <span class="veldlabel">Inzet in % van het kapitaal</span><div class="veldwaarde"><span class="alleenlezen">${moment.inzet_pct === null || moment.inzet_pct === undefined ? "—" : `${toon(moment.inzet_pct)} %`}</span></div>
              <span class="veldlabel">Aanwezigen</span><div class="veldwaarde"><span class="alleenlezen">${toon(moment.aanwezigen)}</span></div>
              <span class="veldlabel">Vastgelegd op</span><div class="veldwaarde"><span class="alleenlezen">${toon(moment.vastgelegd_op)}</span></div>
            </div>
@@ -271,8 +271,8 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
              <div class="veldwaarde"><input id="u_expiratiedatum" type="date"></div>
            </div>
            <div class="formkolom">
-             <label class="veldlabel" for="u_aantal">Aantal contracten</label>
-             <div class="veldwaarde"><input id="u_aantal" type="number" step="1"></div>
+             <label class="veldlabel" for="u_inzet">Inzet in % van het kapitaal</label>
+             <div class="veldwaarde"><input id="u_inzet" type="number" step="0.1"></div>
              <label class="veldlabel" for="u_aanwezigen">Aanwezigen</label>
              <div class="veldwaarde"><input id="u_aanwezigen" type="text"></div>
              <label class="veldlabel" for="u_volgend">Volgend moment bij no-go</label>
@@ -359,7 +359,7 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
           uitkomst: lees("#u_uitkomst"),
           strike: lees("#u_strike"),
           expiratiedatum: lees("#u_expiratiedatum"),
-          aantal_contracten: lees("#u_aantal"),
+          inzet_pct: lees("#u_inzet"),
           aanwezigen: lees("#u_aanwezigen"),
           volgend_moment: lees("#u_volgend"),
           wat_veranderde: lees("#u_veranderde"),

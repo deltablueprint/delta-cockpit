@@ -297,13 +297,13 @@ export async function uitkomst(env, ik, cyclusId, body = {}) {
   const w = (k) => (body[k] === "" || body[k] === undefined ? null : body[k]);
   await env.DB.prepare(
     `update beoordelingsmoment
-        set uitkomst = ?, strike = ?, expiratiedatum = ?, aantal_contracten = ?,
+        set uitkomst = ?, strike = ?, expiratiedatum = ?, inzet_pct = ?,
             wat_veranderde = ?, aanwezigen = ?, volgend_moment = ?,
             status = 'uitkomst vastgelegd', vastgelegd_door = ?, vastgelegd_op = datetime('now'),
             revisie = revisie + 1
       where id = ?`
   ).bind(
-    keuze, w("strike"), w("expiratiedatum"), w("aantal_contracten"),
+    keuze, w("strike"), w("expiratiedatum"), w("inzet_pct"),
     w("wat_veranderde"), w("aanwezigen"), w("volgend_moment"), ik.id, moment.id
   ).run();
 

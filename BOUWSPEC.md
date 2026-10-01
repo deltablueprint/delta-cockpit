@@ -329,7 +329,7 @@ Onderaan wie er al verstuurd heeft — alleen dát, nooit wát, tot het quorum g
 - De **eventstijdslijn** met de vastgelegde behandeling per event (agendablok 2).
 - De **instapvoorwaarden** als volledige tabel: bron, drempel, gemeten waarde, gewicht, gate, status — plus de Tier-1-telling, de harde gates en **nu wel de score**, want het onthullen is geweest.
 - De **drie inzendingen onder elkaar** in de gerelateerde lijst, met de verschillen zichtbaar: positie, strike, expiratie, inzet en reden.
-- Onderaan **de uitkomst van het gesprek**: go of no-go, bij go strike, expiratie en aantal contracten, met wat het gesprek veranderde en wie aanwezig waren. Vastleggen zet de cyclus op *uitvoering ophalen*.
+- Onderaan **de uitkomst van het gesprek**: go of no-go, bij go strike, expiratiedatum en **inzet in % van het kapitaal** — dezelfde noemer als de inzendingen; het aantal contracten volgt uit de uitvoering en wordt daar vastgelegd — met wat het gesprek veranderde en wie aanwezig waren. Vastleggen zet de cyclus op *uitvoering ophalen*.
 - De drie **motiveringen** bij de inzendingen, met de intuïtieve waarneming eronder.
 
 Wat hier op het scherm staat, is wat een verandering van oordeel mag dragen: nieuwe informatie uit het gesprek, niet groepsdruk.
@@ -626,7 +626,7 @@ De go/no-go is geen aparte schermfamilie en ook geen los record dat je uit een m
 
 **4 · Go / no-go meeting.** De knop *Go / no-go meeting* opent hetzelfde scherm als bij het versturen — dezelfde tijdlijn, dezelfde voorwaarden, dezelfde technische analyse — maar nu met de gerelateerde lijst *Inzendingen* **open** eronder: ieders positie, strike, expiratie en reden naast elkaar.
 
-**5 · Eén uitkomst, geen tweede ronde.** De tweede inzendronde is vervallen: het gesprek beslist. Onderaan het meetingscherm staat één blok *Uitkomst van het gesprek* — **go** of **no-go**, en bij go de **strike**, de **expiratiedatum** en het aantal contracten, met wat het gesprek veranderde en wie aanwezig waren.
+**5 · Eén uitkomst, geen tweede ronde.** De tweede inzendronde is vervallen: het gesprek beslist. Onderaan het meetingscherm staat één blok *Uitkomst van het gesprek* — **go** of **no-go**, en bij go de **strike**, de **expiratiedatum** en de **inzet in % van het kapitaal**, met wat het gesprek veranderde en wie aanwezig waren. Het aantal contracten staat er niet: dat is wat de uitvoering teruggeeft, niet wat het gesprek besluit.
 
 **6 · Daarna luistert het systeem.** Vastleggen zet de cyclus op **uitvoering ophalen**: de brokerkoppeling wacht tot de order bij Lynx verschijnt en haalt de uitvoering binnen. De koppeling leest alleen — het systeem plaatst nooit zelf een order.
 
