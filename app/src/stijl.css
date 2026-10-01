@@ -560,7 +560,7 @@ body.sleept .lijsttabel { pointer-events: none; }
 /* Vinkje en prullenbak staan in dezelfde kolom en dus op dezelfde as:
    allebei gecentreerd, zodat ze recht onder elkaar staan. */
 .lijsttabel th.vink, .lijsttabel td.vink {
-  padding: 6px 0; text-align: center; cursor: default; overflow: visible;
+  padding: 2px 0; text-align: center; cursor: default; overflow: visible;
 }
 .lijsttabel th.vink input, .lijsttabel td.vink input { display: inline-block; vertical-align: middle; }
 .lijsttabel tr.gekozen td { background: var(--bluebg); }
@@ -572,6 +572,9 @@ body.sleept .lijsttabel { pointer-events: none; }
   border: 0; background: none; color: var(--mut);
 }
 .rlweg:hover { color: var(--red); border: 0; background: none; }
+/* Onzichtbaar, maar wel op zijn plek: zou de knop uit de regel verdwijnen,
+   dan verspringt de hele tabel zodra je een vinkje zet. */
+.rlweg.onzichtbaar { visibility: hidden; }
 .rlselectie { font-size: 11.5px; color: var(--mut); }
 .lijstmelding.vraag {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;

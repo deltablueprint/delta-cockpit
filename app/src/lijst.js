@@ -293,7 +293,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         <th class="vuller"></th>
       </tr>
       <tr class="zoekregel">
-        ${metVinkjes ? `<td class="vink"><button class="ikoonknop rlweg" id="rlweg" hidden
+        ${metVinkjes ? `<td class="vink"><button class="ikoonknop rlweg onzichtbaar" id="rlweg"
             title="Aangevinkte regels archiveren" aria-label="Aangevinkte regels archiveren">${ICOON.prullenbak}</button></td>` : ""}
         ${kolommen.map((k) => `<td><input type="text" data-kolom="${k.kolom}"
             aria-label="Zoeken in ${ontsnap(k.label)}" value="${ontsnap(toestand.filters[k.kolom] || "")}"
@@ -437,7 +437,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
 
     const bijwerken = () => {
       const n = gekozen().length;
-      if (wegknop) wegknop.hidden = n === 0;
+      if (wegknop) wegknop.classList.toggle("onzichtbaar", n === 0);
       if (telling) telling.textContent = n === 0 ? "" : `${n} aangevinkt`;
       if (alles) alles.checked = n > 0 && n === vinkjes.length;
       vinkjes.forEach((v) => v.closest("tr").classList.toggle("gekozen", v.checked));
