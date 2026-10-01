@@ -10,7 +10,7 @@
 
 import { record as haalRecord, bewaar, maakAan, nieuwSjabloon, lynxPosities } from "./api.js";
 import { lijstscherm } from "./lijst.js";
-import { lees, invoer, ontsnap } from "./veld.js";
+import { lees, invoer, ontsnap, toonDatum } from "./veld.js";
 import { volgLive, stopLive, HARTSLAG } from "./live.js";
 
 const ICOON = {
@@ -251,11 +251,14 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         return;
       }
       vak.innerHTML = `<table class="feittabel"><thead><tr>
-          <th>Contract</th><th>Strike</th><th>Expiratie</th><th>Aantal</th><th>Premie</th><th></th>
+          <th>Contract</th><th>Strike</th><th>Expiratie</th><th>Aantal</th>
+          <th>Premie per contract</th><th>Uitgevoerd</th><th></th>
         </tr></thead><tbody>${uit.posities.map((p, i) => `
-          <tr><td class="feitnaam">${ontsnap(p.contract)}</td><td>${ontsnap(p.strike)}</td>
-            <td>${ontsnap(p.expiratiedatum)}</td><td>${ontsnap(p.aantal)}</td>
-            <td>${ontsnap(p.premie_eur ?? "")}</td>
+          <tr><td class="feitnaam">${ontsnap(p.contract)}</td><td>${ontsnap(p.strike ?? "—")}</td>
+            <td>${p.expiratiedatum ? toonDatum(p.expiratiedatum) : "—"}</td>
+            <td>${ontsnap(p.aantal ?? "—")}${p.richting === "gekocht" ? ' <span class="faint">gekocht</span>' : ""}</td>
+            <td>${p.premie_eur === null || p.premie_eur === undefined ? "—" : `€ ${ontsnap(p.premie_eur)}`}</td>
+            <td>${ontsnap(p.uitvoering_op || "—")}</td>
             <td><button class="knop klein" data-kies="${i}">Deze nemen</button></td></tr>`).join("")}
         </tbody></table>`;
       vak.querySelectorAll("[data-kies]").forEach((knop) => {
