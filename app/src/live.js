@@ -1,92 +1,76 @@
-// Live waarden (etappe 6). In fase 1 hangen er nog geen feeds achter: wat het
-// scherm ververst, zijn de wijzigingen van de anderen. Dat is precies waar je
-// het voor nodig hebt als drie mensen in dezelfde cyclus werken.
+// Live waarden.
 //
-// Vier toestanden, zichtbaar in de balk bovenaan:
-//   live       · net ververst, de klok loopt
-//   bijgewerkt · stil, maar binnen de verversingstijd
-//   gepauzeerd · dit tabblad staat op de achtergrond, of je bent aan het typen
-//   offline    · de laatste poging mislukte
+// Regel: alleen velden die in de definitielaag als live gemarkeerd staan
+// worden ververst, en alleen díé waarden worden op het scherm bijgewerkt.
+// Het scherm zelf wordt nooit opnieuw opgebouwd — je mag er niets van merken.
 //
-// Verversen gebeurt nooit terwijl je in een veld staat of een cel bewerkt:
-// dan zou je eigen invoer onder je handen vandaan verdwijnen.
+// Staat er geen enkel live veld op het scherm, dan loopt er ook geen timer.
+// In fase 1 is dat overal het geval; er beweegt dus niets.
 
 const SNEL = 5000;    // in een lopende cyclus
 const TRAAG = 60000;  // daarbuiten
 
 let timer = null;
-let tempo = TRAAG;
-let ververs = null;
-let toestand = "bijgewerkt";
+let haalWaarden = null;
 let laatste = null;
 
-function elementen() {
-  return {
-    bol: document.getElementById("hartslag"),
-    tekst: document.getElementById("hartslagtekst"),
-  };
+export const HARTSLAG =
+  `<svg class="hartje" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M2 12h4l2-5 4 10 2-5h8"/></svg>`;
+
+function toonTijd() {
+  const tekst = document.getElementById("hartslagtekst");
+  const bol = document.getElementById("hartslag");
+  if (!tekst || !bol) return;
+  if (!haalWaarden) {
+    bol.className = "hartslag stil";
+    tekst.textContent = "";
+    return;
+  }
+  bol.className = "hartslag bijgewerkt";
+  tekst.textContent = laatste ? `Bijgewerkt ${laatste.toTimeString().slice(0, 8)}` : "";
 }
 
-function tijd(d) {
-  return d.toTimeString().slice(0, 8);
-}
-
-export function toonToestand(nieuw) {
-  toestand = nieuw;
-  const { bol, tekst } = elementen();
-  if (!bol || !tekst) return;
-  bol.className = `hartslag ${nieuw}`;
-  const omschrijving = {
-    live: laatste ? `Live · ${tijd(laatste)}` : "Live",
-    bijgewerkt: laatste ? `Bijgewerkt ${tijd(laatste)}` : "Bijgewerkt",
-    gepauzeerd: "Gepauzeerd",
-    offline: "Geen verbinding",
-  }[nieuw];
-  tekst.textContent = omschrijving;
-}
-
-function magVerversen() {
-  if (document.hidden) return false;
-  const a = document.activeElement;
-  if (!a) return true;
-  const typt = ["INPUT", "SELECT", "TEXTAREA"].includes(a.tagName);
-  // In het zoekveld van een lijst mag wél ververst worden; in een formulier of
-  // een cel die je aan het bewerken bent niet.
-  if (!typt) return true;
-  return a.id === "zoek";
-}
-
+// Alleen de elementen met data-live worden aangeraakt; de rest van het scherm
+// blijft staan zoals hij staat.
 async function tik() {
-  if (!ververs) return;
-  if (!magVerversen()) { toonToestand("gepauzeerd"); return; }
+  if (!haalWaarden || document.hidden) return;
+  const doelen = [...document.querySelectorAll("[data-live]")];
+  if (!doelen.length) return stopLive();
   try {
-    await ververs();
+    const waarden = await haalWaarden(doelen.map((d) => d.dataset.live));
+    for (const doel of doelen) {
+      const nieuw = waarden[doel.dataset.live];
+      if (nieuw === undefined) continue;
+      const vak = doel.querySelector(".livewaarde") || doel;
+      if (vak.textContent === String(nieuw)) continue;
+      vak.textContent = nieuw;
+      doel.classList.add("verversen");
+      setTimeout(() => doel.classList.remove("verversen"), 700);
+    }
     laatste = new Date();
-    toonToestand("live");
-    setTimeout(() => { if (toestand === "live") toonToestand("bijgewerkt"); }, 1200);
+    toonTijd();
   } catch {
-    toonToestand("offline");
+    const bol = document.getElementById("hartslag");
+    if (bol) bol.className = "hartslag offline";
   }
 }
 
-// Het scherm meldt hier wat er ververst moet worden, en hoe vaak.
-export function volgLive(functie, lopendeCyclus = false) {
-  ververs = functie;
-  tempo = lopendeCyclus ? SNEL : TRAAG;
-  if (timer) clearInterval(timer);
-  timer = setInterval(tik, tempo);
+// Een scherm meldt zich hiermee aan. Zijn er geen live velden, dan gebeurt
+// er niets — geen timer, geen verzoeken, geen beweging.
+export function volgLive(functie, snel = false) {
+  stopLive();
+  if (!document.querySelector("[data-live]")) { toonTijd(); return; }
+  haalWaarden = functie;
+  timer = setInterval(tik, snel ? SNEL : TRAAG);
   laatste = new Date();
-  toonToestand("bijgewerkt");
+  toonTijd();
 }
 
 export function stopLive() {
-  ververs = null;
   if (timer) clearInterval(timer);
   timer = null;
-  toonToestand("gepauzeerd");
+  haalWaarden = null;
+  toonTijd();
 }
 
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) toonToestand("gepauzeerd");
-  else if (ververs) tik();
-});
+document.addEventListener("visibilitychange", () => { if (!document.hidden) tik(); });

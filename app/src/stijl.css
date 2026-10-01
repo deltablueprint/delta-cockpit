@@ -202,34 +202,92 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
 }
 
 /* ============================================================================
-   Het recordscherm
+   Het recordscherm — de vorm van ServiceNow, in ons eigen palet
    ========================================================================== */
-.knoppen { margin-left: auto; display: flex; gap: 7px; }
-.knop {
-  height: 32px; padding: 0 14px; font-size: 12.5px; font-weight: 600; font-family: inherit;
-  color: #fff; background: var(--blue); border: 1px solid var(--blue); border-radius: 2px;
-  cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
+
+/* --- de balk met de naam van het record en de acties --- */
+.recordbalk {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 8px 14px; background: var(--head);
+  border: 1px solid var(--b1); border-radius: 3px 3px 0 0;
 }
+.recordnaam { font-size: 15px; font-weight: 700; color: var(--ink); }
+.recordmelding { font-size: 12px; color: var(--mut); }
+.recordacties { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+/* Alle knoppen in die balk precies even hoog, ook de links en de icoonknop. */
+.knop, .ikoonknop {
+  box-sizing: border-box; height: 30px; display: inline-flex; align-items: center;
+  justify-content: center; gap: 6px; border-radius: 2px; font-family: inherit;
+  font-size: 12.5px; line-height: 1; text-decoration: none; cursor: pointer;
+}
+.knop { padding: 0 14px; font-weight: 600; color: #fff; background: var(--blue); border: 1px solid var(--blue); }
 .knop.tweede { color: var(--ink2); background: #fff; border-color: #D8D5CE; font-weight: 400; }
+.knop.tweede:hover { border-color: var(--blue); color: var(--blue); }
 .knop.klein { height: 26px; padding: 0 11px; font-size: 12px; }
 .knop[disabled] { opacity: .6; cursor: default; }
+.ikoonknop { width: 30px; padding: 0; color: var(--mut); background: #fff; border: 1px solid #D8D5CE; }
+.ikoonknop:hover { color: var(--blue); border-color: var(--blue); }
+.ikoonknop svg { display: block; }
 
-.formulier { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 8px; margin-bottom: 10px; }
+/* --- chevrons: lichtblauw gedaan, donkerblauw waar je staat --- */
+.chevrons { display: flex; gap: 2px; background: #fff; border: 1px solid var(--b1); border-top: none; padding: 8px 12px; }
+.chevron {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  flex: 1 1 0; min-width: 0; height: 28px; padding: 0 16px 0 22px;
+  font-size: 11px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 50%, calc(100% - 11px) 100%, 0 100%, 11px 50%);
+}
+.chevron:first-child { padding-left: 14px; clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 50%, calc(100% - 11px) 100%, 0 100%); }
+.chevron:last-child { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 11px 50%); }
+.chevron.gedaan { background: #BBD6E5; color: #0B425F; }
+.chevron.nu     { background: var(--blue); color: #fff; }
+.chevron.straks { background: #E8E6E1; color: var(--faint); }
 
+/* --- het formulier: secties onder elkaar, binnen een sectie twee kolommen --- */
+.formulier {
+  display: block;
+  background: #fff; border: 1px solid var(--b1); border-top: none;
+  border-radius: 0 0 3px 3px; margin-bottom: 10px;
+}
+.formsectie { padding: 0 0 14px; }
+.formsectiekop {
+  padding: 7px 16px; margin-bottom: 12px;
+  background: var(--soft); border-top: 1px solid var(--b1); border-bottom: 1px solid var(--b1);
+  font-size: 10px; font-weight: 700; letter-spacing: 1.4px; color: var(--dim); text-transform: uppercase;
+}
+.formsectie:first-child .formsectiekop { border-top: none; }
 
+.formkolommen { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 48px; padding: 0 20px; }
+.formkolom, .formbreed {
+  display: grid; grid-template-columns: 180px minmax(0, 1fr);
+  row-gap: 10px; column-gap: 14px; align-items: center; align-content: start;
+}
+.formbreed { padding: 10px 20px 0; align-items: start; }
 
-.veldlabel { font-size: 12.5px; color: var(--mut); }
-.ster { color: var(--red); }
+.veldlabel { font-size: 12.5px; color: var(--ink2); text-align: right; line-height: 1.3; }
+.ster { color: var(--red); margin-right: 2px; }
+
+.veldwaarde { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .veldwaarde input, .veldwaarde select, .veldwaarde textarea {
-  width: 100%; height: 28px; padding: 0 9px; font-size: 12.5px; font-family: inherit; color: var(--ink);
+  box-sizing: border-box; flex: 1 1 auto; width: 100%; min-width: 0;
+  height: 28px; padding: 0 9px; font-size: 12.5px; font-family: inherit; color: var(--ink);
   background: #fff; border: 1px solid #D8D5CE; border-radius: 2px;
 }
-.veldwaarde textarea { height: auto; padding: 6px 9px; line-height: 1.45; resize: vertical; }
-.veldwaarde input:focus, .veldwaarde select:focus, .veldwaarde textarea:focus { outline: 2px solid var(--bluebg); border-color: var(--blue); }
-.alleenlezen { font-size: 12.5px; color: var(--ink2); }
+.veldwaarde textarea { height: auto; min-height: 60px; padding: 6px 9px; line-height: 1.45; resize: vertical; }
+.veldwaarde input:focus, .veldwaarde select:focus, .veldwaarde textarea:focus {
+  outline: 2px solid var(--bluebg); border-color: var(--blue);
+}
+.veldwaarde input[readonly], .alleenlezen { font-size: 12.5px; color: var(--ink2); }
 .waarschuwing { color: var(--amb); }
 .fouttekst { color: var(--red); }
 .pijlje { color: var(--faint); }
+
+@media (max-width: 1100px) {
+  .formkolommen { grid-template-columns: minmax(0, 1fr); }
+  .formkolom, .formbreed { grid-template-columns: 150px minmax(0, 1fr); }
+}
 
 /* --- gerelateerde lijsten --- */
 .tabbalk { display: flex; gap: 2px; border-bottom: 1px solid var(--b1); margin-bottom: -1px; }
@@ -240,12 +298,10 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
 }
 .tab.actief { background: #fff; border-color: var(--b1); border-bottom-color: #fff; color: var(--ink); font-weight: 700; }
 .tabtelling { font-size: 10.5px; color: var(--faint); background: var(--head); border-radius: 9px; padding: 0 6px; }
-.relatieinhoud { background: #fff; border: 1px solid var(--b1); border-radius: 0 3px 3px 3px; padding: 0; }
+.relatieinhoud { background: #fff; border: 1px solid var(--b1); border-radius: 0 3px 3px 3px; }
 .relatieinhoud.los { margin-bottom: 8px; border-radius: 3px; }
 .lijst.ingebed { border: none; }
-.rlkop {
-  display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--b1);
-}
+.rlkop { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--b1); }
 .rltitel { font-size: 12.5px; font-weight: 700; }
 .rlmeta { font-size: 11.5px; color: var(--mut); }
 .rlkop .knop { margin-left: auto; }
@@ -259,70 +315,6 @@ td.bewerkt input, td.bewerkt select {
 td.bezigcel { opacity: .6; }
 td.zojuist { background: var(--grnbg); transition: background 1s; }
 
-/* --- hartslag: hoe vers is wat je ziet (etappe 6) --- */
-.hartslagvak { display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; }
-.hartslagtekst { font-size: 11.5px; color: var(--navdim); font-variant-numeric: tabular-nums; }
-.hartslag { width: 7px; height: 7px; border-radius: 50%; background: var(--navdim); flex-shrink: 0; }
-.hartslag.live { background: #4FD39B; box-shadow: 0 0 0 3px rgba(79,211,155,.2); }
-.hartslag.bijgewerkt { background: #4FD39B; }
-.hartslag.gepauzeerd { background: var(--navdim); }
-.hartslag.offline { background: #E07A6B; }
-
-/* ============================================================================
-   Het recordscherm — de vorm van ServiceNow, in ons eigen palet
-   ========================================================================== */
-
-/* De balk met de naam van het record en de acties erin. */
-.recordbalk {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding: 9px 14px; background: var(--head); border: 1px solid var(--b1);
-  border-radius: 3px 3px 0 0;
-}
-.recordnaam { font-size: 15px; font-weight: 700; color: var(--ink); }
-.recordmelding { font-size: 12px; color: var(--mut); }
-.recordacties { margin-left: auto; display: flex; align-items: center; gap: 7px; }
-.ikoonknop {
-  height: 30px; width: 30px; display: inline-flex; align-items: center; justify-content: center;
-  background: #fff; border: 1px solid #D8D5CE; border-radius: 2px; color: var(--mut); cursor: pointer;
-}
-.ikoonknop:hover { color: var(--blue); border-color: var(--blue); }
-
-/* Chevrons: lichtblauw is gedaan, donkerblauw is waar je nu staat. */
-.chevrons { display: flex; gap: 2px; background: #fff; border: 1px solid var(--b1); border-top: none; padding: 9px 12px; }
-.chevron {
-  position: relative; display: flex; align-items: center; justify-content: center; gap: 6px;
-  flex: 1 1 0; min-width: 0; height: 30px; padding: 0 18px 0 24px;
-  font-size: 11.5px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%);
-}
-.chevron:first-child { padding-left: 16px; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%); }
-.chevron:last-child { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 12px 50%); }
-.chevron.gedaan { background: #BBD6E5; color: #0B425F; }
-.chevron.nu     { background: var(--blue); color: #fff; }
-.chevron.straks { background: #E8E6E1; color: var(--faint); }
-
-/* Het formulier: twee kolommen labels en velden, geen kaarten. */
-.formulier {
-  background: #fff; border: 1px solid var(--b1); border-top: none;
-  border-radius: 0 0 3px 3px; padding: 4px 0 14px; margin-bottom: 10px;
-}
-.formsectie { padding: 10px 16px 2px; }
-.formsectie + .formsectie { border-top: 1px solid var(--b2); padding-top: 12px; }
-.formsectiekop {
-  font-size: 9.5px; font-weight: 700; letter-spacing: 1.6px; color: var(--dim);
-  text-transform: uppercase; margin-bottom: 10px;
-}
-.formkolommen { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 34px; }
-.formkolom { display: grid; grid-template-columns: 170px minmax(0, 1fr); row-gap: 9px; column-gap: 12px; align-items: center; align-content: start; }
-.formbreed { display: grid; grid-template-columns: 170px minmax(0, 1fr); row-gap: 9px; column-gap: 12px; align-items: start; margin-top: 9px; }
-.veldlabel { font-size: 12.5px; color: var(--ink2); text-align: right; }
-.ster { color: var(--red); }
-
-@media (max-width: 1000px) {
-  .formkolommen { grid-template-columns: minmax(0, 1fr); }
-}
-
 /* --- avatars --- */
 .avatar {
   display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
@@ -333,26 +325,27 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
 .avatarknop { padding: 0; background: none; border: none; cursor: pointer; display: inline-flex; border-radius: 50%; }
 .avatarknop:hover { outline: 2px solid var(--navact); outline-offset: 1px; }
 
+/* --- live velden: alleen hier beweegt iets --- */
+.hartje-vak { display: inline-flex; align-items: center; color: var(--grnm, #17805A); flex-shrink: 0; }
+.veldwaarde.verversen .livewaarde { background: var(--grnbg); transition: background .7s; }
+.hartslag.stil { background: transparent; }
+
 /* --- inlezen uit een document --- */
 .stappen { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-.stapje {
-  font-size: 11.5px; color: var(--mut); background: var(--head);
-  border: 1px solid var(--b1); border-radius: 2px; padding: 3px 10px;
-}
+.stapje { font-size: 11.5px; color: var(--mut); background: var(--head); border: 1px solid var(--b1); border-radius: 2px; padding: 3px 10px; }
 .stapje.nu { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 700; }
 .stapje.gedaan { background: #BBD6E5; border-color: #BBD6E5; color: #0B425F; }
-
+.kaart { background: #fff; border: 1px solid var(--b1); border-radius: 3px; padding: 14px 16px; }
+.leeg { color: var(--mut); line-height: 1.6; }
 .uitleg { font-size: 12.5px; color: var(--ink3); line-height: 1.55; margin: 0 0 10px; }
-.kaart textarea { width: 100%; font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; padding: 8px; border: 1px solid #D8D5CE; border-radius: 2px; }
+.kaart textarea { width: 100%; box-sizing: border-box; font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; padding: 8px; border: 1px solid #D8D5CE; border-radius: 2px; }
 .knoprij { display: flex; gap: 8px; margin-top: 14px; }
-
 .koppeltabel { display: grid; grid-template-columns: 250px 240px minmax(0, 1fr); gap: 8px 12px; align-items: center; }
 .koppelkop { font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--dim); text-transform: uppercase; }
 .koppelveld { font-size: 12.5px; }
 .koppelhint { display: block; font-size: 11px; color: var(--mut); }
 .koppelvoorbeeld { font-size: 12px; color: var(--mut); font-family: ui-monospace, Menlo, monospace; }
 .koppeltabel select { height: 28px; width: 100%; font-size: 12.5px; font-family: inherit; border: 1px solid #D8D5CE; border-radius: 2px; background: #fff; }
-
 .botsinggroep { border: 1px solid var(--b1); border-radius: 3px; margin-bottom: 10px; }
 .botsingkop { padding: 7px 12px; background: var(--ambbg); color: var(--amb); font-size: 12px; font-weight: 700; border-bottom: 1px solid var(--b1); }
 .botsingvergelijk { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--b1); }
@@ -365,3 +358,4 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
 .botsingregel { display: flex; gap: 10px; padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--b2); }
 .botsingregel.fout { color: var(--red); }
 .uitkomstlijst { margin: 0 0 10px; padding-left: 18px; font-size: 12.5px; line-height: 1.7; }
+.fout { font-size: 12px; color: var(--red); background: var(--redbg); border-radius: 2px; padding: 9px 11px; }

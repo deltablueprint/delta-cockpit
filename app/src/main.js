@@ -4,6 +4,7 @@ import { schil, menuBijwerken, schilVergeten } from "./schil.js";
 import { lijstscherm, toestandUitUrl, huidigeLijst } from "./lijst.js";
 import { recordscherm } from "./record.js";
 import { importscherm } from "./importeren.js";
+import { stopLive } from "./live.js";
 
 let persoon = null;
 let meta = null;
@@ -19,6 +20,11 @@ function huidigeRoute() {
 // Etappe 1 kent nog geen schermen: elke route toont wat er komt.
 // Etappe 2 vult /t/<tabel> met de lijst, etappe 3 het record.
 function teken() {
+  // Elke navigatie zet eerst alle verversing stil. Een timer van het vorige
+  // scherm die daarna nog één keer tekent, zet je terug waar je vandaan kwam —
+  // precies wat er gebeurde bij "nieuwe voorwaarde".
+  stopLive();
+
   const { pad, zoekdeel } = huidigeRoute();
   const { kruimel, inhoud } = schil(persoon, meta, pad, afmelden);
 

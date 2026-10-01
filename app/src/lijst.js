@@ -18,7 +18,6 @@
 
 import { lijst as haalLijst, bewaar } from "./api.js";
 import { lees, invoer, keuzesVoor } from "./veld.js";
-import { volgLive } from "./live.js";
 
 const KLEUR = {
   groen:  ["var(--grn)",  "var(--grnbg)"],
@@ -323,12 +322,6 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       ga({ filters, offset: 0 });
     });
   });
-
-  // Zonder de hele lijst opnieuw op te bouwen opnieuw ophalen: zo zie je de
-  // wijzigingen van de anderen binnenkomen terwijl je kijkt.
-  if (!toestand.ingebed) {
-    volgLive(() => lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand));
-  }
 
   // ---- bewerken in de lijst (etappe 5) ----
   // Dubbelklik op een cel maakt er een invoerveld van. Enter of wegklikken

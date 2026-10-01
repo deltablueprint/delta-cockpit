@@ -11,7 +11,7 @@
 import { record as haalRecord, bewaar, maakAan, nieuwSjabloon } from "./api.js";
 import { lijstscherm } from "./lijst.js";
 import { lees, invoer, ontsnap } from "./veld.js";
-import { volgLive } from "./live.js";
+import { volgLive, stopLive, HARTSLAG } from "./live.js";
 
 const ICOON = {
   bijlage: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M21 11l-8.5 8.5a5 5 0 01-7-7L14 4a3.5 3.5 0 015 5l-8.5 8.5a2 2 0 01-3-3L15 6"/></svg>`,
@@ -64,11 +64,11 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
 
   const veldHtml = (v) => `
     <label class="veldlabel" for="veld-${v.kolom}">${v.verplicht ? '<span class="ster">*</span> ' : ""}${ontsnap(v.label)}</label>
-    <div class="veldwaarde">${
+    <div class="veldwaarde"${v.live ? ` data-live="${tabelnaam}.${id}.${v.kolom}"` : ""}>${
       v.alleen_lezen
-        ? `<span class="alleenlezen">${lees(v, data.waarden[v.kolom], meta, data.verwijzingen)}</span>`
+        ? `<span class="alleenlezen livewaarde">${lees(v, data.waarden[v.kolom], meta, data.verwijzingen)}</span>`
         : invoer(v, data.waarden[v.kolom], meta)
-    }</div>`;
+    }${v.live ? `<span class="hartje-vak" title="loopt live mee">${HARTSLAG}</span>` : ""}</div>`;
 
   const sectieHtml = secties.map((sectie) => {
     const eigen = velden.filter((v) => (v.sectie || "algemeen") === sectie.naam);
@@ -98,10 +98,10 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   const relatieHtml = !relaties.length ? "" : tabbladen
     ? `<div class="tabbalk">
          ${relaties.map((r) => `
-           <a href="#/t/${tabelnaam}/${id}?tab=${r.tabel}" class="tab ${r.tabel === actiefTab ? "actief" : ""}">
+           <a href="#/t/${tabelnaam}/${id}?tab=${r.tabel}" data-tabel="${r.tabel}" class="tab ${r.tabel === actiefTab ? "actief" : ""}">
              ${ontsnap(r.label)}<span class="tabtelling">${r.aantal}</span></a>`).join("")}
        </div>
-       <div id="relatie-${actiefTab}" class="relatieinhoud"></div>`
+       <div id="relatievak" class="relatieinhoud"></div>`
     : relaties.map((r) => `<div id="relatie-${r.tabel}" class="relatieinhoud los"></div>`).join("");
 
   const terugNaar = data.ouder
@@ -113,7 +113,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       <span class="recordnaam">${ontsnap(titel)}</span>
       <span class="recordmelding" id="opslagmelding"></span>
       <span class="recordacties">
-        <button class="ikoonknop" id="bijlage" title="Bijlage toevoegen" aria-label="Bijlage toevoegen">${ICOON.bijlage}</button>
+        <button class="knop tweede" id="bijlage" title="Bijlage toevoegen">${ICOON.bijlage}<span>Bijlage</span></button>
         <a class="knop tweede" href="${terugNaar.href}">${ontsnap(terugNaar.label)}</a>
         <button class="knop" id="opslaan">${isNieuw ? "Aanmaken" : "Opslaan"}</button>
       </span>
@@ -123,14 +123,41 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     ${relatieHtml}`;
 
   // ---- gerelateerde lijsten vullen ----
-  for (const r of (tabbladen ? relaties.filter((x) => x.tabel === actiefTab) : relaties)) {
-    const vak = inhoud.querySelector(`#relatie-${r.tabel}`);
-    if (!vak) continue;
+  function toonRelatie(r) {
+    const vak = inhoud.querySelector("#relatievak");
+    if (!vak) return;
     lijstscherm(vak, { textContent: "" }, r.tabel, meta, {
       q: "", sorteer: null, richting: "asc", offset: 0,
       filters: { [r.kolom]: String(id) },
       ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label },
     });
+  }
+
+  if (tabbladen) {
+    const begin = relaties.find((r) => r.tabel === actiefTab);
+    if (begin) toonRelatie(begin);
+    // Een ander tabblad kiezen wisselt alleen de inhoud van het vak. Het hele
+    // record opnieuw opbouwen liet het scherm een paar keer knipperen.
+    inhoud.querySelectorAll(".tab").forEach((tab) => {
+      tab.addEventListener("click", (e) => {
+        e.preventDefault();
+        const r = relaties.find((x) => x.tabel === tab.dataset.tabel);
+        if (!r) return;
+        inhoud.querySelectorAll(".tab").forEach((t) => t.classList.toggle("actief", t === tab));
+        history.replaceState(null, "", `#/t/${tabelnaam}/${id}?tab=${r.tabel}`);
+        toonRelatie(r);
+      });
+    });
+  } else {
+    for (const r of relaties) {
+      const vak = inhoud.querySelector(`#relatie-${r.tabel}`);
+      if (!vak) continue;
+      lijstscherm(vak, { textContent: "" }, r.tabel, meta, {
+        q: "", sorteer: null, richting: "asc", offset: 0,
+        filters: { [r.kolom]: String(id) },
+        ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label },
+      });
+    }
   }
 
   // ---- opslaan ----
@@ -184,8 +211,9 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     }
   });
 
-  if (!isNieuw) {
-    const loopt = ["go-nogo", "uitvoering ophalen", "in positie"].includes(data.waarden.status);
-    volgLive(() => recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties), loopt);
-  }
+  // Live velden: alleen waarden die als live gemarkeerd staan worden ververst,
+  // en alleen díé plekken op het scherm. In fase 1 staat er niets live, dus
+  // loopt er geen timer en beweegt er niets. Vanaf etappe 11 meldt dit scherm
+  // zich hier aan met een functie die de live waarden ophaalt.
+  stopLive();
 }
