@@ -96,13 +96,13 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     : relaties.length ? relaties[0].tabel : null;
 
   const relatieHtml = !relaties.length ? "" : tabbladen
-    ? `<div class="tabbalk">
+    ? `<div class="relatieblok"><div class="tabbalk">
          ${relaties.map((r) => `
            <a href="#/t/${tabelnaam}/${id}?tab=${r.tabel}" data-tabel="${r.tabel}" class="tab ${r.tabel === actiefTab ? "actief" : ""}">
              ${ontsnap(r.label)}<span class="tabtelling">${r.aantal}</span></a>`).join("")}
        </div>
-       <div id="relatievak" class="relatieinhoud"></div>`
-    : relaties.map((r) => `<div id="relatie-${r.tabel}" class="relatieinhoud los"></div>`).join("");
+       <div id="relatievak" class="relatieinhoud"></div></div>`
+    : `<div class="relatieblok">${relaties.map((r) => `<div id="relatie-${r.tabel}" class="relatieinhoud los"></div>`).join("")}</div>`;
 
   const terugNaar = data.ouder
     ? { href: `#/t/${data.ouder.tabel}/${data.ouder.id}`, label: `Terug naar ${data.ouder.titel}` }
@@ -129,7 +129,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     lijstscherm(vak, { textContent: "" }, r.tabel, meta, {
       q: "", sorteer: null, richting: "asc", offset: 0,
       filters: { [r.kolom]: String(id) },
-      ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label },
+      ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label, toonTelling: !tabbladen },
     });
   }
 
@@ -155,7 +155,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       lijstscherm(vak, { textContent: "" }, r.tabel, meta, {
         q: "", sorteer: null, richting: "asc", offset: 0,
         filters: { [r.kolom]: String(id) },
-        ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label },
+        ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label, toonTelling: !tabbladen },
       });
     }
   }

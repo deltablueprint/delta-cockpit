@@ -8,7 +8,11 @@ const LOGO = `<svg viewBox="0 0 296.1 251.9" width="15" height="13" aria-hidden=
   <polygon points="76.9 251.9 0 251.9 76.7 121.6 76.9 251.9" fill="#FFFFFF"/></svg>`;
 
 import { avatar, verklein } from "./avatar.js";
-import { zetAvatar } from "./api.js";
+import { zetAvatar, leesVoorkeur, zetVoorkeur } from "./api.js";
+
+const TRECHTER = `<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+  <path d="M1.5 2.5h13L9.5 8.4v4.3l-3 1.8V8.4z" fill="none" stroke="currentColor" stroke-width="1.3"
+        stroke-linejoin="round"/></svg>`;
 
 let gebouwd = null;
 
@@ -33,12 +37,22 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
 
   const mijnAvatar = () => avatar(persoon, 24);
 
-  const menu = meta.menu.map((groep) => `
-    <div class="groep">${groep.groep}</div>
-    ${groep.items.map((item) => `
-      <a href="#${item.route}" class="${item.route === actieveRoute ? "actief" : ""}">${item.label}</a>
-    `).join("")}
-  `).join("");
+  // Het menu is opgebouwd zoals de navigator die iedereen kent: bovenaan een
+  // filter, daaronder per toepassingsgroep een kop die je open- en dichtklapt,
+  // met de modules eronder. De groepen komen uit db_module; hier staat alleen
+  // hoe ze getoond worden.
+  const menu = meta.menu.map((groep, i) => `
+    <div class="menugroep" data-groep="${i}">
+      <button class="groepkop" type="button" aria-expanded="true">
+        <span class="groepnaam">${groep.groep}</span><span class="groeppijl">&rsaquo;</span>
+      </button>
+      <div class="groepitems">
+        ${groep.items.map((item) => `
+          <a href="#${item.route}" class="${item.route === actieveRoute ? "actief" : ""}"
+             data-zoek="${(item.label + " " + groep.groep).toLowerCase()}">${item.label}</a>
+        `).join("")}
+      </div>
+    </div>`).join("");
 
   wortel.innerHTML = `
     <div class="appbar">
@@ -56,7 +70,14 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
       </span>
     </div>
     <div class="romp">
-      <nav class="menu">${menu}</nav>
+      <nav class="menu">
+        <div class="menufilter">
+          ${TRECHTER}
+          <input id="menufilter" type="text" placeholder="Filter menu" aria-label="Filter menu" autocomplete="off">
+        </div>
+        <div class="menulijst" id="menulijst">${menu}</div>
+        <p class="menuleeg" id="menuleeg" hidden>Niets gevonden.</p>
+      </nav>
       <div class="werkvlak">
         <div class="kruimel" id="kruimel"></div>
         <div class="inhoud" id="inhoud"></div>
@@ -89,6 +110,59 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
       }
     });
     kiezer.click();
+  });
+
+  // ---- open- en dichtklappen, en onthouden wat jij dicht liet staan ----
+  const groepen = [...wortel.querySelectorAll(".menugroep")];
+  const dicht = new Set();
+
+  const toepassen = () => {
+    groepen.forEach((g) => {
+      const uit = dicht.has(g.querySelector(".groepnaam").textContent);
+      g.classList.toggle("dicht", uit);
+      g.querySelector(".groepkop").setAttribute("aria-expanded", uit ? "false" : "true");
+    });
+  };
+
+  leesVoorkeur("menu.dicht")
+    .then(({ waarde }) => { (waarde || []).forEach((n) => dicht.add(n)); toepassen(); })
+    .catch(() => {});
+
+  groepen.forEach((g) => {
+    g.querySelector(".groepkop").addEventListener("click", () => {
+      const naam = g.querySelector(".groepnaam").textContent;
+      if (dicht.has(naam)) dicht.delete(naam); else dicht.add(naam);
+      toepassen();
+      zetVoorkeur("menu.dicht", [...dicht]).catch(() => {});
+    });
+  });
+
+  // ---- filteren ----
+  // Typen zoekt in de naam van de module en van haar groep. Wat past blijft
+  // staan, met zijn groep opengeklapt; de rest verdwijnt zolang je typt.
+  const filter = wortel.querySelector("#menufilter");
+  const leegmelding = wortel.querySelector("#menuleeg");
+  filter.addEventListener("input", () => {
+    const woord = filter.value.trim().toLowerCase();
+    let gevonden = 0;
+    groepen.forEach((g) => {
+      let raak = 0;
+      g.querySelectorAll("a").forEach((a) => {
+        const past = !woord || a.dataset.zoek.includes(woord);
+        a.hidden = !past;
+        if (past) raak++;
+      });
+      g.hidden = raak === 0;
+      g.classList.toggle("zoekt", Boolean(woord));
+      gevonden += raak;
+    });
+    leegmelding.hidden = gevonden > 0;
+    if (!woord) toepassen();
+  });
+  filter.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    filter.value = "";
+    filter.dispatchEvent(new Event("input"));
   });
 
   gebouwd = {

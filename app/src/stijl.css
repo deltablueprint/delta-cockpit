@@ -38,19 +38,49 @@ a { color: var(--blue); }
 
 /* ---- menu links ---- */
 .romp { display: flex; flex-grow: 1; min-height: 0; }
-.menu { width: 232px; flex-shrink: 0; background: var(--navbg); overflow-y: auto; padding-bottom: 14px; }
-.menu .groep {
-  padding: 11px 12px 4px 14px; font-size: 9.5px; font-weight: 700;
-  letter-spacing: 1.3px; color: var(--navdim);
+/* De navigator: bovenaan een filter, daaronder de toepassingsgroepen met hun
+   modules. Een groep klap je dicht; wat je dichtlaat wordt onthouden. */
+.menu {
+  width: 232px; flex-shrink: 0; background: var(--navbg);
+  display: flex; flex-direction: column; min-height: 0;
 }
+.menufilter {
+  display: flex; align-items: center; gap: 7px; flex-shrink: 0;
+  margin: 8px; padding: 0 9px; height: 30px;
+  background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 2px; color: var(--navdim);
+}
+.menufilter:focus-within { border-color: #63808F; background: rgba(255, 255, 255, .11); }
+.menufilter input {
+  flex: 1 1 auto; min-width: 0; height: 100%; padding: 0; border: 0; background: none;
+  color: #fff; font-family: inherit; font-size: 12.5px; outline: none;
+}
+.menufilter input::placeholder { color: var(--navdim); }
+.menulijst { flex: 1 1 auto; overflow-y: auto; padding-bottom: 14px; }
+.menuleeg { margin: 4px 14px 14px; font-size: 12px; color: var(--navdim); }
+
+.groepkop {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px 9px 14px; background: none; border: 0; cursor: pointer;
+  font-family: inherit; font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--navdim); text-transform: uppercase; text-align: left;
+}
+.groepkop:hover { color: #fff; background: rgba(255, 255, 255, .05); }
+.groepnaam { flex: 1 1 auto; }
+.groeppijl { transform: rotate(90deg); transition: transform .12s; font-size: 13px; line-height: 1; }
+.menugroep.dicht .groeppijl { transform: rotate(0deg); }
+.menugroep.dicht .groepitems { display: none; }
+.menugroep.zoekt .groepitems { display: block; }   /* tijdens filteren staat alles open */
+
 .menu a {
-  display: flex; align-items: center; padding: 6px 10px 6px 16px;
+  display: flex; align-items: center; padding: 6px 10px 6px 24px;
   color: var(--navtxt); text-decoration: none; font-size: 12.5px;
 }
+.menu a[hidden] { display: none; }
 .menu a:hover { background: rgba(255,255,255,.06); }
 .menu a.actief {
   background: var(--navact); color: #fff; font-weight: 600;
-  padding-left: 13px; border-left: 3px solid #63808F;
+  padding-left: 21px; border-left: 3px solid #63808F;
 }
 
 /* ---- werkvlak ---- */
@@ -189,8 +219,19 @@ button[disabled] { opacity: .6; cursor: default; }
 .pijl { color: var(--blue); font-size: 9px; }
 td.gesorteerd { background: rgba(19, 98, 137, .035); }
 
-.zoekregel td { padding: 4px 5px; background: var(--soft); border-bottom: 1px solid var(--b1); }
-.zoekregel input { height: 23px; padding: 0 6px; font-size: 11px; color: var(--mut); }
+.zoekregel td {
+  padding: 4px 5px; background: var(--soft); border-bottom: 1px solid var(--b1);
+  overflow: hidden;
+}
+/* Zonder eigen maatvoering namen deze vakjes hun eigen breedte van de
+   browser. Ze liepen dan buiten hun kolom, en op de naad tussen twee
+   kolommen bleef een donker randje zichtbaar. */
+.zoekregel input {
+  box-sizing: border-box; display: block; width: 100%; min-width: 0;
+  height: 23px; padding: 0 6px; font-size: 11px; font-family: inherit; color: var(--mut);
+  background: #fff; border: 1px solid #D8D5CE; border-radius: 2px;
+}
+.zoekregel input:focus { border-color: var(--blue); outline: none; }
 
 .recordlink { font-weight: 600; text-decoration: none; }
 .recordlink:hover { text-decoration: underline; }
@@ -295,24 +336,44 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
   .formkolom, .formbreed { grid-template-columns: 150px minmax(0, 1fr); }
 }
 
-/* --- gerelateerde lijsten --- */
-.tabbalk { display: flex; gap: 2px; border-bottom: 1px solid var(--b1); margin-bottom: -1px; }
+/* --- gerelateerde lijsten ---
+   Hier moet in één oogopslag duidelijk zijn: welke lijsten hangen aan dit
+   record, in welke sta ik, en hoeveel regels zitten erin. Daarom staat de
+   tabbalk op een eigen grijze strook, draagt het actieve tabblad een blauwe
+   streep bovenaan, en herhaalt de paneelkop de naam niet nog eens klein. */
+.relatieblok { margin-top: 18px; }
+.tabbalk {
+  display: flex; gap: 2px; padding: 0 6px;
+  background: var(--soft); border: 1px solid var(--b1); border-bottom: none;
+  border-radius: 3px 3px 0 0; overflow-x: auto;
+}
 .tab {
-  display: flex; align-items: center; gap: 6px; padding: 7px 11px; white-space: nowrap;
+  display: flex; align-items: center; gap: 7px; padding: 9px 14px 8px; white-space: nowrap;
   color: var(--mut); font-size: 12.5px; text-decoration: none;
-  border: 1px solid transparent; border-radius: 3px 3px 0 0;
+  border-top: 2px solid transparent; border-bottom: 1px solid var(--b1);
 }
-.tab.actief { background: #fff; border-color: var(--b1); border-bottom-color: #fff; color: var(--ink); font-weight: 700; }
-.tabtelling { font-size: 10.5px; color: var(--faint); background: var(--head); border-radius: 9px; padding: 0 6px; }
-.relatieinhoud { background: #fff; border: 1px solid var(--b1); border-radius: 0 3px 3px 3px; }
-.relatieinhoud.los { margin-bottom: 8px; border-radius: 3px; }
+.tab:hover { color: var(--ink2); background: rgba(255, 255, 255, .55); }
+.tab.actief {
+  background: #fff; color: var(--ink); font-weight: 700;
+  border-top-color: var(--blue); border-bottom-color: #fff;
+}
+.tabtelling {
+  min-width: 18px; text-align: center; font-size: 10.5px; font-weight: 600;
+  color: var(--mut); background: #E6E3DC; border-radius: 9px; padding: 1px 6px;
+}
+.tab.actief .tabtelling { color: #fff; background: var(--blue); }
+.relatieinhoud { background: #fff; border: 1px solid var(--b1); border-top: none; border-radius: 0 0 3px 3px; }
+.relatieinhoud.los { margin-bottom: 10px; border-top: 1px solid var(--b1); border-radius: 3px; }
 .lijst.ingebed { border: none; }
+/* De kop van het paneel is de handelingsregel: hier staat wat je met deze
+   lijst kunt doen. De naam staat er één keer, de knop ernaast. */
 .rlkop {
-  display: flex; align-items: center; gap: 10px; padding: 7px 12px;
-  background: var(--head); border-bottom: 1px solid #DAD7D0;
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  background: #fff; border-bottom: 1px solid var(--b1);
 }
-.rltitel { font-size: 12.5px; font-weight: 700; }
+.rltitel { font-size: 13.5px; font-weight: 700; color: var(--ink); }
 .rlmeta { font-size: 11.5px; color: var(--mut); }
+.rlkop .knop { margin-left: 0; }
 
 /* --- bewerken in de lijst --- */
 td.bewerkt { padding: 2px 4px; background: var(--bluebg); }

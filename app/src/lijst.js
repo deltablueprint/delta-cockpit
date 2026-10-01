@@ -75,6 +75,47 @@ function waarde(veld, w, meta, rij = {}) {
 const rechtsUit = (veld) =>
   ["getal", "datum", "tijdstip"].includes(veld.type) || veld.kolom.endsWith("_pt");
 
+// ----------------------------------------------------------- kolombreedte
+// Tekst meten doe je niet op gevoel. Het werkblad hieronder rekent dezelfde
+// letters na die de browser straks tekent, zodat een kop als "Aangemaakt door"
+// niet halverwege afbreekt.
+const WERKBLAD = document.createElement("canvas").getContext("2d");
+
+function tekstbreedte(tekst, font, letterspatie = 0) {
+  if (!tekst) return 0;
+  WERKBLAD.font = font;
+  return WERKBLAD.measureText(tekst).width + letterspatie * tekst.length;
+}
+
+// Ruimte naast de tekst: de binnenmarge van de cel, het hamburgertje in de
+// kop, de sorteerpijl en de sleepgreep ernaast.
+const KOPRUIMTE = 52;
+const CELRUIMTE = 22;
+const SMALST = 92;
+const BREEDST = 360;
+
+function gemetenBreedte(kolom, index, rijen, meta) {
+  const familie = getComputedStyle(document.body).fontFamily || "sans-serif";
+  const kopfont = `700 10px ${familie}`;
+  const celfont = `${index === 0 ? "600 " : ""}12px ${familie}`;
+
+  // De kop staat in kapitalen en met wat letterruimte; zo wordt hij ook gemeten.
+  let breed = tekstbreedte(kolom.label.toUpperCase(), kopfont, 0.9) + KOPRUIMTE;
+
+  for (const rij of rijen) {
+    const tekst = platteTekst(kolom, rij[kolom.kolom], meta);
+    if (!tekst) continue;
+    let w = tekstbreedte(tekst, celfont) + CELRUIMTE;
+    if (kolom.type === "keuze") w += 16;                    // het randje om de badge
+    if (kolom.type === "verwijzing" && kolom.verwijst_naar === "gebruiker") w += 28; // de avatar
+    if (kolom.type === "tijd") w += 34;                     // de zoneafkorting erachter
+    if (w > breed) breed = w;
+  }
+
+  const bodem = parseInt(kolom.breedte, 10) || 0;
+  return Math.round(Math.min(Math.max(breed, bodem, SMALST), BREEDST));
+}
+
 // Platte tekst voor het title-attribuut, zodat afgeknotte cellen leesbaar blijven.
 function platteTekst(veld, w, meta) {
   if (w === null || w === undefined || w === "") return "";
@@ -94,6 +135,7 @@ export function toestandUitUrl(zoekdeel) {
   for (const [k, v] of p) if (k.startsWith("f.")) filters[k.slice(2)] = v;
   return {
     q: p.get("q") || "",
+    zoekkolom: p.get("zk") || null,
     sorteer: p.get("sorteer") || null,
     richting: p.get("richting") === "desc" ? "desc" : "asc",
     offset: Math.max(parseInt(p.get("offset") || "0", 10) || 0, 0),
@@ -104,6 +146,7 @@ export function toestandUitUrl(zoekdeel) {
 function urlVoor(tabelnaam, t) {
   const p = new URLSearchParams();
   if (t.q) p.set("q", t.q);
+  if (t.zoekkolom) p.set("zk", t.zoekkolom);
   if (t.sorteer) { p.set("sorteer", t.sorteer); p.set("richting", t.richting); }
   if (t.offset) p.set("offset", String(t.offset));
   for (const [k, v] of Object.entries(t.filters)) if (v) p.set(`f.${k}`, v);
@@ -151,12 +194,15 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     <div class="lijstkop">
       ${ICOON.menu}
       <span class="lijsttitel">${ontsnap(data.tabel.label_mv)}</span>
-      ${data.tabel.import_toegestaan ? `<a class="knop klein" href="#/import/${tabelnaam}">Inlezen uit document</a>` : ""}
+      ${data.tabel.nieuw_vanuit_lijst ? `<a class="knop klein" href="#/t/${tabelnaam}/nieuw">Nieuw</a>` : ""}
+      ${data.tabel.import_toegestaan ? `<a class="knop klein tweede" href="#/import/${tabelnaam}">Inlezen uit document</a>` : ""}
       <span class="zoeklabel">Zoeken</span>
       <select class="zoekveld" aria-label="Zoekveld"><option>Alle velden</option>${
         kolommen.map((k) => `<option value="${k.kolom}"${toestand.zoekkolom === k.kolom ? " selected" : ""}>${ontsnap(k.label)}</option>`).join("")
       }</select>
-      <input id="zoek" class="zoek" type="text" aria-label="Zoeken" value="${ontsnap(toestand.q)}" placeholder="Zoeken">
+      <input id="zoek" class="zoek" type="text" aria-label="Zoeken" value="${
+        ontsnap(toestand.zoekkolom ? (toestand.filters[toestand.zoekkolom] || "") : toestand.q)
+      }" placeholder="Zoeken">
       <span class="pagina">
         ${knop(ICOON.eerste, 0, toestand.offset === 0, "Eerste pagina")}
         ${knop(ICOON.vorige, Math.max(toestand.offset - PAGINA, 0), toestand.offset === 0, "Vorige pagina")}
@@ -185,14 +231,14 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       <span class="filternote">${tot === 0 ? "" : `${tot} ${tot === 1 ? "regel" : "regels"}`}</span>
     </div>`;
 
-  // Elke kolom krijgt zijn breedte uit de definitielaag; wat overblijft gaat
-  // naar een lege kolom rechts. Heeft deze gebruiker een kolom zelf versleept,
-  // dan wint die breedte — dat is van hem, niet van de tabel.
-  const standaardBreedte = (k) =>
-    k.breedte || ({ keuze: "130px", datum: "120px", tijdstip: "150px", tijd: "150px", getal: "110px", "ja_nee": "90px" }[k.type] || "180px");
-
+  // Een kolom is zo breed als wat erin staat. De kop telt mee — een kop die
+  // halverwege afbreekt is onleesbaar — en de getoonde regels tellen mee. Wat
+  // in de definitielaag staat is de ondergrens, en heeft deze gebruiker de
+  // kolom zelf versleept, dan wint zijn breedte: die is van hem.
   const eigen = await eigenBreedtes(tabelnaam);
-  const breedtes = kolommen.map((k) => eigen[k.kolom] ? `${eigen[k.kolom]}px` : standaardBreedte(k));
+  const breedtes = kolommen.map(
+    (k, i) => `${eigen[k.kolom] || gemetenBreedte(k, i, data.rijen, meta)}px`
+  );
   const minBreedte = breedtes.reduce((n, b) => n + (parseInt(b, 10) || 180), 0);
 
   const colgroup = `<colgroup>
@@ -222,7 +268,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
 
   const tbody = tot === 0
     ? `<tbody><tr><td colspan="${kolommen.length + 1}" class="geenregels">
-         ${toestand.q || chips ? "Geen regels die hieraan voldoen." : `Nog geen ${ontsnap(data.tabel.label_mv.toLowerCase())}.`}
+         ${(toestand.ingebed ? toestand.q : toestand.q || chips) ? "Geen regels die hieraan voldoen." : `Nog geen ${ontsnap(data.tabel.label_mv.toLowerCase())}.`}
        </td></tr></tbody>`
     : `<tbody>${data.rijen.map((r) => `
         <tr data-id="${r.id}">
@@ -242,7 +288,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   const relatiekop = !ingebed ? "" : `
     <div class="rlkop">
       <span class="rltitel">${ontsnap(ingebed.label || data.tabel.label_mv)}</span>
-      <span class="rlmeta">${tot} ${tot === 1 ? ontsnap(data.tabel.label.toLowerCase()) : ontsnap(data.tabel.label_mv.toLowerCase())}</span>
+      ${ingebed.toonTelling ? `<span class="rlmeta">${tot} ${tot === 1 ? ontsnap(data.tabel.label.toLowerCase()) : ontsnap(data.tabel.label_mv.toLowerCase())}</span>` : ""}
       <a class="knop" href="#/t/${tabelnaam}/nieuw?ouder=${ingebed.ouder.tabel}:${ingebed.ouder.id}">Nieuw</a>
     </div>`;
 
@@ -280,13 +326,41 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     lijstscherm(inhoud, kruimel, tabelnaam, meta, volgende);
   };
 
+  // Een ingebedde lijst heeft geen werkbalk en dus geen algemeen zoekveld.
+  // Zonder deze controle struikelde alles wat hierna wordt aangesloten —
+  // zoeken per kolom, sorteren, bewerken — op een element dat er niet is.
   const zoek = inhoud.querySelector("#zoek");
-  let klok;
-  zoek.addEventListener("input", () => {
-    clearTimeout(klok);
-    klok = setTimeout(() => ga({ q: zoek.value.trim(), offset: 0 }), 300);
-  });
-  zoek.addEventListener("keydown", (e) => { if (e.key === "Enter") { clearTimeout(klok); ga({ q: zoek.value.trim(), offset: 0 }); } });
+  if (zoek) {
+    // Het rolmenu ernaast zegt wáár gezocht wordt. Staat er een kolom, dan
+    // gaat de tekst als filter naar die kolom; staat er 'Alle velden', dan
+    // gaat ze als vrije zoekterm naar de hele rij.
+    const zoekGa = () => {
+      const tekst = zoek.value.trim();
+      if (toestand.zoekkolom) {
+        const filters = { ...toestand.filters };
+        if (tekst) filters[toestand.zoekkolom] = tekst; else delete filters[toestand.zoekkolom];
+        ga({ filters, offset: 0 });
+      } else {
+        ga({ q: tekst, offset: 0 });
+      }
+    };
+
+    let klok;
+    zoek.addEventListener("input", () => { clearTimeout(klok); klok = setTimeout(zoekGa, 300); });
+    zoek.addEventListener("keydown", (e) => { if (e.key === "Enter") { clearTimeout(klok); zoekGa(); } });
+
+    const zoekveld = inhoud.querySelector(".zoekveld");
+    if (zoekveld) {
+      zoekveld.addEventListener("change", () => {
+        const kolom = zoekveld.selectedIndex === 0 ? null : zoekveld.value;
+        const tekst = zoek.value.trim();
+        const filters = { ...toestand.filters };
+        if (toestand.zoekkolom) delete filters[toestand.zoekkolom];
+        if (kolom && tekst) filters[kolom] = tekst;
+        ga({ zoekkolom: kolom, q: kolom ? "" : tekst, filters, offset: 0 });
+      });
+    }
+  }
 
   inhoud.querySelectorAll(".zoekregel input").forEach((el) => {
     let k2;
@@ -422,7 +496,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   });
 
   // De cursor terug in het veld waar hij stond, anders is typen onmogelijk.
-  if (laatsteFocus === "q") {
+  if (laatsteFocus === "q" && zoek) {
     zoek.focus();
     zoek.setSelectionRange(zoek.value.length, zoek.value.length);
   } else if (laatsteFocus) {

@@ -5,7 +5,7 @@
 //      kunnen geschreven worden.
 
 import { toets } from "./regels.js";
-import { vulEventsBij } from "./events.js";
+import { vulEventsBij, vulCyclitBij } from "./events.js";
 
 async function veldenVan(env, tabelnaam) {
   return (await env.DB.prepare(
@@ -209,6 +209,13 @@ export async function maakAan(env, ik, tabelnaam, body) {
     nieuw.aangemaakt_door = ik.id;
   }
 
+  // Onder welke versie van de instellingen dit record ontstaat, zet het
+  // systeem zelf. Dat is een feit over het moment, geen keuze van wie klikt.
+  if (velden.some((v) => v.kolom === "configuratieversie") && !nieuw.configuratieversie) {
+    const versie = await env.DB.prepare("select max(nummer) as nu from configuratieversie").first();
+    if (versie && versie.nu) nieuw.configuratieversie = versie.nu;
+  }
+
   const kolommen = Object.keys(nieuw);
   if (!kolommen.length) return { fout: "Niets om op te slaan.", status: 400 };
 
@@ -219,6 +226,7 @@ export async function maakAan(env, ik, tabelnaam, body) {
 
   await auditregel(env, ik, tabelnaam, rij.id, "gebeurtenis", { gebeurtenis: "aangemaakt" }).run();
   if (tabelnaam === "cyclus") await vulEventsBij(env, rij.id);
+  if (tabelnaam === "event") await vulCyclitBij(env, rij.id);
   return { id: rij.id, waarschuwingen: uitslag.waarschuwingen };
 }
 

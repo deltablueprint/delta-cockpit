@@ -6,6 +6,8 @@
 // Er wordt niets overschreven zonder dat iemand dat per regel heeft gezegd,
 // en elke import laat een spoor na in de audit trail.
 
+import { vulCycliBijVoorPeriode } from "./events.js";
+
 const TOEGESTAAN = ["datum", "tijdstip", "naam", "soort", "zwaarte", "toelichting", "tijdzone"];
 
 function schoon(rij) {
@@ -83,5 +85,11 @@ export async function uitvoeren(env, ik, regels) {
   }
 
   if (opdrachten.length) await env.DB.batch(opdrachten);
+
+  // Wat erbij komt, hoort meteen zichtbaar te zijn in de cycli waarvan de
+  // looptijd eroverheen loopt. Anders moet je na elke import elke cyclus nog
+  // eens aanraken voor je ziet wat er speelt.
+  await vulCycliBijVoorPeriode(env, regels.map((r) => schoon(r.rij || {}).datum).filter(Boolean));
+
   return { toegevoegd, vervangen, overgeslagen };
 }

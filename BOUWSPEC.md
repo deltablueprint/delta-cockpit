@@ -1,10 +1,12 @@
 # Delta Blueprint — bouwspecificatie operationeel dashboard
 
-**Versie 3.5 · 1 oktober 2026**
+**Versie 3.6 · 1 oktober 2026**
 
 Dit bestand is de geconsolideerde bron waarop het bouwen zich baseert. Besluiten worden genomen in het bouwplan-document en in het go/no-go-protocol van Jacqueline; dit bestand is het resultaat daarvan, bijgewerkt zodra er iets verandert. Wijkt dit bestand af van een genomen besluit, dan is dit bestand verouderd en moet het worden bijgewerkt — niet het besluit.
 
 Openstaande punten staan als **OPEN** gemarkeerd en mogen niet stilzwijgend worden ingevuld tijdens het bouwen.
+
+*In versie 3.6 zijn de weging per cyclus (3.2, 3.3), het automatisch bijvullen van events, de gemeten kolombreedte, *Nieuw* vanuit een zelfstandige lijst en de duidelijker gerelateerde lijsten vastgelegd (10.0c).*
 
 *In versie 3.1 zijn hoofdstuk 3 (datamodel), 5 (go/no-go) en 13 (bouwvolgorde) gelijkgetrokken met de flow uit 10.0e en 10.0f: `voorstel` en `voorgenomen_positie` zijn vervangen door `inzending`, `besluit` door `beoordelingsmoment`, `besluit_voorwaarde` door `moment_voorwaarde`, de tweede oordeelsronde is vervallen en het quorum staat op de processtap. Er staan geen twee generaties meer naast elkaar.*
 
@@ -79,8 +81,8 @@ Gevolg voor het model: `cyclus` krijgt een uniciteitsregel op status — hoogste
 | `handelsdag` | Eén kalenderdag van één beurs | Datum, beurs, status (open / dicht / halve dag), openingstijd, sluitingstijd, bron (import of handmatig) |
 | `portefeuille_instelling` | De sizing- en bufferafspraken, met geldigheid | Kapitaal, maximale inzet in %, minimale reserve in %, maximale inzet per cyclus in %, overschrijding waarschuwt of blokkeert, geldig vanaf, wie |
 | `moment_voorwaarde` | *Fase 2.* Eén regel van de voorwaardentabel zoals ze bij één beoordelingsmoment stond | Beoordelingsmoment, voorwaarde, naam, bron, drempel, gemeten waarde, meettijdstip, gewicht, harde gate, status |
-| `event` | Eén gebeurtenis in de kalender | Datum, tijdstip, naam, soort, zwaarte (laag/medium/hoog), standaardzwaarte overschreven ja/nee, bron, wie de zwaarte zette |
-| `cyclus_event` | De behandeling van één event binnen één cyclus | Cyclus, event, behandeling, motivering, wie, wanneer |
+| `event` | Eén gebeurtenis in de kalender | Datum, tijdstip (lokaal) met tijdzone, naam, soort, **zwaarte (algemeen)** — hoe zwaar deze gebeurtenis in het algemeen weegt —, bron, wie de zwaarte zette |
+| `cyclus_event` | De behandeling van één event binnen één cyclus | Cyclus, event, **zwaarte in deze cyclus**, **waarom afwijkend**, behandeling, motivering, wie, wanneer |
 | `inzending` | De blind verstuurde positie van één co-founder op één beoordelingsmoment | Cyclus, beoordelingsmoment, deelnemer, status (concept / verstuurd), positie (go of no-go), **strike**, **expiratiedatum**, **inzet in % van het kapitaal**, reden (verplicht bij no-go), motivering, intuïtieve waarneming, **wat ik zag** (de stand van de markt op het moment van versturen), verstuurd op. Afgeleid bij het versturen en meebewaard: aantal contracten, verwachte premie in punten en in euro, delta, theta, impliciete volatiliteit, skew, afstand tot de markt, buffer in procent, verhouding premie/risico |
 | `positie` | Eén **uitgevoerde** tranche | Cyclus, beoordelingsmoment, volgnummer van de tranche, contract, strike, expiratie, aantal, ontvangen premie, delta, theta, impliciete volatiliteit, skew, afstand tot de markt, buffer in procent, verhouding premie/risico, **status** (order geplaatst / uitvoering importeren / bewaken / uitkomst vastleggen / gesloten), **exitplan als velden**: stoploss (altijd ask 60,0), winstanker in % van de ontvangen premie, break-even, eventregel; uitvoeringstijdstip, sluittijdstip, herkomst (broker/handmatig), doorgerold naar, **afwijking van besluit ja/nee**, **soort afwijking**, **toelichting bij afwijking** |
 | `meting` | Eén uitlezing van een bron | Bron, waarde, tijdstip, geslaagd ja/nee, spreadbreedte, binnen handelsuren |
@@ -92,6 +94,8 @@ Gevolg voor het model: `cyclus` krijgt een uniciteitsregel op status — hoogste
 ### 3.3 Relaties met betekenis
 
 - `event` staat **buiten** de cycli. Een cyclus bezit geen events; hij heeft een periode. De koppeling met een beoordeling loopt via `cyclus_event`.
+- **De zwaarte wordt twee keer beoordeeld, en dat is geen doublure.** Op het `event` staat de algemene zwaarte: hoe zwaar een ECB-vergadering doorgaans weegt. Op `cyclus_event` staat de zwaarte *in deze cyclus*: dezelfde vergadering is zwaar vlak voor de expiratie en licht als ze aan het begin van de looptijd valt. De algemene zwaarte is de beginwaarde van de cyclusspecifieke; wijkt iemand ervan af, dan hoort daar een reden bij (een waarschuwing, geen blokkade). Een zwaarte op het event aanpassen mag nooit het oordeel in een lopende cyclus veranderen — dat was de reden om dit te splitsen.
+- **De koppeling vult zichzelf, het oordeel niet.** Bij het aanmaken van een cyclus, bij het verschuiven van haar doelexpiratie, en bij elk event dat erbij komt (met de hand of uit een document), zet het systeem de ontbrekende `cyclus_event`-regels klaar voor alles wat binnen de looptijd valt. Behandeling blijft `nog te wegen` tot een mens hem zet. Wat door een datumwijziging buiten de periode valt, blijft staan: daar is over nagedacht.
 - **Voornemen en uitvoering zijn twee tabellen.** Een `inzending` is wat iemand vóór het gesprek voorstelt; een `positie` is wat er daarna werkelijk in de markt staat. De positie verwijst naar het `beoordelingsmoment` waar ze uit voortkomt, niet naar een inzending — de uitkomst is van de groep, niet van één persoon. Eén tabel voor beide zou betekenen dat de blindering van inzendingen langs de achterdeur van een positielijst kan lekken.
 - **De blindering zit op `inzending`.** Zolang het quorum van het beoordelingsmoment niet gehaald is, geeft de API van andermans inzending alleen deelnemer, status en tijdstip terug — positie, strike, expiratie, inzet en reden niet, via welk endpoint dan ook.
 - `handelsdag` is de enige bron voor "handelsdagen" en "binnen handelsuren". Geen enkele regel rekent die zelf uit.
@@ -731,12 +735,13 @@ De applicatie kent een klein aantal **vaste componenten**. Wie een scherm bouwt 
 
 **De lijst** (één vorm voor elke tabel, zoals *Posities*):
 
-- **Werkbalk**: menu-icoon, naam van de tabel, de acties van de lijst, het woord *Zoeken* met een kolomkeuze en een zoekveld, en rechts de paginateller (“1 tot 50 van 70”) met knoppen om te bladeren.
+- **Werkbalk**: menu-icoon, naam van de tabel, de acties van de lijst, het woord *Zoeken* met een kolomkeuze en een zoekveld, en rechts de paginateller (“1 tot 50 van 70”) met knoppen om te bladeren. De **kolomkeuze stuurt waar gezocht wordt**: *Alle velden* zoekt over de hele regel, een gekozen kolom zet de tekst als filter op die kolom — hetzelfde filter dat ook in de filterrij verschijnt, zodat er maar één waarheid is.
 - **Filterbalk**: trechtericoon, *Alle*, de actieve voorwaarden als chips, *+ voorwaarde*, en rechts ruimte voor één toelichtende zin.
 - **Kolomkop**: grijze balk met selectievakje, zoekicoon, en per kolom een greepje, de kolomnaam in kleinkapitaal en een sorteerpijl op de gesorteerde kolom.
 - **Filterrij**: per kolom een smal invoerveld met *Zoeken*.
 - **Rijen**: de cellen, zonder selectievakje of info-icoon — die leidden nergens heen. De eerste kolom is een link naar het record; een rij die aandacht vraagt krijgt een zachte gele achtergrond. Dubbelklikken op een cel bewerkt haar ter plekke.
-- **Kolombreedte** komt uit `db_field.breedte`, en wat iemand zelf versleept wordt per persoon onthouden in `gebruiker_voorkeur` — het is een voorkeur, geen eigenschap van de gegevens.
+- **Kolombreedte wordt gemeten, niet geraden.** De breedte volgt uit de breedste van twee dingen: de kolomkop (een kop die halverwege afbreekt is onleesbaar) en de getoonde waarden, met ruimte voor wat erbij hoort — de badge van een keuze, de avatar bij een persoon, de zoneafkorting bij een tijd. `db_field.breedte` is daarbij de **ondergrens**, niet de uitkomst; er geldt een minimum van 92 en een maximum van 360 pixels. Wat iemand zelf versleept wint van alles en wordt per persoon onthouden in `gebruiker_voorkeur` — dat is een voorkeur, geen eigenschap van de gegevens.
+- **Nieuw vanuit de lijst** staat in de werkbalk, maar alleen waar het mag: `db_table.nieuw_vanuit_lijst` zegt per tabel of een record zonder ouder gemaakt kan worden. Dat staat aan voor de zelfstandige tabellen (cycli, events) en uit voor kindtabellen — die worden gemaakt vanaf hun ouder (regel 10.0). Of het knopje er staat is dus definitie, geen code.
 
 **Waar een actieknop staat.** Dit onderscheid is bindend, want het zegt waar je moet kijken:
 
@@ -748,22 +753,24 @@ De applicatie kent een klein aantal **vaste componenten**. Wie een scherm bouwt 
 
 De vorm van de knop is overal dezelfde — één hoogte, één stijl, primair donkerblauw en secundair wit. Alleen de plaats verschilt, en die volgt uit het soort scherm. Een lijst heeft geen recordbalk, dus daar hoort de actie in de werkbalk; een record heeft er een, dus daar hoort hij rechtsboven.
 
-**De gerelateerde lijst** (één vorm voor elk recordscherm, zoals op de cyclus):
+**De gerelateerde lijst** (één vorm voor elk recordscherm, zoals op de cyclus). Hier moet in één oogopslag te zien zijn welke lijsten aan dit record hangen, in welke je staat, en hoeveel regels erin zitten:
 
-- **Tabbladen** boven het paneel, met per tab een teller; de actieve tab is wit met een blauwe bovenrand.
-- **Paneelkop**: titel, een grijze meta-regel, eventueel één gekleurde aanvulling, en rechts één knop voor de actie van die lijst.
+- **Tabbladen** op een eigen grijze strook boven het paneel, met per tab een teller in een pil. Het actieve tabblad is wit, vet, draagt een blauwe streep bovenaan en zijn teller is blauw; de strook sluit naadloos aan op het witte paneel eronder.
+- **Paneelkop**: de naam van de lijst één keer — niet nog eens klein herhaald onder het tabblad dat hem al toont — met daarnaast de knop voor de actie van die lijst (*Nieuw*, met de ouder al ingevuld). Staat er maar één gerelateerde lijst en dus geen tabbalk, dan staat de teller wél in de kop.
+- **Lege lijst**: *Nog geen voorwaarden* zolang er niet gezocht wordt. Het ouderfilter van een gerelateerde lijst is geen zoekopdracht van de gebruiker en levert dus niet de melding *geen regels die hieraan voldoen*.
 - **Tabel** zonder selectievakjes en zonder filterrij — dit is een deellijst binnen één record, geen zelfstandige tabel.
 
 Beide componenten staan als functie in de gedeelde laag. Een nieuw scherm roept die aan en geeft alleen kolommen en rijen mee.
 
 - Drie zones: navigatiekolom links, breadcrumb bovenaan, inhoud daaronder. De navigatie leest `db_module`.
+- **De navigatiekolom is een navigator, geen lijstje links.** Bovenaan een **filterveld**: typen zoekt in de naam van de module én van haar groep, laat alleen wat past staan en klapt alles open zolang je typt; Escape maakt het veld leeg. Daaronder per groep een **kop die je open- en dichtklapt** met de modules eronder. Wat iemand dichtlaat staan wordt per persoon onthouden in `gebruiker_voorkeur` (`menu.dicht`). Welke groepen en modules er zijn, blijft `db_module` — dit gaat alleen over hoe ze getoond worden.
 - **Onder BEHEER staat alleen inrichting** (bouwstenen, tabellen en velden, standaardset, rollen). Operationele records worden nooit vanuit het menu aangemaakt.
 - **Een nieuwe instapvoorwaarde maak je op de cyclus**, via *Nieuw* in het tabblad Instapvoorwaarden. Het formulier opent met de cyclus als ouder; de breadcrumb is Cycli › cyclus › Instapvoorwaarden › Nieuw. Hetzelfde geldt voor uitstapvoorwaarden, chartanalyses en events-behandelingen.
 - Lijst → record → gerelateerde records. Elke tabel inline bewerkbaar. De URL draagt de staat.
 - **Eén cyclusscherm.** Formulier met de cyclusvelden bovenaan, daaronder alle gerelateerde lijsten als **tabbladen** in één paneel: Posities · Uitstapvoorwaarden · Instapvoorwaarden · Technische analyse · Events · Besluiten · Metingen · Publicaties. Uitstap staat vóór instap (4.6) en *Voorstellen* is opgegaan in *Besluiten*. Eén tab tegelijk zichtbaar, met teller per tab. Geen aparte schermen per gerelateerde lijst.
 - Het tabblad *Technische analyse* bevat een uploadzone voor chart-printscreens en één regel per chart met de parameters (zie 4.3b).
 - Het overzichtsscherm draagt een **portefeuillestrook** (ingezet, reserve, blootstelling, bijdragende cycli) — zie 6.1.
-- Bij elke score staat de **configuratieversie**. Een grafiek van scores over cycli heen wordt onderbroken waar de versie wisselt.
+- Bij elke score staat de **configuratieversie**. Een grafiek van scores over cycli heen wordt onderbroken waar de versie wisselt. Het veld staat **niet op het formulier**: welke versie gold toen een cyclus ontstond, stempelt het systeem erop. Het is een feit over het moment, geen keuze van wie klikt.
 - Live velden dragen een hartslagicoon: 5 s in een lopende cyclus, 60 s daarbuiten, uit de cache van de worker.
 - Ongeslagen wijzigingen blokkeren navigatie met een waarschuwing.
 - Het go/no-go-scherm opent met de eventstijdslijn, daaronder de instapvoorwaarden en de technische analyse (alle drie alleen-lezen, zie 5.2), dan de inzendingen en, op het meetingscherm, de uitkomst van het gesprek.
