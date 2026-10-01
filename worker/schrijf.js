@@ -133,6 +133,22 @@ export async function archiveer(env, ik, tabelnaam, ids, reden) {
     return { fout: `${tabel.label_mv} hebben geen archiefkolom.`, status: 400 };
   }
 
+  // Een verstuurde inzending staat vast — ook voor wie opruimt. Is het moment
+  // zelf verkeerd, dan archiveer je het moment; dan gaat wat eraan hangt mee
+  // uit beeld zonder dat iemands oordeel verdwijnt.
+  if (tabelnaam === "inzending") {
+    const plek = ids.map(() => "?").join(", ");
+    const vast = await env.DB.prepare(
+      `select count(*) as n from inzending where id in (${plek}) and status = 'verstuurd'`
+    ).bind(...ids).first();
+    if (vast && vast.n) {
+      return {
+        fout: "Een verstuurde inzending staat vast. Is het moment zelf verkeerd, archiveer dan het beoordelingsmoment.",
+        status: 409,
+      };
+    }
+  }
+
   const plekken = ids.map(() => "?").join(", ");
   await env.DB.batch([
     env.DB.prepare(`update "${tabelnaam}" set archief = 1 where id in (${plekken})`).bind(...ids),

@@ -16,7 +16,7 @@
 // Rijen die elk hun eigen raster zijn vallen per rij anders uit — dat was fout.
 // ============================================================================
 
-import { lijst as haalLijst, bewaar, leesVoorkeur, zetVoorkeur } from "./api.js";
+import { lijst as haalLijst, bewaar, archiveer, leesVoorkeur, zetVoorkeur } from "./api.js";
 import { lees, invoer, keuzesVoor } from "./veld.js";
 
 const KLEUR = {
@@ -33,6 +33,7 @@ const ICOON = {
   trechter:  `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#136289" stroke-width="1.8" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>`,
   info:      `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#136289" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".7" fill="#136289"/></svg>`,
   menu:      `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#6E6C68" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>`,
+  prullenbak:`<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M10 7V5h4v2M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>`,
   vorige:    `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`,
   volgende:  `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>`,
   eerste:    `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M18 6l-6 6 6 6M8 6v12"/></svg>`,
@@ -253,8 +254,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         <button class="chipweg" data-kolom="__q" aria-label="Zoekterm weghalen">&times;</button></span>` : ""}
       ${chips}
       <span class="filternote">${tot === 0 ? "" : `${tot} ${tot === 1 ? "regel" : "regels"}`}</span>
-    </div>
-    <div class="lijstmelding" id="lijstmelding" hidden></div>`;
+    </div>`;
 
   // Een kolom is zo breed als wat erin staat. De kop telt mee — een kop die
   // halverwege afbreekt is onleesbaar — en de getoonde regels tellen mee. Wat
@@ -264,9 +264,17 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   const breedtes = kolommen.map(
     (k, i) => `${eigen[k.kolom] || gemetenBreedte(k, i, data.rijen, meta, data.verwijzingen || {})}px`
   );
-  const minBreedte = breedtes.reduce((n, b) => n + (parseInt(b, 10) || 180), 0);
+  const minBreedte = breedtes.reduce((n, b) => n + (parseInt(b, 10) || 180), 0)
+    + (toestand.ingebed ? 34 : 0);
+
+  // In een gerelateerde lijst kun je regels aanvinken en archiveren: daar maak
+  // je ze aan, dus daar ruim je een vergissing ook op. Verwijderen bestaat
+  // niet — een gearchiveerde regel verdwijnt uit beeld maar blijft bestaan,
+  // met wie hem weghaalde in de audit trail (hard uitgangspunt 1).
+  const metVinkjes = Boolean(toestand.ingebed);
 
   const colgroup = `<colgroup>
+      ${metVinkjes ? `<col style="width:34px">` : ""}
       ${breedtes.map((b) => `<col style="width:${ontsnap(b)}">`).join("")}
       <col>
     </colgroup>`;
@@ -274,6 +282,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   const thead = `
     <thead>
       <tr class="kopregel">
+        ${metVinkjes ? `<th class="vink"><input type="checkbox" class="vinkalles" aria-label="Alles aanvinken"></th>` : ""}
         ${kolommen.map((k) => `
           <th class="${rechtsUit(k) ? "rechts " : ""}${toestand.sorteer === k.kolom ? "gesorteerd" : ""}" data-kolom="${k.kolom}"
               aria-sort="${toestand.sorteer === k.kolom ? (toestand.richting === "desc" ? "descending" : "ascending") : "none"}">
@@ -284,6 +293,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         <th class="vuller"></th>
       </tr>
       <tr class="zoekregel">
+        ${metVinkjes ? `<td class="vink"></td>` : ""}
         ${kolommen.map((k) => `<td><input type="text" data-kolom="${k.kolom}"
             aria-label="Zoeken in ${ontsnap(k.label)}" value="${ontsnap(toestand.filters[k.kolom] || "")}"
             placeholder="Zoeken"${k.type === "datum" || k.type === "tijdstip" ? ' title="Bijvoorbeeld: 2026 · jul · jul 2026 · 6 jul 2026 · 202607 · 6/7/2026"' : ""}></td>`).join("")}
@@ -304,11 +314,12 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   };
 
   const tbody = tot === 0
-    ? `<tbody><tr><td colspan="${kolommen.length + 1}" class="geenregels">
+    ? `<tbody><tr><td colspan="${kolommen.length + (metVinkjes ? 2 : 1)}" class="geenregels">
          ${(toestand.ingebed ? toestand.q : toestand.q || chips) ? "Geen regels die hieraan voldoen." : `Nog geen ${ontsnap(data.tabel.label_mv.toLowerCase())}.`}
        </td></tr></tbody>`
     : `<tbody>${data.rijen.map((r) => `
         <tr data-id="${r.id}">
+          ${metVinkjes ? `<td class="vink"><input type="checkbox" class="vinkrij" data-id="${r.id}" aria-label="Deze regel aanvinken"></td>` : ""}
           ${kolommen.map((k, i) => {
             const tip = platteTekst(k, r[k.kolom], meta, data.verwijzingen || {});
             return `<td data-kolom="${k.kolom}" class="${rechtsUit(k) ? "rechts " : ""}${toestand.sorteer === k.kolom ? "gesorteerd" : ""}"${tip ? ` title="${ontsnap(tip)}"` : ""}>${
@@ -327,6 +338,9 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       <span class="rltitel">${ontsnap(ingebed.label || data.tabel.label_mv)}</span>
       ${ingebed.toonTelling ? `<span class="rlmeta">${tot} ${tot === 1 ? ontsnap(data.tabel.label.toLowerCase()) : ontsnap(data.tabel.label_mv.toLowerCase())}</span>` : ""}
       <a class="knop" href="#/t/${tabelnaam}/nieuw?ouder=${ingebed.ouder.tabel}:${ingebed.ouder.id}">Nieuw</a>
+      <button class="ikoonknop rlweg" id="rlweg" hidden title="Aangevinkte regels archiveren"
+              aria-label="Aangevinkte regels archiveren">${ICOON.prullenbak}</button>
+      <span class="rlselectie" id="rlselectie"></span>
     </div>`;
 
   inhoud.innerHTML = (ingebed ? "" : `
@@ -335,6 +349,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       <span class="sub">${tot} ${tot === 1 ? "regel" : "regels"}</span>
     </div>`) + `
     <div class="lijst${ingebed ? " ingebed" : ""}">${relatiekop}${ingebed ? (chips || toestand.q ? filterrij : "") : toolbar + filterrij}
+      <div class="lijstmelding" id="lijstmelding" hidden></div>
       <div class="tabelomhulsel"><table class="lijsttabel" style="min-width:${minBreedte}px">${colgroup}${thead}${tbody}</table></div>
     </div>`;
 
@@ -411,6 +426,59 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       }, 300);
     });
   });
+
+  // ---- aanvinken en archiveren in een gerelateerde lijst ----
+  if (metVinkjes) {
+    const alles = inhoud.querySelector(".vinkalles");
+    const vinkjes = [...inhoud.querySelectorAll(".vinkrij")];
+    const wegknop = inhoud.querySelector("#rlweg");
+    const telling = inhoud.querySelector("#rlselectie");
+
+    const gekozen = () => vinkjes.filter((v) => v.checked).map((v) => Number(v.dataset.id));
+
+    const bijwerken = () => {
+      const n = gekozen().length;
+      if (wegknop) wegknop.hidden = n === 0;
+      if (telling) telling.textContent = n === 0 ? "" : `${n} aangevinkt`;
+      if (alles) alles.checked = n > 0 && n === vinkjes.length;
+      vinkjes.forEach((v) => v.closest("tr").classList.toggle("gekozen", v.checked));
+    };
+
+    vinkjes.forEach((v) => v.addEventListener("change", bijwerken));
+    if (alles) {
+      alles.addEventListener("change", () => {
+        vinkjes.forEach((v) => { v.checked = alles.checked; });
+        bijwerken();
+      });
+    }
+
+    if (wegknop) {
+      wegknop.addEventListener("click", () => {
+        const ids = gekozen();
+        if (!ids.length) return;
+        const vak = inhoud.querySelector("#lijstmelding");
+        vak.hidden = false;
+        vak.className = "lijstmelding vraag";
+        vak.innerHTML = `
+          <span>${ids.length === 1 ? "Deze regel" : `Deze ${ids.length} regels`} archiveren?
+            Hij verdwijnt uit de lijst maar blijft bestaan — niets wordt verwijderd.</span>
+          <button class="knop klein" id="wegja">Archiveren</button>
+          <button class="knop klein tweede" id="wegnee">Annuleren</button>`;
+        vak.querySelector("#wegnee").addEventListener("click", () => { vak.hidden = true; });
+        vak.querySelector("#wegja").addEventListener("click", async () => {
+          vak.querySelector("#wegja").disabled = true;
+          try {
+            await archiveer(tabelnaam, ids);
+            vak.hidden = true;
+            lijstscherm(inhoud, kruimel, tabelnaam, meta, { ...toestand, offset: 0 });
+          } catch (fout) {
+            vak.className = "lijstmelding fouttekst";
+            vak.textContent = fout.message;
+          }
+        });
+      });
+    }
+  }
 
   inhoud.querySelectorAll("th[data-kolom]").forEach((el) => {
     el.addEventListener("click", () => {

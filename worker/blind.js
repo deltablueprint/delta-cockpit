@@ -25,12 +25,28 @@ async function openMomenten(env, ids) {
 export async function schermAf(env, ik, tabelnaam, rijen) {
   if (tabelnaam !== "inzending" || !rijen || !rijen.length) return rijen;
 
-  const ids = [...new Set(rijen.map((r) => r.beoordelingsmoment).filter(Boolean))];
+  // Een lijst toont niet alle kolommen, dus bij wie een inzending hoort staat
+  // er niet altijd bij. Dan haalt de regel die context zelf op: zonder die
+  // vangst zou een lijst alles afschermen, ook ná het onthullen.
+  const context = {};
+  const onbekend = rijen.filter((r) => r.beoordelingsmoment === undefined || r.deelnemer === undefined);
+  if (onbekend.length) {
+    const ids = onbekend.map((r) => r.id).filter(Boolean);
+    if (ids.length) {
+      const r = await env.DB.prepare(
+        `select id, beoordelingsmoment, deelnemer from inzending where id in (${ids.map(() => "?").join(", ")})`
+      ).bind(...ids).all();
+      for (const rij of r.results) context[rij.id] = rij;
+    }
+  }
+  const hoortBij = (rij) => context[rij.id] || rij;
+
+  const ids = [...new Set(rijen.map((r) => hoortBij(r).beoordelingsmoment).filter(Boolean))];
   const open = await openMomenten(env, ids);
 
   return rijen.map((rij) => {
-    if (rij.deelnemer === ik.id) return rij;
-    if (open.has(rij.beoordelingsmoment)) return rij;
+    if (hoortBij(rij).deelnemer === ik.id) return rij;
+    if (open.has(hoortBij(rij).beoordelingsmoment)) return rij;
     const uit = { ...rij, afgeschermd: 1 };
     for (const kolom of DICHT) if (kolom in uit) uit[kolom] = null;
     return uit;

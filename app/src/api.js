@@ -60,6 +60,9 @@ export const record = (tabel, id) => haal(`/api/t/${tabel}/${id}`);
 export const bewaar = (tabel, id, velden, revisie, reden) =>
   haal(`/api/t/${tabel}/${id}`, { methode: "PATCH", body: { velden, revisie, reden } });
 
+export const archiveer = (tabel, ids, reden) =>
+  haal(`/api/t/${tabel}/archiveer`, { methode: "POST", body: { ids, reden } });
+
 export const maakAan = (tabel, velden, ouderkolom) =>
   haal(`/api/t/${tabel}`, { methode: "POST", body: { velden, ouderkolom } });
 

@@ -552,3 +552,15 @@ body.sleept .lijsttabel { pointer-events: none; }
 }
 .lijstmelding.waarschuwing { color: var(--amb); background: #FDF6E6; }
 .lijstmelding.fouttekst { color: var(--red); background: #FBE9E6; }
+
+/* Aanvinken in een gerelateerde lijst: daar maak je regels aan, dus daar ruim
+   je een vergissing ook op. Archiveren, niet verwijderen. */
+.lijsttabel th.vink, .lijsttabel td.vink { padding: 8px 6px 8px 10px; cursor: default; }
+.lijsttabel tr.gekozen td { background: var(--bluebg); }
+.rlweg { margin-left: 2px; }
+.rlweg:hover { color: var(--red); border-color: var(--red); }
+.rlselectie { font-size: 11.5px; color: var(--mut); }
+.lijstmelding.vraag {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: #FDF6E6; color: var(--ink2);
+}
