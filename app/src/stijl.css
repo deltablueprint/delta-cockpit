@@ -332,3 +332,36 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
 .persoon { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
 .avatarknop { padding: 0; background: none; border: none; cursor: pointer; display: inline-flex; border-radius: 50%; }
 .avatarknop:hover { outline: 2px solid var(--navact); outline-offset: 1px; }
+
+/* --- inlezen uit een document --- */
+.stappen { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.stapje {
+  font-size: 11.5px; color: var(--mut); background: var(--head);
+  border: 1px solid var(--b1); border-radius: 2px; padding: 3px 10px;
+}
+.stapje.nu { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 700; }
+.stapje.gedaan { background: #BBD6E5; border-color: #BBD6E5; color: #0B425F; }
+
+.uitleg { font-size: 12.5px; color: var(--ink3); line-height: 1.55; margin: 0 0 10px; }
+.kaart textarea { width: 100%; font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; padding: 8px; border: 1px solid #D8D5CE; border-radius: 2px; }
+.knoprij { display: flex; gap: 8px; margin-top: 14px; }
+
+.koppeltabel { display: grid; grid-template-columns: 250px 240px minmax(0, 1fr); gap: 8px 12px; align-items: center; }
+.koppelkop { font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--dim); text-transform: uppercase; }
+.koppelveld { font-size: 12.5px; }
+.koppelhint { display: block; font-size: 11px; color: var(--mut); }
+.koppelvoorbeeld { font-size: 12px; color: var(--mut); font-family: ui-monospace, Menlo, monospace; }
+.koppeltabel select { height: 28px; width: 100%; font-size: 12.5px; font-family: inherit; border: 1px solid #D8D5CE; border-radius: 2px; background: #fff; }
+
+.botsinggroep { border: 1px solid var(--b1); border-radius: 3px; margin-bottom: 10px; }
+.botsingkop { padding: 7px 12px; background: var(--ambbg); color: var(--amb); font-size: 12px; font-weight: 700; border-bottom: 1px solid var(--b1); }
+.botsingvergelijk { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--b1); }
+.botsingkant { background: #fff; padding: 9px 12px; }
+.botsinglabel { font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--dim); text-transform: uppercase; margin-bottom: 6px; }
+.botsingitem { font-size: 12.5px; padding: 3px 0; }
+.botsingitem.nieuw { font-weight: 600; }
+.botsingkeuzes { padding: 9px 12px; border-top: 1px solid var(--b1); display: flex; flex-direction: column; gap: 6px; }
+.botsingkeuzes label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink2); cursor: pointer; }
+.botsingregel { display: flex; gap: 10px; padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--b2); }
+.botsingregel.fout { color: var(--red); }
+.uitkomstlijst { margin: 0 0 10px; padding-left: 18px; font-size: 12.5px; line-height: 1.7; }

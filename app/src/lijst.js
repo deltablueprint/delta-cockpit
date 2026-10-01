@@ -160,6 +160,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         kolommen.map((k) => `<option value="${k.kolom}"${toestand.zoekkolom === k.kolom ? " selected" : ""}>${ontsnap(k.label)}</option>`).join("")
       }</select>
       <input id="zoek" class="zoek" type="text" aria-label="Zoeken" value="${ontsnap(toestand.q)}" placeholder="Zoeken">
+      ${data.tabel.import_toegestaan ? `<a class="knop klein tweede" href="#/import/${tabelnaam}">Inlezen uit document</a>` : ""}
       <span class="pagina">
         ${knop(ICOON.eerste, 0, toestand.offset === 0, "Eerste pagina")}
         ${knop(ICOON.vorige, Math.max(toestand.offset - PAGINA, 0), toestand.offset === 0, "Vorige pagina")}

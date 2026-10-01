@@ -8,6 +8,7 @@
 import { lijst } from "./lijst.js";
 import { wijzig, archiveer, dupliceer, maakAan, sjabloon } from "./schrijf.js";
 import { record } from "./record.js";
+import { voorbereiden, uitvoeren } from "./import.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
@@ -184,6 +185,19 @@ async function behandel(request, env) {
         const uitkomst = await lijst(env, lijstPad[1], url.searchParams);
         if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
         return json(uitkomst);
+      }
+
+      // Importeren uit een document, in twee stappen.
+      if (pad === "/api/import/event/voorbereiden" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        if (!Array.isArray(body.rijen)) return json({ fout: "Geen regels ontvangen." }, 400);
+        if (body.rijen.length > 2000) return json({ fout: "Maximaal 2000 regels per keer." }, 413);
+        return json(await voorbereiden(env, body.rijen));
+      }
+      if (pad === "/api/import/event/uitvoeren" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        if (!Array.isArray(body.regels)) return json({ fout: "Geen regels ontvangen." }, 400);
+        return json(await uitvoeren(env, ik, body.regels));
       }
 
       // /api/t/<tabel>/nieuw — een leeg record om mee te beginnen

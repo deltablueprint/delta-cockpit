@@ -3,6 +3,7 @@ import { aanmeldscherm } from "./aanmelden.js";
 import { schil, menuBijwerken, schilVergeten } from "./schil.js";
 import { lijstscherm, toestandUitUrl, huidigeLijst } from "./lijst.js";
 import { recordscherm } from "./record.js";
+import { importscherm } from "./importeren.js";
 
 let persoon = null;
 let meta = null;
@@ -22,6 +23,13 @@ function teken() {
   const { kruimel, inhoud } = schil(persoon, meta, pad, afmelden);
 
   menuBijwerken(pad);
+
+  if (pad === "/import/event") {
+    huidigeLijst.tabelnaam = null;
+    huidigeLijst.url = null;
+    importscherm(inhoud, kruimel, meta);
+    return;
+  }
 
   // /t/<tabel>/nieuw  en  /t/<tabel>/<id>
   const recordRoute = pad.match(/^\/t\/([a-z_]+)\/(nieuw|\d+)$/);

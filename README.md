@@ -85,14 +85,22 @@ voert geen migraties uit.
 
 ## Events importeren
 
+**In de applicatie**, op de eventskalender: *Inlezen uit document*. Je kiest een
+bestand of plakt de inhoud, koppelt de kolommen van het document aan de velden,
+en krijgt per dag waar al iets staat de keuze: allebei houden, het origineel
+houden, of het origineel vervangen. Er wordt niets overschreven zonder dat je
+dat per regel hebt gezegd; elke vervanging staat in het auditlog.
+
+**Vanaf de opdrachtregel**, voor een grote set:
+
 ```bash
 node scripts/events-naar-sql.mjs mijn-events.csv > events.sql
 npx wrangler d1 execute delta-cockpit-staging --remote --env staging --file events.sql
 ```
 
 Kolommen: `datum,tijdstip,naam,soort,zwaarte,toelichting`.
-Zie `scripts/events-voorbeeld.csv`. Events staan los van cycli; de behandeling
-binnen een cyclus leg je vast op het tabblad *Events in de looptijd*.
+Events staan los van cycli; de behandeling binnen een cyclus leg je vast op het
+tabblad *Events in de looptijd*.
 
 ## Regels bij het bouwen
 

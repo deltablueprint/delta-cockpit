@@ -53,6 +53,12 @@ export const bewaar = (tabel, id, velden, revisie, reden) =>
 export const maakAan = (tabel, velden, ouderkolom) =>
   haal(`/api/t/${tabel}`, { methode: "POST", body: { velden, ouderkolom } });
 
+export const importVoorbereiden = (rijen) =>
+  haal("/api/import/event/voorbereiden", { methode: "POST", body: { rijen } });
+
+export const importUitvoeren = (regels) =>
+  haal("/api/import/event/uitvoeren", { methode: "POST", body: { regels } });
+
 export const zetAvatar = (avatar) =>
   haal("/api/ik/avatar", { methode: "PATCH", body: { avatar } });
 

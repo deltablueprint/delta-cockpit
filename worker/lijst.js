@@ -127,7 +127,8 @@ export async function lijst(env, tabelnaam, params) {
   ]);
 
   return {
-    tabel: { naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv, titel_veld: tabel.titel_veld },
+    tabel: { naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv,
+             titel_veld: tabel.titel_veld, import_toegestaan: tabel.import_toegestaan },
     kolommen: kolommen.map((k) => velden.find((v) => v.kolom === k)),
     rijen: rijen.results,
     totaal: telling.n,
