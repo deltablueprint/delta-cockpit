@@ -253,3 +253,51 @@ export async function magTrancheAanmaken(env, cyclusId) {
     return false;
   }
 }
+
+// --------------------------------------------------- welk besluit eronder ligt
+// Alleen de vastgelegde go-besluiten van déze cyclus: een tranche hoort bij een
+// besluit dat genomen is, niet bij een moment dat nog loopt of op no-go
+// uitkwam. Wat elk besluit zei gaat mee in de lijst, zodat het formulier het
+// meteen kan overnemen zodra je een ander kiest.
+export async function besluitOpties(env, cyclusId) {
+  try {
+    const rijen = (await env.DB.prepare(
+      `select id, datum, strike, expiratiedatum, inzet_pct, aanleiding
+         from beoordelingsmoment
+        where cyclus = ? and archief = 0 and status = 'uitkomst vastgelegd' and uitkomst = 'go'
+        order by datum desc, id desc`
+    ).bind(cyclusId).all()).results;
+
+    return rijen.map((r) => ({
+      id: r.id,
+      titel: `${r.datum}${r.strike ? ` — strike ${r.strike}` : ""}${r.aanleiding ? ` · ${r.aanleiding}` : ""}`,
+      overnemen: {
+        besluit_strike: r.strike,
+        besluit_expiratiedatum: r.expiratiedatum,
+        besluit_inzet_pct: r.inzet_pct,
+      },
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// Wat het besluit zei, overgeschreven op de tranche. Kopiëren en niet opzoeken:
+// een besluit dat later wordt bijgesteld mag de vergelijking met déze
+// uitvoering niet met terugwerkende kracht veranderen.
+export async function neemBesluitOver(env, momentId) {
+  if (!momentId) return null;
+  try {
+    const m = await env.DB.prepare(
+      "select strike, expiratiedatum, inzet_pct from beoordelingsmoment where id = ?"
+    ).bind(momentId).first();
+    if (!m) return null;
+    return {
+      besluit_strike: m.strike,
+      besluit_expiratiedatum: m.expiratiedatum,
+      besluit_inzet_pct: m.inzet_pct,
+    };
+  } catch {
+    return null;
+  }
+}

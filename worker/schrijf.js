@@ -9,7 +9,7 @@ import { vulEventsBij, vulCyclitBij } from "./events.js";
 import { startMoment } from "./gonogo.js";
 import { instelling, wijktAf, stoplossVerruimd, noteerGeweigerdeStoploss,
          volgendeTranche, contractnaam, zetExitplanKlaar, exitplanCompleet,
-         herberekenExitplan } from "./positie.js";
+         herberekenExitplan, besluitOpties, neemBesluitOver } from "./positie.js";
 
 async function veldenVan(env, tabelnaam) {
   return (await env.DB.prepare(
@@ -112,6 +112,20 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
         veld: "afwijking_toelichting",
         status: 422,
       };
+    }
+
+    // Kiest iemand een ander besluit, dan gaat ook wat dát besluit zei mee.
+    if (teSchrijven.some((t) => t.veld.kolom === "beoordelingsmoment")) {
+      const besluit = await neemBesluitOver(env, straks.beoordelingsmoment);
+      for (const [kolom, waarde] of Object.entries(besluit || {})) {
+        if (String(straks[kolom] ?? "") === String(waarde ?? "")) continue;
+        straks[kolom] = waarde;
+        teSchrijven.push({
+          veld: velden.find((v) => v.kolom === kolom),
+          nieuweWaarde: waarde,
+          oudeWaarde: huidig[kolom],
+        });
+      }
     }
 
     // De contractnaam volgt uit de expiratie en de strike; hem met de hand
@@ -325,6 +339,8 @@ export async function maakAan(env, ik, tabelnaam, body) {
 
   if (tabelnaam === "positie") {
     if (!nieuw.tranche) nieuw.tranche = await volgendeTranche(env, nieuw.cyclus);
+    const besluit = await neemBesluitOver(env, nieuw.beoordelingsmoment);
+    if (besluit) Object.assign(nieuw, besluit);
     const naam = contractnaam(nieuw);
     if (naam) nieuw.contract = naam;
   }
@@ -400,8 +416,20 @@ export async function sjabloon(env, tabelnaam, ouder) {
     }
   }
 
+  const opties = {};
   if (tabelnaam === "positie" && ouder && ouder.tabel === "cyclus") {
     waarden.tranche = await volgendeTranche(env, Number(ouder.id));
+
+    // Het laatste goedgekeurde besluit staat voorgevuld; een ander kiezen kan.
+    opties.beoordelingsmoment = await besluitOpties(env, Number(ouder.id));
+    const laatste = opties.beoordelingsmoment[0];
+    if (laatste) {
+      waarden.beoordelingsmoment = laatste.id;
+      Object.assign(waarden, laatste.overnemen);
+      if (waarden.strike === null) waarden.strike = laatste.overnemen.besluit_strike;
+      if (waarden.expiratiedatum === null) waarden.expiratiedatum = laatste.overnemen.besluit_expiratiedatum;
+      if (waarden.inzet_pct === null) waarden.inzet_pct = laatste.overnemen.besluit_inzet_pct;
+    }
   }
 
   let proces = null;
@@ -414,7 +442,7 @@ export async function sjabloon(env, tabelnaam, ouder) {
 
   return {
     tabel: { naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv, titel_veld: tabel.titel_veld, proces_veld: tabel.proces_veld },
-    secties, velden, waarden, ouderkolom, ouder: ouderInfo, proces,
+    secties, velden, waarden, ouderkolom, ouder: ouderInfo, proces, opties,
     nieuw: true, relaties: [], verwijzingen: {},
   };
 }

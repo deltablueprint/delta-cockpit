@@ -93,8 +93,10 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     <label class="veldlabel" for="veld-${v.kolom}">${v.verplicht ? '<span class="ster">*</span> ' : ""}${ontsnap(v.label)}</label>
     <div class="veldwaarde"${v.live ? ` data-live="${tabelnaam}.${id}.${v.kolom}"` : ""}>${
       v.alleen_lezen
-        ? `<span class="alleenlezen livewaarde">${lees(v, data.waarden[v.kolom], meta, data.verwijzingen, data.waarden)}</span>`
-        : invoer(v, data.waarden[v.kolom], meta, "", data.verwijzingen ? data.verwijzingen[v.kolom] : null)
+        ? `<span class="alleenlezen livewaarde" data-toon="${v.kolom}">${lees(v, data.waarden[v.kolom], meta, data.verwijzingen, data.waarden)}</span>`
+        : invoer(v, data.waarden[v.kolom], meta, "",
+                 data.verwijzingen ? data.verwijzingen[v.kolom] : null,
+                 data.opties ? data.opties[v.kolom] : null)
     }${v.live ? `<span class="hartje-vak" title="loopt live mee">${HARTSLAG}</span>` : ""}</div>`;
 
   const sectieHtml = secties.map((sectie) => {
@@ -202,6 +204,26 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
                  toonTelling: !tabbladen, magNieuw: r.magNieuw !== false },
       });
     }
+  }
+
+  // ---- een andere keuze, andere gegevens ----
+  // Kies je een ander besluit onder deze tranche, dan hoort het formulier
+  // meteen te laten zien wat dát besluit zei. Bij het opslaan doet de worker
+  // hetzelfde nog eens: het scherm vooruitlopen is prettig, maar het is niet
+  // de plek waar de waarheid vandaan komt.
+  for (const [kolom, lijst] of Object.entries(data.opties || {})) {
+    const kiezer = inhoud.querySelector(`.veldwaarde [data-kolom="${kolom}"]`);
+    if (!kiezer || !Array.isArray(lijst)) continue;
+    kiezer.addEventListener("change", () => {
+      const gekozen = lijst.find((k) => String(k.id) === String(kiezer.value));
+      if (!gekozen) return;
+      for (const [veld, waarde] of Object.entries(gekozen.overnemen || {})) {
+        const el = inhoud.querySelector(`.veldwaarde [data-kolom="${veld}"]`);
+        if (el) el.value = waarde ?? "";
+        const toon = inhoud.querySelector(`.veldwaarde [data-toon="${veld}"]`);
+        if (toon) toon.textContent = waarde === null || waarde === undefined || waarde === "" ? "—" : waarde;
+      }
+    });
   }
 
   // ---- opslaan ----

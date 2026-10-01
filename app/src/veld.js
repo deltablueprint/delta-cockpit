@@ -68,7 +68,7 @@ export function lees(veld, waarde, meta, verwijzingen = {}, rij = {}) {
 }
 
 // Bewerken: het invoerelement voor dit veldtype.
-export function invoer(veld, waarde, meta, extra = "", naam = null) {
+export function invoer(veld, waarde, meta, extra = "", naam = null, keuzelijst = null) {
   const w = waarde ?? "";
   const id = `veld-${veld.kolom}`;
 
@@ -77,6 +77,14 @@ export function invoer(veld, waarde, meta, extra = "", naam = null) {
   // het formulier de naam in plaats van het nummer. Zo'n veld stuurt niets
   // mee bij het opslaan: het verandert niet per ongeluk.
   if (veld.type === "verwijzing") {
+    // Een keuzelijst uit de definitielaag (db_field.keuzelijst): de worker
+    // geeft de records mee die hier gekozen mogen worden.
+    if (Array.isArray(keuzelijst)) {
+      return `<select id="${id}" data-kolom="${veld.kolom}" ${extra}>
+        ${veld.verplicht ? "" : `<option value=""${w === "" ? " selected" : ""}>&mdash;</option>`}
+        ${keuzelijst.map((k) => `<option value="${ontsnap(k.id)}"${String(k.id) === String(w) ? " selected" : ""}>${ontsnap(k.titel)}</option>`).join("")}
+      </select>`;
+    }
     if (veld.verwijst_naar === "gebruiker" && meta.gebruikers) {
       const mensen = Object.values(meta.gebruikers);
       return `<select id="${id}" data-kolom="${veld.kolom}" ${extra}>

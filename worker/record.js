@@ -5,7 +5,7 @@
 
 import { schermAfEen } from "./blind.js";
 import { actieVoor } from "./gonogo.js";
-import { magTrancheAanmaken } from "./positie.js";
+import { magTrancheAanmaken, besluitOpties } from "./positie.js";
 
 export async function record(env, tabelnaam, id, ik) {
   const tabel = await env.DB.prepare(
@@ -91,6 +91,14 @@ export async function record(env, tabelnaam, id, ik) {
     if (stappen.length) proces = { veld: tabel.proces_veld, nu: rij[tabel.proces_veld], stappen };
   }
 
+  // Keuzelijsten voor verwijzingen die je mag kiezen (db_field.keuzelijst).
+  // Ze blijven binnen hetzelfde ouderrecord: een tranche hoort bij een besluit
+  // van zijn eigen cyclus.
+  const opties = {};
+  if (tabelnaam === "positie" && rij.cyclus) {
+    opties.beoordelingsmoment = await besluitOpties(env, rij.cyclus);
+  }
+
   // De actieknop rechtsboven: die van de stap waar dit record nu in staat.
   const actie = await actieVoor(env, tabelnaam, rij, tabel, ik);
 
@@ -98,6 +106,7 @@ export async function record(env, tabelnaam, id, ik) {
     ouder,
     proces,
     actie,
+    opties,
     tabel: {
       naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv,
       titel_veld: tabel.titel_veld, related_weergave: tabel.related_weergave,
