@@ -101,7 +101,17 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     const eigen = velden.filter((v) => (v.sectie || "algemeen") === sectie.naam);
     if (!eigen.length) return "";
     const breed = eigen.filter((v) => v.type === "lang");
-    const smal = eigen.filter((v) => v.type !== "lang");
+    let smal = eigen.filter((v) => v.type !== "lang");
+
+    // De status staat op elk formulier op dezelfde plek: tweede regel links.
+    // Hij zegt waar een record staat, en dat hoor je op elk scherm op dezelfde
+    // plaats te vinden in plaats van te moeten zoeken.
+    const procesVeld = data.tabel.proces_veld;
+    const plek = smal.findIndex((v) => v.kolom === procesVeld);
+    if (procesVeld && plek > -1) {
+      const [veld] = smal.splice(plek, 1);
+      smal.splice(Math.min(2, smal.length), 0, veld);
+    }
     const links = smal.filter((_, i) => i % 2 === 0);
     const rechts = smal.filter((_, i) => i % 2 === 1);
     return `

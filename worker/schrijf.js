@@ -13,7 +13,7 @@ import { instelling, wijktAf, stoplossVerruimd, noteerGeweigerdeStoploss,
 
 async function veldenVan(env, tabelnaam) {
   return (await env.DB.prepare(
-    "select * from db_field where tabel = ? and actief = 1"
+    "select * from db_field where tabel = ? and actief = 1 order by volgorde, id"
   ).bind(tabelnaam).all()).results;
 }
 
