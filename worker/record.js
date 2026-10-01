@@ -20,12 +20,20 @@ export async function record(env, tabelnaam, id, ik) {
   ]);
   if (!rij) return { fout: `Geen ${tabel.label.toLowerCase()} met nummer ${id}.`, status: 404 };
 
-  // Gerelateerde lijsten: elke tabel met een veld dat hierheen verwijst.
+  // Gerelateerde lijsten: elke tabel met een veld dat hierheen verwijst en dat
+  // het ouderveld is. Dat ouderveld herken je eraan dat het niet op het
+  // formulier staat: je kiest het niet, het ligt vast zodra het record bestaat.
+  // Een verwijzing die je wél kiest — het besluit onder een tranche — is een
+  // koppeling en geen ouderschap, en levert dus geen tabblad op. Een mens is
+  // nooit de ouder van een record: 'aangemaakt door' hoort op het record, niet
+  // als lijst onder de persoon.
   const kinderen = (await env.DB.prepare(
     `select f.tabel, f.kolom, t.label, t.label_mv, t.volgorde
        from db_field f
        join db_table t on t.naam = f.tabel
       where f.verwijst_naar = ? and f.actief = 1 and t.actief = 1
+        and f.toon_op_formulier = 0
+        and f.verwijst_naar <> 'gebruiker'
       order by t.volgorde`
   ).bind(tabelnaam).all()).results;
 
