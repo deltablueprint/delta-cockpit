@@ -156,7 +156,6 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         kolommen.map((k) => `<option value="${k.kolom}"${toestand.zoekkolom === k.kolom ? " selected" : ""}>${ontsnap(k.label)}</option>`).join("")
       }</select>
       <input id="zoek" class="zoek" type="text" aria-label="Zoeken" value="${ontsnap(toestand.q)}" placeholder="Zoeken">
-      ${data.tabel.import_toegestaan ? `<a class="knop tweede" href="#/import/${tabelnaam}">Inlezen uit document</a>` : ""}
       <span class="pagina">
         ${knop(ICOON.eerste, 0, toestand.offset === 0, "Eerste pagina")}
         ${knop(ICOON.vorige, Math.max(toestand.offset - PAGINA, 0), toestand.offset === 0, "Vorige pagina")}
@@ -249,7 +248,10 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   inhoud.innerHTML = (ingebed ? "" : `
     <div class="titelrij">
       <h1>${ontsnap(data.tabel.label_mv)}</h1>
-      <span class="sub">${tot} ${tot === 1 ? ontsnap(data.tabel.label.toLowerCase()) : ontsnap(data.tabel.label_mv.toLowerCase())}</span>
+      <span class="sub">${tot} ${tot === 1 ? "regel" : "regels"}</span>
+      <span class="recordacties">
+        ${data.tabel.import_toegestaan ? `<a class="knop tweede" href="#/import/${tabelnaam}">Inlezen uit document</a>` : ""}
+      </span>
     </div>`) + `
     <div class="lijst${ingebed ? " ingebed" : ""}">${relatiekop}${ingebed ? "" : toolbar + filterrij}
       <div class="tabelomhulsel"><table class="lijsttabel" style="min-width:${minBreedte}px">${colgroup}${thead}${tbody}</table></div>
