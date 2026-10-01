@@ -188,7 +188,7 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
   if (tabelnaam === "positie" && teSchrijven.some((t) => t.veld.kolom === "status")) {
     const rij = await env.DB.prepare("select cyclus, status from positie where id = ?").bind(id).first();
     if (rij) {
-      if (rij.status === "bewaken") {
+      if (["publiceren naar leden", "bewaken"].includes(rij.status)) {
         await env.DB.prepare(
           "update cyclus set status = 'in positie' where id = ? and status in ('go-nogo', 'uitvoering ophalen')"
         ).bind(rij.cyclus).run();

@@ -549,7 +549,7 @@ Dit is de zwaarste regel van hoofdstuk 10. Wie een scherm ontwerpt begint hier, 
 
 De cyclus volgt zijn tranches: gaat er één bewaken, dan staat de cyclus *in positie*; is elke tranche gesloten, dan begint de post-analyse. Wat de brokerkoppeling straks doet — ophalen en voorstellen — doet een mens nu met de hand; wat het systeem nooit doet, blijft hetzelfde: orders plaatsen.
 
-`positie` heeft **één recordscherm** met het proces **POSITIE** (besluit goedgekeurd → exitplan vastgelegd → order bij Lynx → uitvoering geïmporteerd → bewaken → uitkomst vastgelegd) en één statusveld dat zegt waar de tranche staat. De lijst *Posities* opent dat record; wat eerder losse actieschermen waren, zijn statussen ervan.
+`positie` heeft **één recordscherm** met het proces **POSITIE** (besluit goedgekeurd → order bij Lynx → uitvoering vastgelegd → publiceren naar leden → bewaken → gesloten) en één statusveld dat zegt waar de tranche staat. *Exitplan vastgelegd* is geen eigen stand: het exitplan is een gerelateerde lijst en een voorwaarde om de eerste stand uit te komen. **Publiceren naar leden** staat tussen de uitvoering en het bewaken, want vastleggen gaat altijd vóór publiceren — eerst het feit, dan het verhaal (6) — en zolang het bericht niet uit is, is de tranche nog niet in bewaking. De lijst *Posities* opent dat record; wat eerder losse actieschermen waren, zijn statussen ervan.
 
 Bovenaan staat altijd hetzelfde formulier: tranche, cyclus, status, expiratie, contracten, ontvangen premie, besluit, exitplan en aandeel van de portefeuille. Daaronder wisselt het beeld met de status:
 
