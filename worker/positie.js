@@ -237,3 +237,19 @@ export async function herberekenExitplan(env, positieId, rij) {
     }
   } catch { /* geen exitplan in deze omgeving */ }
 }
+
+// Een tranche bestaat niet zonder goedgekeurd besluit. Zolang er op de cyclus
+// geen vastgelegde go ligt, valt er niets in te nemen — en hoort er dus ook
+// geen knop te staan die suggereert van wel (BOUWSPEC 5.5: voor uitvoering
+// zijn drie go's nodig).
+export async function magTrancheAanmaken(env, cyclusId) {
+  try {
+    const r = await env.DB.prepare(
+      `select count(*) as n from beoordelingsmoment
+        where cyclus = ? and archief = 0 and status = 'uitkomst vastgelegd' and uitkomst = 'go'`
+    ).bind(cyclusId).first();
+    return Boolean(r && r.n);
+  } catch {
+    return false;
+  }
+}

@@ -338,7 +338,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     <div class="rlkop">
       <span class="rltitel">${ontsnap(ingebed.label || data.tabel.label_mv)}</span>
       ${ingebed.toonTelling ? `<span class="rlmeta">${tot} ${tot === 1 ? ontsnap(data.tabel.label.toLowerCase()) : ontsnap(data.tabel.label_mv.toLowerCase())}</span>` : ""}
-      <a class="knop" href="#/t/${tabelnaam}/nieuw?ouder=${ingebed.ouder.tabel}:${ingebed.ouder.id}">Nieuw</a>
+      ${ingebed.magNieuw === false ? "" : `<a class="knop" href="#/t/${tabelnaam}/nieuw?ouder=${ingebed.ouder.tabel}:${ingebed.ouder.id}">Nieuw</a>`}
       <span class="rlselectie" id="rlselectie"></span>
     </div>`;
 

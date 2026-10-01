@@ -170,7 +170,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       q: "", sorteer: null, richting: "asc", offset: 0,
       filters: {},
       idfilters: { [r.kolom]: String(id) },
-      ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label, toonTelling: !tabbladen },
+      ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label,
+                 toonTelling: !tabbladen, magNieuw: r.magNieuw !== false },
     });
   }
 
@@ -197,7 +198,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         q: "", sorteer: null, richting: "asc", offset: 0,
         filters: {},
         idfilters: { [r.kolom]: String(id) },
-        ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label, toonTelling: !tabbladen },
+        ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label,
+                 toonTelling: !tabbladen, magNieuw: r.magNieuw !== false },
       });
     }
   }

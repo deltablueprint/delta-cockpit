@@ -5,6 +5,7 @@
 
 import { schermAfEen } from "./blind.js";
 import { actieVoor } from "./gonogo.js";
+import { magTrancheAanmaken } from "./positie.js";
 
 export async function record(env, tabelnaam, id, ik) {
   const tabel = await env.DB.prepare(
@@ -39,7 +40,15 @@ export async function record(env, tabelnaam, id, ik) {
     } catch {
       continue;   // tabel bestaat nog niet; dan tonen we hem ook niet
     }
-    relaties.push({ tabel: k.tabel, kolom: k.kolom, label: k.label_mv, aantal });
+    // Of je in deze lijst iets mag aanmaken, hangt soms van het record af.
+    // Een tranche bestaat niet zonder goedgekeurd besluit.
+    let magNieuw = true;
+    if (k.tabel === "positie" && tabelnaam === "cyclus") {
+      magNieuw = await magTrancheAanmaken(env, id);
+    }
+    if (k.tabel === "exitregel") magNieuw = false;   // die zet het systeem klaar
+
+    relaties.push({ tabel: k.tabel, kolom: k.kolom, label: k.label_mv, aantal, magNieuw });
   }
 
   // Verwijzingen omzetten naar iets leesbaars: niet 'simon' maar 'Simon DeJonghe'.
