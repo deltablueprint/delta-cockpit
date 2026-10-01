@@ -83,6 +83,17 @@ voert geen migraties uit.
 | Productie | https://delta-cockpit.dejonghe-simon.workers.dev |
 | Staging | https://delta-cockpit-staging.dejonghe-simon.workers.dev |
 
+## Events importeren
+
+```bash
+node scripts/events-naar-sql.mjs mijn-events.csv > events.sql
+npx wrangler d1 execute delta-cockpit-staging --remote --env staging --file events.sql
+```
+
+Kolommen: `datum,tijdstip,naam,soort,zwaarte,toelichting`.
+Zie `scripts/events-voorbeeld.csv`. Events staan los van cycli; de behandeling
+binnen een cyclus leg je vast op het tabblad *Events in de looptijd*.
+
 ## Regels bij het bouwen
 
 - Niets wordt verwijderd: geen DELETE-route, records krijgen een archiefstatus.

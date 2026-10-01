@@ -12,6 +12,7 @@
 import { record as haalRecord, bewaar, maakAan, nieuwSjabloon } from "./api.js";
 import { lijstscherm } from "./lijst.js";
 import { lees, invoer, ontsnap } from "./veld.js";
+import { volgLive } from "./live.js";
 
 export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties = {}) {
   let data;
@@ -98,6 +99,12 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       filters: { [r.kolom]: String(id) },
       ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label },
     });
+  }
+
+  // Een lopende cyclus ververst snel, de rest traag (BOUWSPEC 10.2).
+  if (!isNieuw) {
+    const loopt = ["go-nogo", "uitvoering ophalen", "in positie"].includes(data.waarden.status);
+    volgLive(() => recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties), loopt);
   }
 
   // ---- opslaan ----

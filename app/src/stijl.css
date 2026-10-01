@@ -261,3 +261,12 @@ td.bewerkt input, td.bewerkt select {
 }
 td.bezigcel { opacity: .6; }
 td.zojuist { background: var(--grnbg); transition: background 1s; }
+
+/* --- hartslag: hoe vers is wat je ziet (etappe 6) --- */
+.hartslagvak { display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; }
+.hartslagtekst { font-size: 11.5px; color: var(--navdim); font-variant-numeric: tabular-nums; }
+.hartslag { width: 7px; height: 7px; border-radius: 50%; background: var(--navdim); flex-shrink: 0; }
+.hartslag.live { background: #4FD39B; box-shadow: 0 0 0 3px rgba(79,211,155,.2); }
+.hartslag.bijgewerkt { background: #4FD39B; }
+.hartslag.gepauzeerd { background: var(--navdim); }
+.hartslag.offline { background: #E07A6B; }

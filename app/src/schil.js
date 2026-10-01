@@ -44,6 +44,10 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
       <span class="merk">Delta Blueprint</span>
       <span class="sub">Cockpit</span>
       <span class="rechts">
+        <span class="hartslagvak" title="Hoe vers wat je ziet is">
+          <span id="hartslag" class="hartslag bijgewerkt"></span>
+          <span id="hartslagtekst" class="hartslagtekst"></span>
+        </span>
         <span class="bol">${initialen}</span>
         <span>${persoon.naam}</span>
         <a href="#afmelden" id="afmelden" style="color: var(--navdim); text-decoration: none;">afmelden</a>
