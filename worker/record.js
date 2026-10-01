@@ -31,14 +31,24 @@ export async function record(env, tabelnaam, id, ik) {
 
   const relaties = [];
   for (const k of kinderen) {
+    // De teller telt wat je in de lijst ziet: gearchiveerde regels horen daar
+    // niet bij. Stond er 2 terwijl er één regel stond, dan klopte er iets —
+    // en een teller waarin je niet gelooft, is erger dan geen teller.
     let aantal = 0;
     try {
       const r = await env.DB.prepare(
-        `select count(*) as n from "${k.tabel}" where "${k.kolom}" = ?`
+        `select count(*) as n from "${k.tabel}" where "${k.kolom}" = ? and archief = 0`
       ).bind(id).first();
       aantal = r ? r.n : 0;
     } catch {
-      continue;   // tabel bestaat nog niet; dan tonen we hem ook niet
+      try {
+        const r = await env.DB.prepare(
+          `select count(*) as n from "${k.tabel}" where "${k.kolom}" = ?`
+        ).bind(id).first();
+        aantal = r ? r.n : 0;
+      } catch {
+        continue;   // tabel bestaat nog niet; dan tonen we hem ook niet
+      }
     }
     // Of je in deze lijst iets mag aanmaken, hangt soms van het record af.
     // Een tranche bestaat niet zonder goedgekeurd besluit.
