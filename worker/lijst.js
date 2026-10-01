@@ -36,13 +36,21 @@ export async function lijst(env, tabelnaam, params) {
     }
   }
 
-  // filter per kolom:  ?f.status=groen
-  for (const [sleutel, waarde] of params) {
+  // Filter per kolom:  ?f.status=groen
+  // Tekstkolommen zoeken op "bevat", de rest op exact — zo doet een kolomfilter
+  // wat je verwacht als je er half een woord in typt.
+  for (const [sleutel, zoekwaarde] of params) {
     if (!sleutel.startsWith("f.")) continue;
     const kolom = sleutel.slice(2);
-    if (!bestaat(kolom)) continue;
-    waar.push(`"${kolom}" = ?`);
-    binden.push(waarde);
+    const veld = velden.find((v) => v.kolom === kolom);
+    if (!veld) continue;
+    if (["tekst", "lang"].includes(veld.type)) {
+      waar.push(`"${kolom}" like ?`);
+      binden.push(`%${zoekwaarde}%`);
+    } else {
+      waar.push(`"${kolom}" = ?`);
+      binden.push(zoekwaarde);
+    }
   }
 
   // vrij zoeken over de tekstkolommen

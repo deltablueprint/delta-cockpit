@@ -1,32 +1,32 @@
 import { isAangemeld, aanmeldingWissen, ik, meta as haalMeta } from "./api.js";
 import { aanmeldscherm } from "./aanmelden.js";
 import { schil } from "./schil.js";
-import { lijstscherm } from "./lijst.js";
+import { lijstscherm, toestandUitUrl } from "./lijst.js";
 
 let persoon = null;
 let meta = null;
 
 function huidigeRoute() {
-  return location.hash.slice(1) || "/dashboard";
+  const heel = location.hash.slice(1) || "/dashboard";
+  const vraagteken = heel.indexOf("?");
+  return vraagteken === -1
+    ? { pad: heel, zoekdeel: "" }
+    : { pad: heel.slice(0, vraagteken), zoekdeel: heel.slice(vraagteken + 1) };
 }
 
 // Etappe 1 kent nog geen schermen: elke route toont wat er komt.
 // Etappe 2 vult /t/<tabel> met de lijst, etappe 3 het record.
-const lijsttoestand = {};   // onthoudt zoekterm en sortering per tabel
-
 function teken() {
-  const route = huidigeRoute();
-  const { kruimel, inhoud } = schil(persoon, meta, route, afmelden);
+  const { pad, zoekdeel } = huidigeRoute();
+  const { kruimel, inhoud } = schil(persoon, meta, pad, afmelden);
 
-  const lijstRoute = route.match(/^\/t\/([a-z_]+)$/);
+  const lijstRoute = pad.match(/^\/t\/([a-z_]+)$/);
   if (lijstRoute) {
-    const tabelnaam = lijstRoute[1];
-    lijsttoestand[tabelnaam] ||= { q: "", sorteer: null, richting: "asc" };
-    lijstscherm(inhoud, kruimel, tabelnaam, meta, lijsttoestand[tabelnaam]);
+    lijstscherm(inhoud, kruimel, lijstRoute[1], meta, toestandUitUrl(zoekdeel));
     return;
   }
 
-  const item = meta.menu.flatMap((g) => g.items).find((i) => i.route === route);
+  const item = meta.menu.flatMap((g) => g.items).find((i) => i.route === pad);
   const titel = item ? item.label : "Onbekend scherm";
 
   kruimel.textContent = titel;
