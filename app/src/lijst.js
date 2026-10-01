@@ -16,7 +16,7 @@
 // Rijen die elk hun eigen raster zijn vallen per rij anders uit — dat was fout.
 // ============================================================================
 
-import { lijst as haalLijst, bewaar } from "./api.js";
+import { lijst as haalLijst, bewaar, leesVoorkeur, zetVoorkeur } from "./api.js";
 import { lees, invoer, keuzesVoor } from "./veld.js";
 
 const KLEUR = {
@@ -186,11 +186,13 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     </div>`;
 
   // Elke kolom krijgt zijn breedte uit de definitielaag; wat overblijft gaat
-  // naar een lege kolom rechts. Zo wordt de titelkolom nooit onnodig breed.
+  // naar een lege kolom rechts. Heeft deze gebruiker een kolom zelf versleept,
+  // dan wint die breedte — dat is van hem, niet van de tabel.
   const standaardBreedte = (k) =>
-    k.breedte || ({ keuze: "130px", datum: "120px", tijdstip: "150px", getal: "110px", "ja_nee": "90px" }[k.type] || "180px");
+    k.breedte || ({ keuze: "130px", datum: "120px", tijdstip: "150px", tijd: "150px", getal: "110px", "ja_nee": "90px" }[k.type] || "180px");
 
-  const breedtes = kolommen.map(standaardBreedte);
+  const eigen = await eigenBreedtes(tabelnaam);
+  const breedtes = kolommen.map((k) => eigen[k.kolom] ? `${eigen[k.kolom]}px` : standaardBreedte(k));
   const minBreedte = breedtes.reduce((n, b) => n + (parseInt(b, 10) || 180), 0);
 
   const colgroup = `<colgroup>
@@ -206,7 +208,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
               aria-sort="${toestand.sorteer === k.kolom ? (toestand.richting === "desc" ? "descending" : "ascending") : "none"}">
             <span class="kolomkop">${ICOON.hamburger}<span>${ontsnap(k.label)}</span>${
               toestand.sorteer === k.kolom ? `<span class="pijl">${toestand.richting === "desc" ? "▾" : "▴"}</span>` : ""
-            }</span>
+            }</span><span class="sleepgreep" data-sleep="${k.kolom}" title="Sleep om de kolom breder of smaller te maken"></span>
           </th>`).join("")}
         <th class="vuller"></th>
       </tr>
@@ -320,6 +322,38 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     });
   });
 
+  // ---- kolombreedte verslepen ----
+  // De breedte wordt per gebruiker onthouden, niet per tabel: het is een
+  // voorkeur, geen eigenschap van de gegevens.
+  const tabel = inhoud.querySelector(".lijsttabel");
+  inhoud.querySelectorAll(".sleepgreep").forEach((greep) => {
+    greep.addEventListener("click", (e) => e.stopPropagation());   // niet sorteren
+    greep.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const kolom = greep.dataset.sleep;
+      const index = kolommen.findIndex((k) => k.kolom === kolom);
+      const col = tabel.querySelectorAll("col")[index];
+      const beginX = e.clientX;
+      const beginBreedte = col.getBoundingClientRect().width;
+      document.body.classList.add("sleept");
+
+      const beweeg = (ev) => {
+        const nieuw = Math.max(70, Math.round(beginBreedte + ev.clientX - beginX));
+        col.style.width = `${nieuw}px`;
+      };
+      const los = async () => {
+        document.removeEventListener("mousemove", beweeg);
+        document.removeEventListener("mouseup", los);
+        document.body.classList.remove("sleept");
+        const breedte = Math.round(col.getBoundingClientRect().width);
+        onthoudBreedte(tabelnaam, kolom, breedte);
+      };
+      document.addEventListener("mousemove", beweeg);
+      document.addEventListener("mouseup", los);
+    });
+  });
+
   // ---- bewerken in de lijst (etappe 5) ----
   // Dubbelklik op een cel maakt er een invoerveld van. Enter of wegklikken
   // slaat op, Escape maakt ongedaan. Opslaan draagt de revisie mee: heeft
@@ -396,4 +430,30 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
   }
   laatsteFocus = null;
+}
+
+
+// ---------------------------------------------------------- kolombreedtes
+// Eén keer per tabel ophalen en daarna in het geheugen houden, zodat het
+// slepen niet bij elke rij opnieuw een verzoek doet.
+const breedteCache = {};
+
+async function eigenBreedtes(tabelnaam) {
+  if (breedteCache[tabelnaam]) return breedteCache[tabelnaam];
+  try {
+    const { waarde } = await leesVoorkeur(`lijst.${tabelnaam}.breedtes`);
+    breedteCache[tabelnaam] = waarde || {};
+  } catch {
+    breedteCache[tabelnaam] = {};
+  }
+  return breedteCache[tabelnaam];
+}
+
+let bewaarKlok = null;
+function onthoudBreedte(tabelnaam, kolom, breedte) {
+  breedteCache[tabelnaam] = { ...(breedteCache[tabelnaam] || {}), [kolom]: breedte };
+  clearTimeout(bewaarKlok);
+  bewaarKlok = setTimeout(() => {
+    zetVoorkeur(`lijst.${tabelnaam}.breedtes`, breedteCache[tabelnaam]).catch(() => {});
+  }, 400);
 }

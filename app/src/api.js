@@ -59,6 +59,10 @@ export const importVoorbereiden = (rijen) =>
 export const importUitvoeren = (regels) =>
   haal("/api/import/event/uitvoeren", { methode: "POST", body: { regels } });
 
+export const leesVoorkeur = (sleutel) => haal(`/api/voorkeur/${sleutel}`);
+export const zetVoorkeur = (sleutel, waarde) =>
+  haal(`/api/voorkeur/${sleutel}`, { methode: "PUT", body: { waarde } });
+
 export const zetAvatar = (avatar) =>
   haal("/api/ik/avatar", { methode: "PATCH", body: { avatar } });
 

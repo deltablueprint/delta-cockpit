@@ -187,6 +187,27 @@ async function behandel(request, env) {
         return json(uitkomst);
       }
 
+      // Persoonlijke voorkeuren: kolombreedtes en wat iemand verder zelf
+      // instelt. Altijd van jezelf; die van een ander kun je niet lezen.
+      const voorkeurPad = pad.match(/^\/api\/voorkeur\/([a-z0-9._-]+)$/i);
+      if (voorkeurPad && request.method === "GET") {
+        const r = await env.DB.prepare(
+          "select waarde from gebruiker_voorkeur where gebruiker = ? and sleutel = ?"
+        ).bind(ik.id, voorkeurPad[1]).first();
+        return json({ waarde: r ? JSON.parse(r.waarde) : null });
+      }
+      if (voorkeurPad && request.method === "PUT") {
+        const body = await request.json().catch(() => ({}));
+        const tekst = JSON.stringify(body.waarde ?? null);
+        if (tekst.length > 20000) return json({ fout: "Te veel om te onthouden." }, 413);
+        await env.DB.prepare(
+          `insert into gebruiker_voorkeur (gebruiker, sleutel, waarde, gewijzigd)
+           values (?, ?, ?, datetime('now'))
+           on conflict (gebruiker, sleutel) do update set waarde = excluded.waarde, gewijzigd = excluded.gewijzigd`
+        ).bind(ik.id, voorkeurPad[1], tekst).run();
+        return json({ ok: true });
+      }
+
       // Importeren uit een document, in twee stappen.
       if (pad === "/api/import/event/voorbereiden" && request.method === "POST") {
         const body = await request.json().catch(() => ({}));
