@@ -12,7 +12,8 @@
     "build": "vite build",
     "dev:app": "vite",
     "dev:api": "wrangler dev",
-    "db:voorbeeld:staging": "wrangler d1 execute delta-cockpit-staging --remote --env staging --file scripts/voorbeeld-staging.sql"
+    "db:voorbeeld:staging": "wrangler d1 execute delta-cockpit-staging --remote --env staging --file scripts/voorbeeld-staging.sql",
+    "db:proef-inzendingen:staging": "wrangler d1 execute delta-cockpit-staging --remote --env staging --file scripts/proef-inzendingen.sql"
   },
   "devDependencies": {
     "wrangler": "^4",

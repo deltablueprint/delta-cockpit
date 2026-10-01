@@ -37,7 +37,13 @@ npm run deploy               # uitrollen naar productie
 
 npm run db:migrate:staging   # migraties op staging
 npm run deploy:staging       # uitrollen naar staging
+
+npm run db:voorbeeld:staging          # voorbeeldcycli en -voorwaarden op staging
+npm run db:proef-inzendingen:staging  # twee verstuurde inzendingen (Pieter, Jacqueline)
 ```
+
+De twee laatste commando's zetten **proefdata** op staging. Ze staan bewust niet in
+`migrations/` en raken productie nooit aan; opnieuw draaien mag, ze ruimen eerst op.
 
 ## Aanmelden
 
