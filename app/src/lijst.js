@@ -253,7 +253,8 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         <button class="chipweg" data-kolom="__q" aria-label="Zoekterm weghalen">&times;</button></span>` : ""}
       ${chips}
       <span class="filternote">${tot === 0 ? "" : `${tot} ${tot === 1 ? "regel" : "regels"}`}</span>
-    </div>`;
+    </div>
+    <div class="lijstmelding" id="lijstmelding" hidden></div>`;
 
   // Een kolom is zo breed als wat erin staat. De kop telt mee — een kop die
   // halverwege afbreekt is onleesbaar — en de getoonde regels tellen mee. Wat
@@ -289,6 +290,18 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         <td></td>
       </tr>
     </thead>`;
+
+  // Meldingen horen in het scherm, niet in een venster van de browser dat je
+  // moet wegklikken voor je verder kunt.
+  const meld = (tekst, soort = "waarschuwing") => {
+    const vak = inhoud.querySelector("#lijstmelding");
+    if (!vak) return;
+    vak.textContent = tekst;
+    vak.className = `lijstmelding ${soort}`;
+    vak.hidden = false;
+    clearTimeout(meld.klok);
+    meld.klok = setTimeout(() => { vak.hidden = true; }, 6000);
+  };
 
   const tbody = tot === 0
     ? `<tbody><tr><td colspan="${kolommen.length + 1}" class="geenregels">
@@ -505,10 +518,13 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
             : getoond;
           cel.classList.add("zojuist");
           setTimeout(() => cel.classList.remove("zojuist"), 1200);
+          if (uitkomst.waarschuwingen && uitkomst.waarschuwingen.length) {
+            meld(uitkomst.waarschuwingen[0].melding, "waarschuwing");
+          }
         } catch (fout) {
           cel.classList.remove("bezigcel");
           herstel();
-          alert(fout.message);
+          meld(fout.message, "fouttekst");
           if (String(fout.message).includes("intussen")) {
             lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand);
           }

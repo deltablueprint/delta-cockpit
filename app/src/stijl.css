@@ -543,3 +543,12 @@ body.sleept .lijsttabel { pointer-events: none; }
 .inzendfeiten dd { margin: 0; font-size: 12.5px; color: var(--ink2); }
 .inzendtekst { margin: 0 0 7px; font-size: 12.5px; color: var(--ink2); line-height: 1.5; }
 .inzendtekst strong { color: var(--ink); }
+
+/* Een melding na het bewerken in de lijst: in het scherm, niet in een venster
+   van de browser dat je eerst moet wegklikken. */
+.lijstmelding {
+  padding: 8px 12px; font-size: 12.5px; line-height: 1.45;
+  background: var(--soft); border-bottom: 1px solid var(--b1);
+}
+.lijstmelding.waarschuwing { color: var(--amb); background: #FDF6E6; }
+.lijstmelding.fouttekst { color: var(--red); background: #FBE9E6; }

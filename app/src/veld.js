@@ -68,9 +68,25 @@ export function lees(veld, waarde, meta, verwijzingen = {}, rij = {}) {
 }
 
 // Bewerken: het invoerelement voor dit veldtype.
-export function invoer(veld, waarde, meta, extra = "") {
+export function invoer(veld, waarde, meta, extra = "", naam = null) {
   const w = waarde ?? "";
   const id = `veld-${veld.kolom}`;
+
+  // Een verwijzing is een record, geen getal. Naar een persoon kies je uit de
+  // deelnemers; naar iets anders is er in fase 1 nog geen kiezer, en dan toont
+  // het formulier de naam in plaats van het nummer. Zo'n veld stuurt niets
+  // mee bij het opslaan: het verandert niet per ongeluk.
+  if (veld.type === "verwijzing") {
+    if (veld.verwijst_naar === "gebruiker" && meta.gebruikers) {
+      const mensen = Object.values(meta.gebruikers);
+      return `<select id="${id}" data-kolom="${veld.kolom}" ${extra}>
+        ${veld.verplicht ? "" : `<option value=""${w === "" ? " selected" : ""}>&mdash;</option>`}
+        ${mensen.map((g) => `<option value="${ontsnap(g.id)}"${g.id === w ? " selected" : ""}>${ontsnap(g.naam)}</option>`).join("")}
+      </select>`;
+    }
+    return `<input id="${id}" type="text" readonly value="${ontsnap(naam ?? w)}"
+                   title="Deze verwijzing ligt vast zodra het record bestaat." ${extra}>`;
+  }
   if (veld.type === "keuze") {
     const keuzes = keuzesVoor(meta, veld);
     return `<select id="${id}" data-kolom="${veld.kolom}" ${extra}>

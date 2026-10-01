@@ -30,9 +30,18 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   }
 
   const isNieuw = data.nieuw === true;
+  // Is het titelveld een verwijzing, dan heet het record naar waar het heen
+  // wijst — 'Maandexpiratie OESX', niet '66'.
+  const titelVeld = data.tabel.titel_veld;
   const titel = isNieuw
     ? `Nieuwe ${data.tabel.label.toLowerCase()}`
-    : String(data.waarden[data.tabel.titel_veld] ?? `${data.tabel.label} ${id}`);
+    : String(
+        (data.verwijzingen && data.verwijzingen[titelVeld])
+        ?? (meta.gebruikers && meta.gebruikers[data.waarden[titelVeld]]
+             ? meta.gebruikers[data.waarden[titelVeld]].naam : null)
+        ?? data.waarden[titelVeld]
+        ?? `${data.tabel.label} ${id}`
+      );
 
   document.title = `${titel} · Delta Blueprint Cockpit`;
 
@@ -72,7 +81,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     <div class="veldwaarde"${v.live ? ` data-live="${tabelnaam}.${id}.${v.kolom}"` : ""}>${
       v.alleen_lezen
         ? `<span class="alleenlezen livewaarde">${lees(v, data.waarden[v.kolom], meta, data.verwijzingen, data.waarden)}</span>`
-        : invoer(v, data.waarden[v.kolom], meta)
+        : invoer(v, data.waarden[v.kolom], meta, "", data.verwijzingen ? data.verwijzingen[v.kolom] : null)
     }${v.live ? `<span class="hartje-vak" title="loopt live mee">${HARTSLAG}</span>` : ""}</div>`;
 
   const sectieHtml = secties.map((sectie) => {
