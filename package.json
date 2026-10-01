@@ -11,7 +11,8 @@
     "db:migrate:local": "wrangler d1 migrations apply delta-cockpit --local",
     "build": "vite build",
     "dev:app": "vite",
-    "dev:api": "wrangler dev"
+    "dev:api": "wrangler dev",
+    "db:voorbeeld:staging": "wrangler d1 execute delta-cockpit-staging --remote --env staging --file scripts/voorbeeld-staging.sql"
   },
   "devDependencies": {
     "wrangler": "^4",
