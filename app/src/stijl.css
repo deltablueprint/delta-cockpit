@@ -307,10 +307,12 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
 .relatieinhoud { background: #fff; border: 1px solid var(--b1); border-radius: 0 3px 3px 3px; }
 .relatieinhoud.los { margin-bottom: 8px; border-radius: 3px; }
 .lijst.ingebed { border: none; }
-.rlkop { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--b1); }
+.rlkop {
+  display: flex; align-items: center; gap: 10px; padding: 7px 12px;
+  background: var(--head); border-bottom: 1px solid #DAD7D0;
+}
 .rltitel { font-size: 12.5px; font-weight: 700; }
 .rlmeta { font-size: 11.5px; color: var(--mut); }
-.rlkop .knop { margin-left: auto; }
 
 /* --- bewerken in de lijst --- */
 td.bewerkt { padding: 2px 4px; background: var(--bluebg); }
