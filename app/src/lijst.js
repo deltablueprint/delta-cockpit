@@ -139,8 +139,13 @@ function platteTekst(veld, w, meta, namen = {}) {
 export function toestandUitUrl(zoekdeel) {
   const p = new URLSearchParams(zoekdeel || "");
   const filters = {};
-  for (const [k, v] of p) if (k.startsWith("f.")) filters[k.slice(2)] = v;
+  const idfilters = {};
+  for (const [k, v] of p) {
+    if (k.startsWith("fid.")) idfilters[k.slice(4)] = v;
+    else if (k.startsWith("f.")) filters[k.slice(2)] = v;
+  }
   return {
+    idfilters,
     q: p.get("q") || "",
     zoekkolom: p.get("zk") || null,
     sorteer: p.get("sorteer") || null,
@@ -157,6 +162,7 @@ function urlVoor(tabelnaam, t) {
   if (t.sorteer) { p.set("sorteer", t.sorteer); p.set("richting", t.richting); }
   if (t.offset) p.set("offset", String(t.offset));
   for (const [k, v] of Object.entries(t.filters)) if (v) p.set(`f.${k}`, v);
+  for (const [k, v] of Object.entries(t.idfilters || {})) if (v) p.set(`fid.${k}`, v);
   const vraag = p.toString();
   return `#/t/${tabelnaam}${vraag ? "?" + vraag : ""}`;
 }
@@ -169,6 +175,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   if (toestand.offset) params.set("offset", String(toestand.offset));
   params.set("limiet", String(PAGINA));
   for (const [k, v] of Object.entries(toestand.filters)) if (v) params.set(`f.${k}`, v);
+  for (const [k, v] of Object.entries(toestand.idfilters || {})) if (v) params.set(`fid.${k}`, v);
 
   const bestaand = inhoud.querySelector(".lijst");
   if (bestaand) bestaand.classList.add("bezig");
@@ -220,7 +227,17 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       </span>
     </div>`;
 
-  const chips = Object.entries(toestand.filters)
+  // De chips: wat er nu gefilterd wordt. Een vast filter op een verwijzing
+  // toont de naam van dat record — 'Cyclus = 2026-10', niet 'Cyclus = 3'.
+  // In een gerelateerde lijst blijft het ouderfilter buiten beeld: dat ís de
+  // lijst, en wie het weghaalt zou de lijst van een ander record zien.
+  const vasteChips = Object.entries(data.idfilters || {})
+    .filter(([k]) => !(toestand.ingebed && k === toestand.ingebed.kolom))
+    .map(([k, f]) => `<span class="chip">${ontsnap(f.veldlabel || k)} = ${ontsnap(f.label)}
+        <button class="chipweg" data-vast="${k}" aria-label="Filter weghalen">&times;</button></span>`)
+    .join("");
+
+  const chips = vasteChips + Object.entries(toestand.filters)
     .filter(([k, v]) => v && !(toestand.ingebed && k === toestand.ingebed.kolom))
     .map(([k, v]) => {
       const veld = kolommen.find((x) => x.kolom === k);
@@ -396,6 +413,11 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
 
   inhoud.querySelectorAll(".chipweg").forEach((el) => {
     el.addEventListener("click", () => {
+      if (el.dataset.vast) {
+        const idfilters = { ...(toestand.idfilters || {}) };
+        delete idfilters[el.dataset.vast];
+        return ga({ idfilters, offset: 0 });
+      }
       if (el.dataset.kolom === "__q") return ga({ q: "", offset: 0 });
       const filters = { ...toestand.filters };
       delete filters[el.dataset.kolom];

@@ -65,7 +65,11 @@ export async function record(env, tabelnaam, id, ik) {
     if (ot) {
       const r = await env.DB.prepare(`select "${ot.titel_veld}" as titel from "${ot.naam}" where id = ?`)
         .bind(rij[ouderveld.kolom]).first();
-      ouder = { tabel: ot.naam, label_mv: ot.label_mv, id: rij[ouderveld.kolom], titel: r ? r.titel : `${ot.label} ${rij[ouderveld.kolom]}` };
+      ouder = {
+        tabel: ot.naam, label_mv: ot.label_mv, id: rij[ouderveld.kolom],
+        kolom: ouderveld.kolom,
+        titel: r ? r.titel : `${ot.label} ${rij[ouderveld.kolom]}`,
+      };
     }
   }
 

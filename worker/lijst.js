@@ -44,6 +44,32 @@ export async function lijst(env, tabelnaam, params, ik) {
   //   tekst      → bevat
   //   keuze      → het label waarop gezocht wordt, omgezet naar de waarden
   //   datum/tijd → bevat, op de opgeslagen jjjj-mm-dd, met maandnamen vertaald
+  // Een vast filter op een verwijzing: ?fid.cyclus=3 — precies dat record,
+  // niet 'bevat'. Zo filtert de lijst van voorwaarden op één cyclus, en zo
+  // haalt een gerelateerde lijst zijn regels op.
+  const idfilters = {};
+  for (const [sleutel, waardeTekst] of params) {
+    if (!sleutel.startsWith("fid.")) continue;
+    const kolom = sleutel.slice(4);
+    const veld = velden.find((v) => v.kolom === kolom && v.type === "verwijzing");
+    const nummer = Number(waardeTekst);
+    if (!veld || !Number.isFinite(nummer)) continue;
+    waar.push(`"${kolom}" = ?`);
+    binden.push(nummer);
+
+    let naam = String(nummer);
+    const doel = await env.DB.prepare("select naam, titel_veld, label from db_table where naam = ?")
+      .bind(veld.verwijst_naar).first();
+    if (doel) {
+      try {
+        const r = await env.DB.prepare(`select "${doel.titel_veld}" as titel from "${doel.naam}" where id = ?`)
+          .bind(nummer).first();
+        if (r && r.titel) naam = String(r.titel);
+      } catch { /* geen titelveld: dan het nummer */ }
+    }
+    idfilters[kolom] = { waarde: nummer, label: naam, veldlabel: veld.label };
+  }
+
   for (const [sleutel, ingetypt] of params) {
     if (!sleutel.startsWith("f.")) continue;
     const kolom = sleutel.slice(2);
@@ -162,6 +188,7 @@ export async function lijst(env, tabelnaam, params, ik) {
   }
 
   return {
+    idfilters,
     verwijzingen,
     tabel: { naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv,
              titel_veld: tabel.titel_veld, import_toegestaan: tabel.import_toegestaan,

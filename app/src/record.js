@@ -42,7 +42,12 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     kruimels.push(`<a href="#/t/${data.ouder.tabel}">${ontsnap(data.ouder.label_mv)}</a>`);
     kruimels.push(`<a href="#/t/${data.ouder.tabel}/${data.ouder.id}">${ontsnap(data.ouder.titel)}</a>`);
   }
-  kruimels.push(`<a href="#/t/${tabelnaam}">${ontsnap(data.tabel.label_mv)}</a>`);
+  // Kom je via een cyclus bij een voorwaarde, dan hoort 'Voorwaarden' in de
+  // breadcrumb de voorwaarden van díé cyclus te tonen — niet die van alle
+  // cycli. De kruimel draagt het ouderfilter dus mee.
+  kruimels.push(data.ouder && data.ouder.kolom
+    ? `<a href="#/t/${tabelnaam}?fid.${data.ouder.kolom}=${data.ouder.id}">${ontsnap(data.tabel.label_mv)}</a>`
+    : `<a href="#/t/${tabelnaam}">${ontsnap(data.tabel.label_mv)}</a>`);
   kruimels.push(`<span>${ontsnap(titel)}</span>`);
   kruimel.innerHTML = kruimels.join(` <span class="pijlje">&rsaquo;</span> `);
 
@@ -131,7 +136,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     if (!vak) return;
     lijstscherm(vak, { textContent: "" }, r.tabel, meta, {
       q: "", sorteer: null, richting: "asc", offset: 0,
-      filters: { [r.kolom]: String(id) },
+      filters: {},
+      idfilters: { [r.kolom]: String(id) },
       ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label, toonTelling: !tabbladen },
     });
   }
@@ -157,7 +163,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       if (!vak) continue;
       lijstscherm(vak, { textContent: "" }, r.tabel, meta, {
         q: "", sorteer: null, richting: "asc", offset: 0,
-        filters: { [r.kolom]: String(id) },
+        filters: {},
+        idfilters: { [r.kolom]: String(id) },
         ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label, toonTelling: !tabbladen },
       });
     }
