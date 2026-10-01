@@ -6,6 +6,7 @@
 //      schrijfactie draagt een identiteit (BOUWSPEC 11). Geen gedeelde sleutel.
 
 import { lijst } from "./lijst.js";
+import { wijzig, archiveer, dupliceer } from "./schrijf.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
@@ -135,13 +136,41 @@ export default {
 
       if (pad === "/api/ik") return json(ik);
 
-      // /api/t/<tabel> — de lijst. Alleen lezen in deze etappe.
+      // /api/t/<tabel> — de lijst
       const lijstPad = pad.match(/^\/api\/t\/([a-z_]+)$/);
       if (lijstPad) {
         if (request.method !== "GET") {
-          return json({ fout: "Schrijven kan nog niet; dat komt in etappe 4." }, 405);
+          return json({ fout: "Nieuwe records maak je aan vanaf het record waar ze bij horen." }, 405);
         }
         const uitkomst = await lijst(env, lijstPad[1], url.searchParams);
+        if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
+        return json(uitkomst);
+      }
+
+      // /api/t/<tabel>/<id> — één record wijzigen
+      const recordPad = pad.match(/^\/api\/t\/([a-z_]+)\/(\d+)$/);
+      if (recordPad && request.method === "PATCH") {
+        const body = await request.json().catch(() => ({}));
+        const uitkomst = await wijzig(env, ik, recordPad[1], Number(recordPad[2]), body);
+        if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
+        return json(uitkomst);
+      }
+
+      // /api/t/<tabel>/archiveer — één of meer records naar het archief
+      const archiefPad = pad.match(/^\/api\/t\/([a-z_]+)\/archiveer$/);
+      if (archiefPad && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const ids = (body.ids || []).map(Number).filter(Boolean);
+        if (!ids.length) return json({ fout: "Geen records opgegeven." }, 400);
+        const uitkomst = await archiveer(env, ik, archiefPad[1], ids, body.reden);
+        if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
+        return json(uitkomst);
+      }
+
+      // /api/t/<tabel>/<id>/dupliceer
+      const kopiePad = pad.match(/^\/api\/t\/([a-z_]+)\/(\d+)\/dupliceer$/);
+      if (kopiePad && request.method === "POST") {
+        const uitkomst = await dupliceer(env, ik, kopiePad[1], Number(kopiePad[2]));
         if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
         return json(uitkomst);
       }

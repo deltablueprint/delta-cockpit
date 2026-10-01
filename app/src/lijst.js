@@ -16,7 +16,7 @@
 // Rijen die elk hun eigen raster zijn vallen per rij anders uit — dat was fout.
 // ============================================================================
 
-import { lijst as haalLijst } from "./api.js";
+import { lijst as haalLijst, archiveer, dupliceer } from "./api.js";
 
 const KLEUR = {
   groen:  ["var(--grn)",  "var(--grnbg)"],
@@ -31,6 +31,9 @@ const ICOON = {
   zoek:      `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#8A8884" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>`,
   trechter:  `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#136289" stroke-width="2" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>`,
   info:      `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#136289" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".7" fill="#136289"/></svg>`,
+  tandwiel:  `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#6E6C68" stroke-width="1.9" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M4.2 7.5l1.9 1.1M17.9 15.4l1.9 1.1M4.2 16.5l1.9-1.1M17.9 8.6l1.9-1.1"/></svg>`,
+  doos:      `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7h18v4H3zM5 11v9h14v-9M10 15h4"/></svg>`,
+  kopie:     `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M5 15V5a1 1 0 011-1h10"/></svg>`,
   menu:      `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#6E6C68" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>`,
   vorige:    `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>`,
   volgende:  `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>`,
@@ -39,6 +42,10 @@ const ICOON = {
 };
 
 let laatsteFocus = null;   // welk veld de cursor had vóór het opnieuw tekenen
+
+// Welke lijst er nu staat. De router gebruikt dit om te zien of een
+// hashwijziging van onszelf komt — dan hoeft er niets opnieuw getekend.
+export const huidigeLijst = { tabelnaam: null, url: null };
 
 const MAANDEN = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
 const PAGINA = 50;
@@ -180,16 +187,26 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       <span class="filternote">${tot === 0 ? "" : `${tot} ${tot === 1 ? "regel" : "regels"}`}</span>
     </div>`;
 
+  // Elke kolom krijgt zijn breedte uit de definitielaag; wat overblijft gaat
+  // naar een lege kolom rechts. Zo wordt de titelkolom nooit onnodig breed.
+  const standaardBreedte = (k) =>
+    k.breedte || ({ keuze: "130px", datum: "120px", tijdstip: "150px", getal: "110px", "ja_nee": "90px" }[k.type] || "180px");
+
+  const breedtes = kolommen.map(standaardBreedte);
+  const minBreedte = 34 + breedtes.reduce((n, b) => n + (parseInt(b, 10) || 180), 0);
+
   const colgroup = `<colgroup>
-      <col style="width:34px"><col style="width:28px">
-      ${kolommen.map((k) => `<col${k.breedte ? ` style="width:${ontsnap(k.breedte)}"` : ""}>`).join("")}
+      <col style="width:34px">
+      ${breedtes.map((b) => `<col style="width:${ontsnap(b)}">`).join("")}
+      <col>
     </colgroup>`;
 
   const thead = `
     <thead>
       <tr class="kopregel">
-        <th class="vink"><input type="checkbox" aria-label="Alles selecteren"></th>
-        <th class="icoonkol">${ICOON.zoek}</th>
+        <th class="vink">
+          <button class="tandwiel" id="tandwiel" aria-label="Acties op de aangevinkte regels" title="Acties op de aangevinkte regels">${ICOON.tandwiel}</button>
+        </th>
         ${kolommen.map((k) => `
           <th class="${rechtsUit(k) ? "rechts" : ""}" data-kolom="${k.kolom}"
               aria-sort="${toestand.sorteer === k.kolom ? (toestand.richting === "desc" ? "descending" : "ascending") : "none"}">
@@ -197,11 +214,14 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
               toestand.sorteer === k.kolom ? `<span class="pijl">${toestand.richting === "desc" ? "▾" : "▴"}</span>` : ""
             }</span>
           </th>`).join("")}
+        <th class="vuller"></th>
       </tr>
       <tr class="zoekregel">
-        <td></td><td></td>
-        ${kolommen.map((k) => `<td><input type="text" data-kolom="${k.kolom}" placeholder="Zoeken"
-            aria-label="Zoeken in ${ontsnap(k.label)}" value="${ontsnap(toestand.filters[k.kolom] || "")}"></td>`).join("")}
+        <td><input type="checkbox" id="allesaan" aria-label="Alles selecteren"></td>
+        ${kolommen.map((k) => `<td><input type="text" data-kolom="${k.kolom}"
+            aria-label="Zoeken in ${ontsnap(k.label)}" value="${ontsnap(toestand.filters[k.kolom] || "")}"
+            placeholder="${k.type === "datum" || k.type === "tijdstip" ? "jjjj-mm-dd" : "Zoeken"}"></td>`).join("")}
+        <td></td>
       </tr>
     </thead>`;
 
@@ -212,7 +232,6 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     : `<tbody>${data.rijen.map((r) => `
         <tr data-id="${r.id}">
           <td class="vink"><input type="checkbox" aria-label="Selecteer regel"></td>
-          <td class="icoonkol">${ICOON.info}</td>
           ${kolommen.map((k, i) => {
             const tip = platteTekst(k, r[k.kolom], meta);
             return `<td class="${rechtsUit(k) ? "rechts" : ""}"${tip ? ` title="${ontsnap(tip)}"` : ""}>${
@@ -221,15 +240,25 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
                 : waarde(k, r[k.kolom], meta)
             }</td>`;
           }).join("")}
+          <td class="vuller"></td>
         </tr>`).join("")}</tbody>`;
+
+  const selectiebalk = `
+    <div class="selectiebalk" id="selectiebalk" hidden>
+      <span class="selectietekst"><b id="aantalgekozen">0</b> gekozen</span>
+      <button class="actieknop" id="actie-dupliceer">${ICOON.kopie} Dupliceren</button>
+      <button class="actieknop" id="actie-archiveer">${ICOON.doos} Archiveren</button>
+      <span class="selectienote">Archiveren haalt de regel uit de lijst; verwijderen bestaat niet.</span>
+      <button class="actieknop leeg" id="actie-annuleer">Selectie opheffen</button>
+    </div>`;
 
   inhoud.innerHTML = `
     <div class="titelrij">
       <h1>${ontsnap(data.tabel.label_mv)}</h1>
       <span class="sub">${tot} ${tot === 1 ? ontsnap(data.tabel.label.toLowerCase()) : ontsnap(data.tabel.label_mv.toLowerCase())}</span>
     </div>
-    <div class="lijst">${toolbar}${filterrij}
-      <div class="tabelomhulsel"><table class="lijsttabel">${colgroup}${thead}${tbody}</table></div>
+    <div class="lijst">${toolbar}${filterrij}${selectiebalk}
+      <div class="tabelomhulsel"><table class="lijsttabel" style="min-width:${minBreedte}px">${colgroup}${thead}${tbody}</table></div>
     </div>`;
 
   // ------------------------------------------------------------- gedrag
@@ -240,7 +269,17 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       : actief && actief.dataset && actief.dataset.kolom && actief.tagName === "INPUT"
         ? actief.dataset.kolom
         : null;
-    location.hash = urlVoor(tabelnaam, { ...toestand, ...nieuw });
+
+    const volgende = { ...toestand, ...nieuw };
+    const url = urlVoor(tabelnaam, volgende);
+
+    // De URL bijwerken zonder navigatie: het adres klopt en de terugknop werkt,
+    // maar het scherm wordt niet opnieuw opgebouwd.
+    huidigeLijst.tabelnaam = tabelnaam;
+    huidigeLijst.url = url;
+    history.pushState(null, "", url);
+
+    lijstscherm(inhoud, kruimel, tabelnaam, meta, volgende);
   };
 
   const zoek = inhoud.querySelector("#zoek");
@@ -284,6 +323,70 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       ga({ filters, offset: 0 });
     });
   });
+
+  // ---- selecteren en de acties daarop ----
+  const balk = inhoud.querySelector("#selectiebalk");
+  const teller2 = inhoud.querySelector("#aantalgekozen");
+  const allesAan = inhoud.querySelector("#allesaan");
+  const vinkjes = () => [...inhoud.querySelectorAll('tbody input[type="checkbox"]')];
+  const gekozen = () => vinkjes().filter((v) => v.checked).map((v) => Number(v.closest("tr").dataset.id));
+
+  function selectieBijwerken() {
+    const n = gekozen().length;
+    teller2.textContent = n;
+    balk.hidden = n === 0;
+    inhoud.querySelector("#actie-dupliceer").disabled = n !== 1;
+    if (allesAan) allesAan.checked = n > 0 && n === vinkjes().length;
+  }
+
+  vinkjes().forEach((v) => v.addEventListener("change", selectieBijwerken));
+  if (allesAan) {
+    allesAan.addEventListener("change", () => {
+      vinkjes().forEach((v) => { v.checked = allesAan.checked; });
+      selectieBijwerken();
+    });
+  }
+  inhoud.querySelector("#actie-annuleer").addEventListener("click", () => {
+    vinkjes().forEach((v) => { v.checked = false; });
+    selectieBijwerken();
+  });
+  inhoud.querySelector("#tandwiel").addEventListener("click", () => {
+    if (!gekozen().length) {
+      balk.hidden = false;
+      teller2.textContent = "0";
+      setTimeout(() => { if (!gekozen().length) balk.hidden = true; }, 2500);
+    }
+  });
+
+  inhoud.querySelector("#actie-archiveer").addEventListener("click", async () => {
+    const ids = gekozen();
+    if (!ids.length) return;
+    const reden = prompt(
+      `${ids.length} ${ids.length === 1 ? "regel" : "regels"} archiveren.\n` +
+      "De regel blijft bestaan en blijft opvraagbaar; hij verdwijnt alleen uit deze lijst.\n\n" +
+      "Reden (mag leeg):", ""
+    );
+    if (reden === null) return;
+    try {
+      await archiveer(tabelnaam, ids, reden);
+      lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand);
+    } catch (fout) {
+      alert(fout.message);
+    }
+  });
+
+  inhoud.querySelector("#actie-dupliceer").addEventListener("click", async () => {
+    const ids = gekozen();
+    if (ids.length !== 1) return;
+    try {
+      const nieuw = await dupliceer(tabelnaam, ids[0]);
+      location.hash = `/t/${tabelnaam}/${nieuw.id}`;
+    } catch (fout) {
+      alert(fout.message);
+    }
+  });
+
+  selectieBijwerken();
 
   // De cursor terug in het veld waar hij stond, anders is typen onmogelijk.
   if (laatsteFocus === "q") {

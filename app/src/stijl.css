@@ -188,3 +188,25 @@ button[disabled] { opacity: .6; cursor: default; }
   .zoek { width: 140px; }
   .paginatekst { display: none; }
 }
+
+/* --- selecteren en acties --- */
+.tandwiel {
+  height: 20px; width: 20px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: none; cursor: pointer;
+}
+.tandwiel:hover { background: rgba(0,0,0,.06); border-radius: 2px; }
+
+.selectiebalk {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 7px 10px; background: var(--bluebg); border-bottom: 1px solid #B4CBD8;
+}
+.selectietekst { font-size: 12px; color: var(--ink); }
+.actieknop {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px;
+  font-size: 12px; font-family: inherit; color: var(--ink);
+  background: #fff; border: 1px solid #D8D5CE; border-radius: 2px; cursor: pointer;
+}
+.actieknop:hover:not([disabled]) { border-color: var(--blue); color: var(--blue); }
+.actieknop[disabled] { color: var(--faint); cursor: default; }
+.actieknop.leeg { margin-left: 0; background: transparent; border-color: transparent; color: var(--mut); }
+.selectienote { margin-left: auto; font-size: 11.5px; color: var(--mut); }

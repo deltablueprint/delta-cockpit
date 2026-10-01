@@ -36,21 +36,50 @@ export async function lijst(env, tabelnaam, params) {
     }
   }
 
-  // Filter per kolom:  ?f.status=groen
-  // Tekstkolommen zoeken op "bevat", de rest op exact — zo doet een kolomfilter
-  // wat je verwacht als je er half een woord in typt.
-  for (const [sleutel, zoekwaarde] of params) {
+  // Filter per kolom:  ?f.status=afgesloten
+  // Wat iemand intypt is wat hij op het scherm ziet staan, niet wat er in de
+  // database staat. Daarom vertaalt elk type zijn eigen invoer:
+  //   tekst      → bevat
+  //   keuze      → het label waarop gezocht wordt, omgezet naar de waarden
+  //   datum/tijd → bevat, op de opgeslagen jjjj-mm-dd, met maandnamen vertaald
+  for (const [sleutel, ingetypt] of params) {
     if (!sleutel.startsWith("f.")) continue;
     const kolom = sleutel.slice(2);
     const veld = velden.find((v) => v.kolom === kolom);
-    if (!veld) continue;
+    if (!veld || !ingetypt.trim()) continue;
+    const zoekterm = ingetypt.trim();
+
+    if (veld.type === "keuze") {
+      const keuzes = (await env.DB.prepare(
+        "select waarde, label from db_choice where tabel = ? and kolom = ? and actief = 1"
+      ).bind(tabelnaam, kolom).all()).results;
+      const passend = keuzes
+        .filter((k) => k.label.toLowerCase().includes(zoekterm.toLowerCase())
+                    || k.waarde.toLowerCase().includes(zoekterm.toLowerCase()))
+        .map((k) => k.waarde);
+      if (passend.length) {
+        waar.push(`"${kolom}" in (${passend.map(() => "?").join(", ")})`);
+        binden.push(...passend);
+      } else {
+        waar.push("1 = 0");   // niets komt overeen: dan ook geen regels
+      }
+      continue;
+    }
+
+    if (veld.type === "datum" || veld.type === "tijdstip") {
+      waar.push(`"${kolom}" like ?`);
+      binden.push(`%${datumZoekterm(zoekterm)}%`);
+      continue;
+    }
+
     if (["tekst", "lang"].includes(veld.type)) {
       waar.push(`"${kolom}" like ?`);
-      binden.push(`%${zoekwaarde}%`);
-    } else {
-      waar.push(`"${kolom}" = ?`);
-      binden.push(zoekwaarde);
+      binden.push(`%${zoekterm}%`);
+      continue;
     }
+
+    waar.push(`"${kolom}" = ?`);
+    binden.push(zoekterm);
   }
 
   // vrij zoeken over de tekstkolommen
@@ -106,6 +135,29 @@ function veiligeSortering(sortering, bestaat) {
   const [kolom, richting] = sortering.trim().split(/\s+/);
   if (!bestaat(kolom)) return "id desc";
   return `"${kolom}" ${(richting || "").toLowerCase() === "desc" ? "desc" : "asc"}`;
+}
+
+// "aug" → "-08-",  "10 aug 2026" → "2026-08-10",  "2026-08" blijft zoals het is.
+const MAANDEN = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
+function datumZoekterm(tekst) {
+  const t = tekst.trim().toLowerCase();
+
+  const volledig = /^(\d{1,2})\s+([a-z]{3,})\s+(\d{4})$/.exec(t);
+  if (volledig) {
+    const m = MAANDEN.findIndex((x) => volledig[2].startsWith(x));
+    if (m >= 0) return `${volledig[3]}-${String(m + 1).padStart(2, "0")}-${volledig[1].padStart(2, "0")}`;
+  }
+
+  const maandJaar = /^([a-z]{3,})\s+(\d{4})$/.exec(t);
+  if (maandJaar) {
+    const m = MAANDEN.findIndex((x) => maandJaar[1].startsWith(x));
+    if (m >= 0) return `${maandJaar[2]}-${String(m + 1).padStart(2, "0")}`;
+  }
+
+  const alleenMaand = MAANDEN.findIndex((x) => t.length >= 3 && x.startsWith(t.slice(0, 3)) && /^[a-z]+$/.test(t));
+  if (alleenMaand >= 0) return `-${String(alleenMaand + 1).padStart(2, "0")}-`;
+
+  return t;
 }
 
 async function kolomBestaatInDb(env, tabel, kolom) {

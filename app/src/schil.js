@@ -7,7 +7,24 @@ const LOGO = `<svg viewBox="0 0 296.1 251.9" width="15" height="13" aria-hidden=
   <polygon points="296.1 251.9 139.2 251.9 256.9 185.1 296.1 251.9" fill="#FFFFFF"/>
   <polygon points="76.9 251.9 0 251.9 76.7 121.6 76.9 251.9" fill="#FFFFFF"/></svg>`;
 
+let gebouwd = null;
+
+// Markeert het actieve menu-item zonder de schil opnieuw te bouwen.
+export function menuBijwerken(route) {
+  if (!gebouwd) return;
+  gebouwd.wortel.querySelectorAll(".menu a").forEach((a) => {
+    a.classList.toggle("actief", a.getAttribute("href") === "#" + route);
+  });
+}
+
 export function schil(persoon, meta, actieveRoute, afmelden) {
+  // De schil wordt één keer gebouwd. Hem bij elke klik opnieuw opbouwen laat
+  // het scherm knipperen alsof de pagina herlaadt — dat mag niet.
+  if (gebouwd && gebouwd.persoon === persoon) {
+    menuBijwerken(actieveRoute);
+    return gebouwd;
+  }
+
   const wortel = document.getElementById("app");
   wortel.className = "";
 
@@ -45,8 +62,13 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
     afmelden();
   });
 
-  return {
+  gebouwd = {
+    wortel,
+    persoon,
     kruimel: wortel.querySelector("#kruimel"),
     inhoud: wortel.querySelector("#inhoud"),
   };
+  return gebouwd;
 }
+
+export function schilVergeten() { gebouwd = null; }
