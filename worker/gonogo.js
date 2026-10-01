@@ -42,11 +42,46 @@ export async function stapVoor(env, toepassing, stand) {
 
 // De actieknop rechtsboven op een record: precies één, die van de stap waar
 // het record nu in staat.
-export async function actieVoor(env, tabelnaam, rij, tabel) {
+export async function actieVoor(env, tabelnaam, rij, tabel, ik) {
   if (!tabel || !tabel.proces_veld || !rij) return null;
-  const stap = await stapVoor(env, tabelnaam, rij[tabel.proces_veld]);
-  if (!stap || !stap.actieknop || !stap.doelscherm) return null;
-  return { label: stap.actieknop, route: `/${stap.doelscherm}/${rij.id}`, stap: stap.naam };
+
+  let stappen = [];
+  try {
+    stappen = (await env.DB.prepare(
+      `select s.* from processtap s
+         join proces p on p.id = s.proces
+        where p.toepassing = ? and p.archief = 0 and s.archief = 0 and s.stand = ?
+          and s.actieknop is not null
+        order by s.volgorde`
+    ).bind(tabelnaam, rij[tabel.proces_veld]).all()).results;
+  } catch {
+    return null;   // Procesbeheer bestaat nog niet in deze omgeving
+  }
+  if (!stappen.length) return null;
+
+  // Horen er meerdere stappen bij dezelfde status, dan bepaalt het quorum waar
+  // je staat: zolang het niet gehaald is stuur je blind in, daarna is het
+  // gesprek aan de beurt. Er staat nooit meer dan één knop.
+  let stap = stappen[0];
+  let label = stap.actieknop;
+
+  if (tabelnaam === "cyclus") {
+    const moment = await openMoment(env, rij.id);
+    if (moment && moment.quorum_gehaald_op && stappen.length > 1) {
+      stap = stappen[1];
+      label = stap.actieknop;
+    } else if (moment && ik) {
+      // Jij bent klaar, de anderen nog niet: dan vraagt de knop niets meer van
+      // je, hij laat alleen zien waar het op wacht.
+      const mijn = await env.DB.prepare(
+        "select status from inzending where beoordelingsmoment = ? and deelnemer = ?"
+      ).bind(moment.id, ik.id).first();
+      if (mijn && mijn.status === "verstuurd" && stap.actieknop_klaar) label = stap.actieknop_klaar;
+    }
+  }
+
+  if (!stap.doelscherm) return null;
+  return { label, route: `/${stap.doelscherm}/${rij.id}`, stap: stap.naam };
 }
 
 async function quorumstap(env) {
@@ -81,10 +116,21 @@ export async function stand(env, ik, cyclusId) {
 
   let inzendingen = [];
   let mijn = null;
-  if (moment) {
+  let hetMoment = moment;
+  if (hetMoment) {
+    // Het quorum wordt niet alleen geteld op het ogenblik dat iemand verstuurt.
+    // Komt er een inzending langs een andere weg bij — proefdata, een import,
+    // een herstelde regel — dan hoort het beeld daarna nog steeds te kloppen.
+    // Daarom telt het systeem hier opnieuw, en opent het alsnog als het er is.
+    if (!hetMoment.quorum_gehaald_op) {
+      await tilQuorum(env, ik, hetMoment.id);
+      hetMoment = await env.DB.prepare("select * from beoordelingsmoment where id = ?")
+        .bind(hetMoment.id).first();
+    }
+
     const rijen = (await env.DB.prepare(
       "select * from inzending where beoordelingsmoment = ? and archief = 0"
-    ).bind(moment.id).all()).results;
+    ).bind(hetMoment.id).all()).results;
     mijn = rijen.find((r) => r.deelnemer === ik.id) || null;
     inzendingen = await schermAf(env, ik, "inzending", rijen);
   }
@@ -109,8 +155,8 @@ export async function stand(env, ik, cyclusId) {
   return {
     cyclus,
     stap: stap ? { naam: stap.naam, quorum: stap.quorum, quorum_van: stap.quorum_van, afdwingt: stap.afdwingt } : null,
-    moment,
-    open: Boolean(moment && moment.quorum_gehaald_op),
+    moment: hetMoment,
+    open: Boolean(hetMoment && hetMoment.quorum_gehaald_op),
     quorum: { nodig, van: stap && stap.quorum_van ? stap.quorum_van : deelnemers.results.length, verstuurd },
     deelnemers: deelnemers.results,
     inzendingen,

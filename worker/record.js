@@ -83,7 +83,7 @@ export async function record(env, tabelnaam, id, ik) {
   }
 
   // De actieknop rechtsboven: die van de stap waar dit record nu in staat.
-  const actie = await actieVoor(env, tabelnaam, rij, tabel);
+  const actie = await actieVoor(env, tabelnaam, rij, tabel, ik);
 
   return {
     ouder,
