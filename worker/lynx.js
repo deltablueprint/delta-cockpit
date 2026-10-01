@@ -129,18 +129,25 @@ export function leesPosities(xml) {
         .sort((a, b) => String(b.dateTime || "").localeCompare(String(a.dateTime || "")))[0];
 
       const multiplier = multiplierVan(p);
-      const premiePunten = opening ? getal(opening.tradePrice) : null;
+      // De prijs waartegen geopend is staat ook op de positie zelf
+      // (costBasisPrice). Is de openingstransactie binnen de periode van het
+      // rapport gevallen, dan is die preciezer — anders is dit genoeg.
+      const premiePunten = (opening ? getal(opening.tradePrice) : null)
+        ?? getal(p.openPrice) ?? getal(p.costBasisPrice);
 
       return {
         conid: p.conid,
-        contract: `${p.underlyingSymbol || p.symbol || ""} ${datum(p.expiry) || ""} ${p.strike || ""} ${(p.putCall || "").toUpperCase() === "P" ? "PUT" : (p.putCall || "")}`.replace(/\s+/g, " ").trim(),
+        contract: p.description
+          || `${p.underlyingSymbol || p.symbol || ""} ${datum(p.expiry) || ""} ${p.strike || ""} ${(p.putCall || "").toUpperCase() === "P" ? "PUT" : (p.putCall || "")}`.replace(/\s+/g, " ").trim(),
         strike: getal(p.strike),
         expiratiedatum: datum(p.expiry),
         aantal: Math.abs(getal(p.position) ?? getal(p.quantity) ?? 0) || null,
         premie_eur: premiePunten === null ? null : Math.round(premiePunten * multiplier * 100) / 100,
         premie_pt: premiePunten,
         uitvoering_op: tijdstip(opening && opening.dateTime),
-        richting: (getal(p.position) ?? 0) < 0 ? "geschreven" : "gekocht",
+        richting: (p.side === "Short" || (getal(p.position) ?? 0) < 0) ? "geschreven" : "gekocht",
+        marktprijs: getal(p.markPrice),
+        rapportdatum: datum(p.reportDate),
       };
     });
 }

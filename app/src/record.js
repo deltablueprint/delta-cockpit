@@ -258,7 +258,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
             <td>${p.expiratiedatum ? toonDatum(p.expiratiedatum) : "—"}</td>
             <td>${ontsnap(p.aantal ?? "—")}${p.richting === "gekocht" ? ' <span class="faint">gekocht</span>' : ""}</td>
             <td>${p.premie_eur === null || p.premie_eur === undefined ? "—" : `€ ${ontsnap(p.premie_eur)}`}</td>
-            <td>${ontsnap(p.uitvoering_op || "—")}</td>
+            <td>${ontsnap(p.uitvoering_op || p.rapportdatum || "—")}</td>
             <td><button class="knop klein" data-kies="${i}">Deze nemen</button></td></tr>`).join("")}
         </tbody></table>`;
       vak.querySelectorAll("[data-kies]").forEach((knop) => {
