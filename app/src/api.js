@@ -33,8 +33,18 @@ async function haal(pad, opties = {}) {
     throw e;
   }
   if (!antwoord.ok) {
+    // De worker antwoordt altijd in JSON, ook bij een fout. Die melding is in
+    // het Nederlands geschreven voor wie hem leest; die tonen we dus, niet de
+    // ruwe tekst van het antwoord.
     const tekst = await antwoord.text();
-    throw new Error(`Fout ${antwoord.status}: ${tekst.slice(0, 200)}`);
+    let melding = `Fout ${antwoord.status}: ${tekst.slice(0, 200)}`;
+    try {
+      const uit = JSON.parse(tekst);
+      if (uit && uit.fout) melding = uit.fout;
+    } catch { /* geen JSON; dan de ruwe tekst */ }
+    const e = new Error(melding);
+    e.code = antwoord.status;
+    throw e;
   }
   return antwoord.json();
 }
@@ -68,3 +78,12 @@ export const zetAvatar = (avatar) =>
 
 export const nieuwSjabloon = (tabel, ouder) =>
   haal(`/api/t/${tabel}/nieuw${ouder ? `?ouder=${ouder.tabel}:${ouder.id}` : ""}`);
+
+// ---- de go/no-go (etappe 10) ----
+export const gonogoStand = (cyclus) => haal(`/api/gonogo/${cyclus}`);
+export const gonogoMoment = (cyclus, body = {}) =>
+  haal(`/api/gonogo/${cyclus}/moment`, { methode: "POST", body });
+export const gonogoVersturen = (cyclus, body) =>
+  haal(`/api/gonogo/${cyclus}/versturen`, { methode: "POST", body });
+export const gonogoUitkomst = (cyclus, body) =>
+  haal(`/api/gonogo/${cyclus}/uitkomst`, { methode: "POST", body });

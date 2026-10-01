@@ -39,6 +39,13 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
   const huidig = await env.DB.prepare(`select * from "${tabelnaam}" where id = ?`).bind(id).first();
   if (!huidig) return { fout: `Geen ${tabel.label.toLowerCase()} met nummer ${id}.`, status: 404 };
 
+  // Versturen vergrendelt een inzending. Daarna is ze niet meer te wijzigen,
+  // ook niet door degene die haar schreef: wie van mening verandert doet dat
+  // in het gesprek (BOUWSPEC 5.4).
+  if (tabelnaam === "inzending" && huidig.status === "verstuurd") {
+    return { fout: "Deze inzending is verstuurd en staat vast.", status: 409 };
+  }
+
   // Botsingsdetectie: wie opslaat op een verouderde revisie krijgt het record
   // terug in plaats van andermans werk te overschrijven.
   if (body.revisie !== undefined && huidig.revisie !== undefined &&

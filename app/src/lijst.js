@@ -57,10 +57,12 @@ function datum(s) {
   return m ? `${Number(m[3])} ${MAANDEN[Number(m[2]) - 1]} ${m[1]}` : ontsnap(s);
 }
 
-function waarde(veld, w, meta, rij = {}) {
+function waarde(veld, w, meta, rij = {}, namen = {}) {
   if (w === null || w === undefined || w === "") return `<span class="faint">&mdash;</span>`;
   if (veld.type === "keuze" || veld.type === "tijd" || veld.type === "verwijzing") {
-    return lees(veld, w, meta, {}, rij);
+    const vertaald = namen[veld.kolom] && namen[veld.kolom][w] !== undefined
+      ? { [veld.kolom]: namen[veld.kolom][w] } : {};
+    return lees(veld, w, meta, vertaald, rij);
   }
   if (veld.kolom.endsWith("_pt")) {
     const n = Number(w);
@@ -94,7 +96,7 @@ const CELRUIMTE = 22;
 const SMALST = 92;
 const BREEDST = 360;
 
-function gemetenBreedte(kolom, index, rijen, meta) {
+function gemetenBreedte(kolom, index, rijen, meta, namen = {}) {
   const familie = getComputedStyle(document.body).fontFamily || "sans-serif";
   const kopfont = `700 10px ${familie}`;
   const celfont = `${index === 0 ? "600 " : ""}12px ${familie}`;
@@ -103,7 +105,7 @@ function gemetenBreedte(kolom, index, rijen, meta) {
   let breed = tekstbreedte(kolom.label.toUpperCase(), kopfont, 0.9) + KOPRUIMTE;
 
   for (const rij of rijen) {
-    const tekst = platteTekst(kolom, rij[kolom.kolom], meta);
+    const tekst = platteTekst(kolom, rij[kolom.kolom], meta, namen);
     if (!tekst) continue;
     let w = tekstbreedte(tekst, celfont) + CELRUIMTE;
     if (kolom.type === "keuze") w += 16;                    // het randje om de badge
@@ -117,8 +119,13 @@ function gemetenBreedte(kolom, index, rijen, meta) {
 }
 
 // Platte tekst voor het title-attribuut, zodat afgeknotte cellen leesbaar blijven.
-function platteTekst(veld, w, meta) {
+function platteTekst(veld, w, meta, namen = {}) {
   if (w === null || w === undefined || w === "") return "";
+  if (veld.type === "verwijzing") {
+    if (namen[veld.kolom] && namen[veld.kolom][w] !== undefined) return String(namen[veld.kolom][w]);
+    if (veld.verwijst_naar === "gebruiker" && meta.gebruikers[w]) return meta.gebruikers[w].naam;
+    return String(w);
+  }
   if (veld.type === "keuze") {
     const k = (meta.keuzes[`${veld.tabel}.${veld.kolom}`] || []).find((x) => x.waarde === w);
     return k ? k.label : String(w);
@@ -214,7 +221,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     </div>`;
 
   const chips = Object.entries(toestand.filters)
-    .filter(([, v]) => v)
+    .filter(([k, v]) => v && !(toestand.ingebed && k === toestand.ingebed.kolom))
     .map(([k, v]) => {
       const veld = kolommen.find((x) => x.kolom === k);
       return `<span class="chip">${ontsnap(veld ? veld.label : k)} = ${ontsnap(v)}
@@ -237,7 +244,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   // kolom zelf versleept, dan wint zijn breedte: die is van hem.
   const eigen = await eigenBreedtes(tabelnaam);
   const breedtes = kolommen.map(
-    (k, i) => `${eigen[k.kolom] || gemetenBreedte(k, i, data.rijen, meta)}px`
+    (k, i) => `${eigen[k.kolom] || gemetenBreedte(k, i, data.rijen, meta, data.verwijzingen || {})}px`
   );
   const minBreedte = breedtes.reduce((n, b) => n + (parseInt(b, 10) || 180), 0);
 
@@ -273,11 +280,11 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     : `<tbody>${data.rijen.map((r) => `
         <tr data-id="${r.id}">
           ${kolommen.map((k, i) => {
-            const tip = platteTekst(k, r[k.kolom], meta);
+            const tip = platteTekst(k, r[k.kolom], meta, data.verwijzingen || {});
             return `<td data-kolom="${k.kolom}" class="${rechtsUit(k) ? "rechts " : ""}${toestand.sorteer === k.kolom ? "gesorteerd" : ""}"${tip ? ` title="${ontsnap(tip)}"` : ""}>${
               i === 0
-                ? `<a href="#/t/${tabelnaam}/${r.id}" class="recordlink">${waarde(k, r[k.kolom], meta, r)}</a>`
-                : waarde(k, r[k.kolom], meta, r)
+                ? `<a href="#/t/${tabelnaam}/${r.id}" class="recordlink">${waarde(k, r[k.kolom], meta, r, data.verwijzingen || {})}</a>`
+                : waarde(k, r[k.kolom], meta, r, data.verwijzingen || {})
             }</td>`;
           }).join("")}
           <td class="vuller"></td>
@@ -297,7 +304,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       <h1>${ontsnap(data.tabel.label_mv)}</h1>
       <span class="sub">${tot} ${tot === 1 ? "regel" : "regels"}</span>
     </div>`) + `
-    <div class="lijst${ingebed ? " ingebed" : ""}">${relatiekop}${ingebed ? "" : toolbar + filterrij}
+    <div class="lijst${ingebed ? " ingebed" : ""}">${relatiekop}${ingebed ? (chips || toestand.q ? filterrij : "") : toolbar + filterrij}
       <div class="tabelomhulsel"><table class="lijsttabel" style="min-width:${minBreedte}px">${colgroup}${thead}${tbody}</table></div>
     </div>`;
 

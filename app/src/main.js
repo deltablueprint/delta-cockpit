@@ -4,6 +4,7 @@ import { schil, menuBijwerken, schilVergeten } from "./schil.js";
 import { lijstscherm, toestandUitUrl, huidigeLijst } from "./lijst.js";
 import { recordscherm } from "./record.js";
 import { importscherm } from "./importeren.js";
+import { gonogoscherm } from "./gonogo.js";
 import { stopLive } from "./live.js";
 
 let persoon = null;
@@ -34,6 +35,15 @@ function teken() {
     huidigeLijst.tabelnaam = null;
     huidigeLijst.url = null;
     importscherm(inhoud, kruimel, meta);
+    return;
+  }
+
+  // Het actiescherm van de go/no-go hangt aan één cyclus (etappe 10).
+  const gonogoRoute = pad.match(/^\/gonogo\/(\d+)$/);
+  if (gonogoRoute) {
+    huidigeLijst.tabelnaam = null;
+    huidigeLijst.url = null;
+    gonogoscherm(inhoud, kruimel, Number(gonogoRoute[1]), meta);
     return;
   }
 

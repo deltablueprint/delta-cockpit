@@ -3,7 +3,10 @@
 // definitielaag — een kindtabel is een tabel met een veld dat naar deze
 // tabel verwijst (BOUWSPEC 10.0). Geen aparte relatietabel om bij te houden.
 
-export async function record(env, tabelnaam, id) {
+import { schermAfEen } from "./blind.js";
+import { actieVoor } from "./gonogo.js";
+
+export async function record(env, tabelnaam, id, ik) {
   const tabel = await env.DB.prepare(
     "select * from db_table where naam = ? and actief = 1"
   ).bind(tabelnaam).first();
@@ -75,9 +78,13 @@ export async function record(env, tabelnaam, id) {
     if (stappen.length) proces = { veld: tabel.proces_veld, nu: rij[tabel.proces_veld], stappen };
   }
 
+  // De actieknop rechtsboven: die van de stap waar dit record nu in staat.
+  const actie = await actieVoor(env, tabelnaam, rij, tabel);
+
   return {
     ouder,
     proces,
+    actie,
     tabel: {
       naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv,
       titel_veld: tabel.titel_veld, related_weergave: tabel.related_weergave,
@@ -85,7 +92,7 @@ export async function record(env, tabelnaam, id) {
     },
     secties: secties.results,
     velden: velden.results,
-    waarden: rij,
+    waarden: await schermAfEen(env, ik, tabelnaam, rij),
     verwijzingen: labels,
     relaties,
   };

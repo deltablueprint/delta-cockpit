@@ -2,9 +2,11 @@
 // definitielaag — niet uit de URL. Daarmee kan een verzoek nooit een kolom
 // of tabel bereiken die niet gedefinieerd is.
 
+import { schermAf } from "./blind.js";
+
 const MAX = 200;
 
-export async function lijst(env, tabelnaam, params) {
+export async function lijst(env, tabelnaam, params, ik) {
   const tabel = await env.DB.prepare(
     "select * from db_table where naam = ? and actief = 1"
   ).bind(tabelnaam).first();
@@ -80,19 +82,33 @@ export async function lijst(env, tabelnaam, params) {
       continue;
     }
 
-    waar.push(`"${kolom}" = ?`);
-    binden.push(zoekterm);
+    // Een verwijzing toont een naam, dus daar wordt op gezocht — niet op het
+    // nummer dat eronder zit.
+    if (veld.type === "verwijzing" && veld.verwijst_naar) {
+      const doel = await env.DB.prepare("select naam, titel_veld from db_table where naam = ?")
+        .bind(veld.verwijst_naar).first();
+      if (doel) {
+        waar.push(`"${kolom}" in (select id from "${doel.naam}" where "${doel.titel_veld}" like ?)`);
+        binden.push(`%${zoekterm}%`);
+        continue;
+      }
+    }
+
+    // Alles wat overblijft — getallen, ja/nee — zoekt op 'bevat' en niet op
+    // 'is precies'. Zoeken op 7 hoort ook 70 te vinden: de 7 staat erin.
+    waar.push(`cast("${kolom}" as text) like ?`);
+    binden.push(`%${zoekterm}%`);
   }
 
   // vrij zoeken over de tekstkolommen
   const zoek = (params.get("q") || "").trim();
   if (zoek) {
-    const tekstkolommen = velden
-      .filter((v) => ["tekst", "lang", "keuze"].includes(v.type))
+    const zoekbaar = velden
+      .filter((v) => !["bestand"].includes(v.type))
       .map((v) => v.kolom);
-    if (tekstkolommen.length) {
-      waar.push("(" + tekstkolommen.map((k) => `"${k}" like ?`).join(" or ") + ")");
-      tekstkolommen.forEach(() => binden.push(`%${zoek}%`));
+    if (zoekbaar.length) {
+      waar.push("(" + zoekbaar.map((k) => `cast("${k}" as text) like ?`).join(" or ") + ")");
+      zoekbaar.forEach(() => binden.push(`%${zoek}%`));
     }
   }
 
@@ -126,12 +142,32 @@ export async function lijst(env, tabelnaam, params) {
     env.DB.prepare(`select count(*) as n from "${tabelnaam}" ${waarSql}`).bind(...binden).first(),
   ]);
 
+  // Een verwijzing toont een naam, geen nummer. Welke namen dat zijn, haalt
+  // de lijst in één vraag per verwijzende kolom op.
+  const verwijzingen = {};
+  for (const veld of kolommen.map((k) => velden.find((v) => v.kolom === k))) {
+    if (!veld || veld.type !== "verwijzing" || !veld.verwijst_naar) continue;
+    if (veld.verwijst_naar === "gebruiker") continue;      // die komen uit meta
+    const ids = [...new Set(rijen.results.map((r) => r[veld.kolom]).filter((w) => w !== null && w !== undefined))];
+    if (!ids.length) continue;
+    const doel = await env.DB.prepare("select naam, titel_veld from db_table where naam = ?")
+      .bind(veld.verwijst_naar).first();
+    if (!doel) continue;
+    try {
+      const namen = (await env.DB.prepare(
+        `select id, "${doel.titel_veld}" as titel from "${doel.naam}" where id in (${ids.map(() => "?").join(", ")})`
+      ).bind(...ids).all()).results;
+      verwijzingen[veld.kolom] = Object.fromEntries(namen.map((n) => [n.id, n.titel]));
+    } catch { /* tabel zonder titelveld: laat het nummer staan */ }
+  }
+
   return {
+    verwijzingen,
     tabel: { naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv,
              titel_veld: tabel.titel_veld, import_toegestaan: tabel.import_toegestaan,
              nieuw_vanuit_lijst: tabel.nieuw_vanuit_lijst },
     kolommen: kolommen.map((k) => velden.find((v) => v.kolom === k)),
-    rijen: rijen.results,
+    rijen: await schermAf(env, ik, tabelnaam, rijen.results),
     totaal: telling.n,
     limiet,
     offset,

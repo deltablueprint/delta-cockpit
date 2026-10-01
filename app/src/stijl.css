@@ -495,3 +495,51 @@ label.knop { cursor: pointer; }
 .sleepgreep:hover::after { background: var(--blue); }
 body.sleept { cursor: col-resize; user-select: none; }
 body.sleept .lijsttabel { pointer-events: none; }
+
+/* ============================================================================
+   Het go/no-go-scherm (etappe 10)
+   Twee gezichten, één beeld: eerst je eigen oordeel, daarna het gesprek.
+   ========================================================================== */
+.feiten { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 10px; margin-bottom: 10px; }
+.feitpaneel { background: #fff; border: 1px solid var(--b1); border-radius: 3px; overflow: hidden; margin-bottom: 10px; }
+.feitkop {
+  display: flex; align-items: baseline; gap: 10px; padding: 10px 12px;
+  background: #fff; border-bottom: 1px solid var(--b1);
+  font-size: 13.5px; font-weight: 700; color: var(--ink);
+}
+.feitmeta { font-size: 11.5px; font-weight: 400; color: var(--mut); }
+.feitleeg { margin: 0; padding: 14px 12px; font-size: 12.5px; color: var(--mut); }
+.feittabel { width: 100%; border-collapse: collapse; }
+.feittabel th {
+  padding: 7px 10px; text-align: left; background: var(--b1); border-bottom: 1px solid #DAD7D0;
+  font-size: 10px; font-weight: 700; letter-spacing: .9px; color: var(--dim); text-transform: uppercase;
+}
+.feittabel td {
+  padding: 7px 10px; font-size: 12px; color: var(--ink2);
+  border-bottom: 1px solid var(--b2); vertical-align: middle;
+}
+.feittabel tr:last-child td { border-bottom: none; }
+.feitnaam { font-weight: 600; color: var(--ink); }
+
+/* Wie er al verstuurd heeft — dát, niet wát. */
+.quorumbalk {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 16px;
+  padding: 10px 14px; margin-bottom: 10px;
+  background: #fff; border: 1px solid var(--b1); border-radius: 3px;
+}
+.quorumtelling { font-size: 12.5px; font-weight: 700; }
+.quorumpersoon { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--mut); }
+.quorumpersoon.klaar { color: var(--ink); }
+.quorumtijd { font-size: 11px; color: var(--mut); }
+.quorumnote { margin-left: auto; font-size: 11.5px; color: var(--mut); max-width: 420px; line-height: 1.45; }
+
+/* De inzendingen naast elkaar, zodra het quorum gehaald is. */
+.inzendingen { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1px; background: var(--b1); }
+.inzending { background: #fff; padding: 12px 14px 14px; }
+.inzendkop { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
+.inzendnaam { font-size: 13px; font-weight: 700; flex: 1 1 auto; }
+.inzendfeiten { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 4px 10px; margin: 0 0 10px; }
+.inzendfeiten dt { font-size: 11.5px; color: var(--mut); }
+.inzendfeiten dd { margin: 0; font-size: 12.5px; color: var(--ink2); }
+.inzendtekst { margin: 0 0 7px; font-size: 12.5px; color: var(--ink2); line-height: 1.5; }
+.inzendtekst strong { color: var(--ink); }

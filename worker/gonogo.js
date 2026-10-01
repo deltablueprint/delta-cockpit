@@ -1,0 +1,280 @@
+// Etappe 10 — de go/no-go.
+//
+// Twee schermen, hetzelfde beeld: eerst *Positie blind versturen*, en zodra
+// het quorum gehaald is *Go / no-go meeting*. Beide worden bereikt met de
+// actieknop op het cyclusrecord; welke knop dat is komt uit `processtap` en
+// niet uit het scherm (BOUWSPEC 10.0e).
+//
+// Wat het systeem hier wél doet: bewaren, afschermen, tellen tot het quorum.
+// Wat het niet doet: oordelen. Er is geen berekening die go of no-go zegt.
+
+import { schermAf } from "./blind.js";
+
+const DEELVELDEN = [
+  "positie", "strike", "expiratiedatum", "inzet_pct",
+  "reden", "motivering", "intuitie", "wat_ik_zag",
+];
+
+function audit(env, ik, tabel, record, soort, extra = {}) {
+  return env.DB.prepare(
+    `insert into audit (wie, tabel, record, soort, veld, oude_waarde, nieuwe_waarde, gebeurtenis, reden)
+     values (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    ik.id, tabel, record, soort,
+    extra.veld ?? null, extra.oude ?? null, extra.nieuwe ?? null,
+    extra.gebeurtenis ?? null, extra.reden ?? null
+  );
+}
+
+// De stap waar een record nu in staat, uit Procesbeheer.
+export async function stapVoor(env, toepassing, stand) {
+  try {
+    return await env.DB.prepare(
+      `select s.* from processtap s
+         join proces p on p.id = s.proces
+        where p.toepassing = ? and p.archief = 0 and s.archief = 0 and s.stand = ?
+        order by s.volgorde limit 1`
+    ).bind(toepassing, stand).first();
+  } catch {
+    return null;   // Procesbeheer bestaat nog niet in deze omgeving
+  }
+}
+
+// De actieknop rechtsboven op een record: precies één, die van de stap waar
+// het record nu in staat.
+export async function actieVoor(env, tabelnaam, rij, tabel) {
+  if (!tabel || !tabel.proces_veld || !rij) return null;
+  const stap = await stapVoor(env, tabelnaam, rij[tabel.proces_veld]);
+  if (!stap || !stap.actieknop || !stap.doelscherm) return null;
+  return { label: stap.actieknop, route: `/${stap.doelscherm}/${rij.id}`, stap: stap.naam };
+}
+
+async function quorumstap(env) {
+  return env.DB.prepare(
+    `select s.* from processtap s
+       join proces p on p.id = s.proces
+      where p.toepassing = 'cyclus' and p.archief = 0 and s.archief = 0 and s.quorum is not null
+      order by s.volgorde limit 1`
+  ).first();
+}
+
+async function openMoment(env, cyclusId) {
+  return env.DB.prepare(
+    `select * from beoordelingsmoment
+      where cyclus = ? and archief = 0 and status <> 'uitkomst vastgelegd'
+      order by datum desc, id desc limit 1`
+  ).bind(cyclusId).first();
+}
+
+// ------------------------------------------------------------------ lezen
+export async function stand(env, ik, cyclusId) {
+  const cyclus = await env.DB.prepare(
+    "select id, label, status, geopend_op, doelexpiratie from cyclus where id = ?"
+  ).bind(cyclusId).first();
+  if (!cyclus) return { fout: `Geen cyclus met nummer ${cyclusId}.`, status: 404 };
+
+  const [stap, moment, deelnemers] = await Promise.all([
+    quorumstap(env),
+    openMoment(env, cyclusId),
+    env.DB.prepare("select id, naam, korte_naam, avatar, kleur from gebruiker where actief = 1 order by naam").all(),
+  ]);
+
+  let inzendingen = [];
+  let mijn = null;
+  if (moment) {
+    const rijen = (await env.DB.prepare(
+      "select * from inzending where beoordelingsmoment = ? and archief = 0"
+    ).bind(moment.id).all()).results;
+    mijn = rijen.find((r) => r.deelnemer === ik.id) || null;
+    inzendingen = await schermAf(env, ik, "inzending", rijen);
+  }
+
+  // De feiten waartegen geoordeeld wordt. Alleen lezen op dit scherm:
+  // bijwerken gebeurt op de cyclus, en dat staat in de audit trail.
+  const voorwaarden = (await env.DB.prepare(
+    `select id, naam, soort, bron, gemeten_waarde, status, gemeten_door, gemeten_op
+       from voorwaarde where cyclus = ? and archief = 0 order by soort desc, volgorde, id`
+  ).bind(cyclusId).all()).results;
+
+  const events = (await env.DB.prepare(
+    `select ce.id, ce.behandeling, ce.motivering, ce.zwaarte, ce.zwaarte_reden,
+            e.datum, e.tijdstip, e.tijdzone, e.naam, e.soort
+       from cyclus_event ce join event e on e.id = ce.event
+      where ce.cyclus = ? order by e.datum, e.tijdstip`
+  ).bind(cyclusId).all()).results;
+
+  const verstuurd = inzendingen.filter((i) => i.status === "verstuurd").length;
+  const nodig = stap && stap.quorum ? stap.quorum : (deelnemers.results.length || 3);
+
+  return {
+    cyclus,
+    stap: stap ? { naam: stap.naam, quorum: stap.quorum, quorum_van: stap.quorum_van, afdwingt: stap.afdwingt } : null,
+    moment,
+    open: Boolean(moment && moment.quorum_gehaald_op),
+    quorum: { nodig, van: stap && stap.quorum_van ? stap.quorum_van : deelnemers.results.length, verstuurd },
+    deelnemers: deelnemers.results,
+    inzendingen,
+    mijn,
+    voorwaarden,
+    events,
+    ik: ik.id,
+  };
+}
+
+// ------------------------------------------------- een moment openen
+export async function startMoment(env, ik, cyclusId, body = {}) {
+  const bestaand = await openMoment(env, cyclusId);
+  if (bestaand) return { id: bestaand.id, bestond: true };
+
+  const cyclus = await env.DB.prepare("select id, status from cyclus where id = ?").bind(cyclusId).first();
+  if (!cyclus) return { fout: `Geen cyclus met nummer ${cyclusId}.`, status: 404 };
+
+  const rij = await env.DB.prepare(
+    `insert into beoordelingsmoment (cyclus, datum, aanleiding, status, aangemaakt_door)
+     values (?, coalesce(?, date('now')), ?, 'blind versturen', ?) returning id`
+  ).bind(cyclusId, body.datum || null, body.aanleiding || null, ik.id).first();
+
+  await env.DB.batch([
+    audit(env, ik, "beoordelingsmoment", rij.id, "gebeurtenis", { gebeurtenis: "beoordelingsmoment geopend" }),
+    env.DB.prepare("update cyclus set status = 'go-nogo' where id = ? and status = 'pre-analyse'").bind(cyclusId),
+  ]);
+
+  return { id: rij.id, bestond: false };
+}
+
+// ------------------------------------------------- blind versturen
+export async function versturen(env, ik, cyclusId, body = {}) {
+  const moment = await openMoment(env, cyclusId);
+  if (!moment) return { fout: "Er loopt nog geen beoordelingsmoment op deze cyclus.", status: 409 };
+  if (moment.status === "uitkomst vastgelegd") {
+    return { fout: "De uitkomst van dit moment is al vastgelegd.", status: 409 };
+  }
+
+  const bestaand = await env.DB.prepare(
+    "select * from inzending where beoordelingsmoment = ? and deelnemer = ?"
+  ).bind(moment.id, ik.id).first();
+
+  // Versturen vergrendelt. Daarna is een inzending niet meer te wijzigen —
+  // ook niet door degene die hem schreef.
+  if (bestaand && bestaand.status === "verstuurd") {
+    return { fout: "Je inzending is al verstuurd en staat vast.", status: 409 };
+  }
+
+  const positie = body.positie === "go" || body.positie === "no-go" ? body.positie : null;
+  if (!positie) return { fout: "Kies go of no-go.", status: 422, veld: "positie" };
+  if (positie === "no-go" && !String(body.reden || "").trim()) {
+    return { fout: "Een no-go heeft een reden nodig.", status: 422, veld: "reden" };
+  }
+  if (positie === "go" && (body.strike === null || body.strike === undefined || body.strike === "")) {
+    return { fout: "Bij een go hoort een strike.", status: 422, veld: "strike" };
+  }
+  if (positie === "go" && !String(body.expiratiedatum || "").trim()) {
+    return { fout: "Bij een go hoort een expiratiedatum.", status: 422, veld: "expiratiedatum" };
+  }
+
+  const w = (k) => (body[k] === "" || body[k] === undefined ? null : body[k]);
+  const waarden = [
+    positie, w("strike"), w("expiratiedatum"), w("inzet_pct"),
+    w("reden"), w("motivering"), w("intuitie"), w("wat_ik_zag"),
+  ];
+
+  let id;
+  if (bestaand) {
+    await env.DB.prepare(
+      `update inzending set positie = ?, strike = ?, expiratiedatum = ?, inzet_pct = ?,
+              reden = ?, motivering = ?, intuitie = ?, wat_ik_zag = ?,
+              status = 'verstuurd', verstuurd_op = datetime('now'), revisie = revisie + 1
+        where id = ?`
+    ).bind(...waarden, bestaand.id).run();
+    id = bestaand.id;
+  } else {
+    const rij = await env.DB.prepare(
+      `insert into inzending (cyclus, beoordelingsmoment, deelnemer, status,
+                              positie, strike, expiratiedatum, inzet_pct,
+                              reden, motivering, intuitie, wat_ik_zag, verstuurd_op)
+       values (?, ?, ?, 'verstuurd', ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')) returning id`
+    ).bind(cyclusId, moment.id, ik.id, ...waarden).first();
+    id = rij.id;
+  }
+
+  await audit(env, ik, "inzending", id, "gebeurtenis", { gebeurtenis: "verstuurd" }).run();
+
+  const telling = await tilQuorum(env, ik, moment.id);
+  return { id, ...telling };
+}
+
+// Het quorum tellen. Wordt het gehaald, dan gaan de inzendingen open —
+// tegelijk voor iedereen, ook voor degene die als eerste verstuurde.
+async function tilQuorum(env, ik, momentId) {
+  const stap = await quorumstap(env);
+  const nodig = stap && stap.quorum ? stap.quorum : 3;
+  const n = (await env.DB.prepare(
+    "select count(*) as n from inzending where beoordelingsmoment = ? and status = 'verstuurd' and archief = 0"
+  ).bind(momentId).first()).n;
+
+  const moment = await env.DB.prepare("select * from beoordelingsmoment where id = ?").bind(momentId).first();
+  if (n >= nodig && moment && !moment.quorum_gehaald_op) {
+    await env.DB.batch([
+      env.DB.prepare(
+        `update beoordelingsmoment
+            set quorum_gehaald_op = datetime('now'), status = 'inzendingen open', revisie = revisie + 1
+          where id = ?`
+      ).bind(momentId),
+      audit(env, ik, "beoordelingsmoment", momentId, "gebeurtenis",
+            { gebeurtenis: "quorum gehaald", nieuwe: `${n} van ${nodig}` }),
+    ]);
+    return { verstuurd: n, nodig, open: true };
+  }
+  return { verstuurd: n, nodig, open: Boolean(moment && moment.quorum_gehaald_op) };
+}
+
+// ------------------------------------------------- de uitkomst van het gesprek
+export async function uitkomst(env, ik, cyclusId, body = {}) {
+  const moment = await openMoment(env, cyclusId);
+  if (!moment) return { fout: "Er loopt geen beoordelingsmoment op deze cyclus.", status: 409 };
+  if (!moment.quorum_gehaald_op) {
+    return { fout: "De inzendingen zijn nog niet open; het quorum is nog niet gehaald.", status: 409 };
+  }
+
+  const keuze = body.uitkomst === "go" || body.uitkomst === "no-go" ? body.uitkomst : null;
+  if (!keuze) return { fout: "Leg vast of het een go of een no-go werd.", status: 422, veld: "uitkomst" };
+  if (keuze === "go" && (body.strike === null || body.strike === undefined || body.strike === "")) {
+    return { fout: "Bij een go hoort een strike.", status: 422, veld: "strike" };
+  }
+  if (keuze === "go" && !String(body.expiratiedatum || "").trim()) {
+    return { fout: "Bij een go hoort een expiratiedatum.", status: 422, veld: "expiratiedatum" };
+  }
+  if (keuze === "no-go" && !String(body.volgend_moment || "").trim()) {
+    return { fout: "Elke no-go eindigt met een nieuw analysemoment.", status: 422, veld: "volgend_moment" };
+  }
+
+  const w = (k) => (body[k] === "" || body[k] === undefined ? null : body[k]);
+  await env.DB.prepare(
+    `update beoordelingsmoment
+        set uitkomst = ?, strike = ?, expiratiedatum = ?, aantal_contracten = ?,
+            wat_veranderde = ?, aanwezigen = ?, volgend_moment = ?,
+            status = 'uitkomst vastgelegd', vastgelegd_door = ?, vastgelegd_op = datetime('now'),
+            revisie = revisie + 1
+      where id = ?`
+  ).bind(
+    keuze, w("strike"), w("expiratiedatum"), w("aantal_contracten"),
+    w("wat_veranderde"), w("aanwezigen"), w("volgend_moment"), ik.id, moment.id
+  ).run();
+
+  // Een go zet de cyclus door naar *uitvoering ophalen*: de koppeling wacht
+  // tot de order bij Lynx verschijnt. Het systeem plaatst nooit zelf een
+  // order (hard uitgangspunt 1). Een no-go blijft staan waar hij staat, met
+  // een nieuw analysemoment op de cyclus.
+  const vervolg = [audit(env, ik, "beoordelingsmoment", moment.id, "gebeurtenis",
+                         { gebeurtenis: `uitkomst vastgelegd: ${keuze}` })];
+  if (keuze === "go") {
+    vervolg.push(env.DB.prepare("update cyclus set status = 'uitvoering ophalen' where id = ?").bind(cyclusId));
+  } else {
+    vervolg.push(env.DB.prepare(
+      "update cyclus set status = 'pre-analyse', volgend_analysemoment = ? where id = ?"
+    ).bind(w("volgend_moment"), cyclusId));
+  }
+  await env.DB.batch(vervolg);
+
+  return { id: moment.id, uitkomst: keuze };
+}

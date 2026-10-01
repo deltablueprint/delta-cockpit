@@ -115,7 +115,10 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       <span class="recordacties">
         <button class="knop tweede" id="bijlage" title="Bijlage toevoegen">${ICOON.bijlage}<span>Bijlage</span></button>
         <a class="knop tweede" href="${terugNaar.href}">${ontsnap(terugNaar.label)}</a>
-        <button class="knop" id="opslaan">${isNieuw ? "Aanmaken" : "Opslaan"}</button>
+        ${data.actie && !isNieuw
+          ? `<a class="knop" href="#${data.actie.route}" title="${ontsnap(data.actie.stap || "")}">${ontsnap(data.actie.label)}</a>`
+          : ""}
+        <button class="knop${data.actie && !isNieuw ? " tweede" : ""}" id="opslaan">${isNieuw ? "Aanmaken" : "Opslaan"}</button>
       </span>
     </div>
     ${procesHtml}

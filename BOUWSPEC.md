@@ -1,10 +1,12 @@
 # Delta Blueprint — bouwspecificatie operationeel dashboard
 
-**Versie 3.6 · 1 oktober 2026**
+**Versie 3.7 · 1 oktober 2026**
 
 Dit bestand is de geconsolideerde bron waarop het bouwen zich baseert. Besluiten worden genomen in het bouwplan-document en in het go/no-go-protocol van Jacqueline; dit bestand is het resultaat daarvan, bijgewerkt zodra er iets verandert. Wijkt dit bestand af van een genomen besluit, dan is dit bestand verouderd en moet het worden bijgewerkt — niet het besluit.
 
 Openstaande punten staan als **OPEN** gemarkeerd en mogen niet stilzwijgend worden ingevuld tijdens het bouwen.
+
+*In versie 3.7 is etappe 10 gebouwd: `beoordelingsmoment` en `inzending`, de serverzijdige afscherming, het quorum uit `processtap` en de twee actieschermen — met het eerste stuk Procesbeheer eronder (10.4). Ook: vergevingsgezind zoeken en namen in plaats van nummers in lijsten (10.0c).*
 
 *In versie 3.6 zijn de weging per cyclus (3.2, 3.3), het automatisch bijvullen van events, de gemeten kolombreedte, *Nieuw* vanuit een zelfstandige lijst en de duidelijker gerelateerde lijsten vastgelegd (10.0c).*
 
@@ -738,7 +740,8 @@ De applicatie kent een klein aantal **vaste componenten**. Wie een scherm bouwt 
 - **Werkbalk**: menu-icoon, naam van de tabel, de acties van de lijst, het woord *Zoeken* met een kolomkeuze en een zoekveld, en rechts de paginateller (“1 tot 50 van 70”) met knoppen om te bladeren. De **kolomkeuze stuurt waar gezocht wordt**: *Alle velden* zoekt over de hele regel, een gekozen kolom zet de tekst als filter op die kolom — hetzelfde filter dat ook in de filterrij verschijnt, zodat er maar één waarheid is.
 - **Filterbalk**: trechtericoon, *Alle*, de actieve voorwaarden als chips, *+ voorwaarde*, en rechts ruimte voor één toelichtende zin.
 - **Kolomkop**: grijze balk met selectievakje, zoekicoon, en per kolom een greepje, de kolomnaam in kleinkapitaal en een sorteerpijl op de gesorteerde kolom.
-- **Filterrij**: per kolom een smal invoerveld met *Zoeken*.
+- **Filterrij**: per kolom een smal invoerveld met *Zoeken*. Het zoeken is **vergevingsgezind**: overal geldt *bevat*, niet *is precies*. Zoeken op `7` vindt dus ook `70`, zoeken op een datum begrijpt `jul`, `202607` en `6/7/2026`, een keuze wordt op haar label gezocht en een verwijzing op de **naam** waar ze heen wijst — niet op het nummer dat eronder zit. Een gerelateerde lijst bouwt dezelfde filterchips op als een gewone lijst; alleen het ouderfilter blijft buiten beeld, want dat is de lijst zelf.
+- **Een verwijzing toont een naam, nooit een nummer.** De lijst haalt de titels van de verwezen records in één vraag per kolom op. Stond er een nummer, dan is dat een fout en geen bedoeling.
 - **Rijen**: de cellen, zonder selectievakje of info-icoon — die leidden nergens heen. De eerste kolom is een link naar het record; een rij die aandacht vraagt krijgt een zachte gele achtergrond. Dubbelklikken op een cel bewerkt haar ter plekke.
 - **Kolombreedte wordt gemeten, niet geraden.** De breedte volgt uit de breedste van twee dingen: de kolomkop (een kop die halverwege afbreekt is onleesbaar) en de getoonde waarden, met ruimte voor wat erbij hoort — de badge van een keuze, de avatar bij een persoon, de zoneafkorting bij een tijd. `db_field.breedte` is daarbij de **ondergrens**, niet de uitkomst; er geldt een minimum van 92 en een maximum van 360 pixels. Wat iemand zelf versleept wint van alles en wordt per persoon onthouden in `gebruiker_voorkeur` — dat is een voorkeur, geen eigenschap van de gegevens.
 - **Nieuw vanuit de lijst** staat in de werkbalk, maar alleen waar het mag: `db_table.nieuw_vanuit_lijst` zegt per tabel of een record zonder ouder gemaakt kan worden. Dat staat aan voor de zelfstandige tabellen (cycli, events) en uit voor kindtabellen — die worden gemaakt vanaf hun ouder (regel 10.0). Of het knopje er staat is dus definitie, geen code.
@@ -806,6 +809,8 @@ De kolommen zijn: **taak** (met daaronder waarom de stap nu van jou wordt verwac
 
 Er is bewust **geen** `taak`-tabel: de takenlijst is een query over `processtap` en de stand van de lopende cyclus.
 
+**Wat er in etappe 10 van Procesbeheer gebouwd is.** De tabellen `proces` en `processtap` staan er, met één gevuld proces: **Go / no-go**, met vier stappen (instapvoorwaarden invullen · positie blind versturen · go/no-go meeting · uitvoering ophalen). Per stap staat erbij bij welke **status** van het record hij hoort (`stand`), welk **label de actieknop** draagt, naar welk **doelscherm** hij gaat, en het **quorum** (3 van 3). Daarmee is het quorum een instelling en geen aanname in de code, en komt de knop rechtsboven op het cyclusrecord uit de database: `processtap.stand` = `cyclus.status`. Verandert het quorum, dan verandert alleen die regel. De andere zeven processen uit de lijst hierboven komen in etappe 12; de tabellen groeien mee zonder dat er iets herbouwd hoeft te worden.
+
 ---
 
 ## 11. API
@@ -853,7 +858,7 @@ GET    /api/barometer/:cyclus     afgeleide toestand voor de ledenapp
 | 7 | *Fase 2 — buiten de MVP.* Score en rekenmotor | Rekenmotor voert `db_calc` uit tegen de gepinde configuratieversie, drempels en gewichten, harde gates, `moment_voorwaarde` als momentopname, en de vraag of het vastklikmoment terugkomt |
 | 8 | *Fase 2 — buiten de MVP.* Regelbeheer | Regels samenstellen uit bouwstenen, doorrekenen tegen de lopende cyclus |
 | 9 | Eventskalender | Eventtabel, jaarscript, handmatig bijmaken, import, related list op periode |
-| 10 | Blind versturen, quorum en onthullen | `inzending` als kindtabel van de cyclus, vergrendelen bij versturen, **serverzijdige afscherming van positie, strike, expiratie, inzet en reden**, quorum per processtap, openen zodra het gehaald is, het meetingscherm met de inzendingen open, en één vastgelegde uitkomst op het beoordelingsmoment |
+| 10 ✓ | Blind versturen, quorum en onthullen | `inzending` als kindtabel van de cyclus, vergrendelen bij versturen, **serverzijdige afscherming van positie, strike, expiratie, inzet en reden**, quorum per processtap, openen zodra het gehaald is, het meetingscherm met de inzendingen open, en één vastgelegde uitkomst op het beoordelingsmoment |
 | 11 | Positie en publicatie | Het positierecord met zijn zes stappen en statussen (10.0f), brokerkoppeling, **vergelijking uitkomst ↔ uitvoering met afwijkingsregistratie**, exitplan als velden, tranches, uitkomst vastleggen, communiceren naar leden |
 | 11b | Portefeuille | Portefeuille-instellingen, blootstelling en reserve over alle open tranches, sizing als voorwaarde, portefeuillestrook op het overzicht |
 | 12 | Dashboard en post-analyse | Het operationele dashboard met zijn vijf toestanden inclusief het terugkijken op een afgesloten cyclus, procesbeheer en Mijn taken als gegroepeerde lijst, positielijst, exitdrempels met quote-toets, maandverslag met toetsing |

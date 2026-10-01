@@ -9,6 +9,7 @@ import { lijst } from "./lijst.js";
 import { wijzig, archiveer, dupliceer, maakAan, sjabloon } from "./schrijf.js";
 import { record } from "./record.js";
 import { voorbereiden, uitvoeren } from "./import.js";
+import { stand, startMoment, versturen, uitkomst as gonogoUitkomst } from "./gonogo.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
@@ -182,7 +183,7 @@ async function behandel(request, env) {
           return json(gemaakt, 201);
         }
         if (request.method !== "GET") return json({ fout: "Deze methode bestaat niet." }, 405);
-        const uitkomst = await lijst(env, lijstPad[1], url.searchParams);
+        const uitkomst = await lijst(env, lijstPad[1], url.searchParams, ik);
         if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
         return json(uitkomst);
       }
@@ -233,10 +234,32 @@ async function behandel(request, env) {
         return json(uitkomst);
       }
 
+      // ---- de go/no-go (etappe 10) ----
+      // Twee schermen op één cyclus: blind versturen en de meeting. De
+      // afscherming zit hier, aan de serverkant.
+      const gonogoPad = pad.match(/^\/api\/gonogo\/(\d+)(?:\/(moment|versturen|uitkomst))?$/);
+      if (gonogoPad) {
+        const cyclusId = Number(gonogoPad[1]);
+        const wat = gonogoPad[2];
+        if (!wat && request.method === "GET") {
+          const uitkomst = await stand(env, ik, cyclusId);
+          if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
+          return json(uitkomst);
+        }
+        if (wat && request.method === "POST") {
+          const body = await request.json().catch(() => ({}));
+          const doen = wat === "moment" ? startMoment : wat === "versturen" ? versturen : gonogoUitkomst;
+          const uitkomst = await doen(env, ik, cyclusId, body);
+          if (uitkomst.fout) return json(uitkomst, uitkomst.status || 400);
+          return json(uitkomst);
+        }
+        return json({ fout: "Deze methode bestaat niet." }, 405);
+      }
+
       // /api/t/<tabel>/<id> — één record lezen of wijzigen
       const recordPad = pad.match(/^\/api\/t\/([a-z_]+)\/(\d+)$/);
       if (recordPad && request.method === "GET") {
-        const uitkomst = await record(env, recordPad[1], Number(recordPad[2]));
+        const uitkomst = await record(env, recordPad[1], Number(recordPad[2]), ik);
         if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
         return json(uitkomst);
       }
