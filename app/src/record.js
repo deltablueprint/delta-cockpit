@@ -280,11 +280,29 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         if (h) h.addEventListener("click", toonTranche);
         return;
       }
+      // Welke open positie hoort bij dit besluit? Gelijke strike én gelijke
+      // expiratie: dan is het dezelfde afspraak. Die wordt voorgesteld en
+      // meteen overgenomen; de rest blijft zichtbaar maar grijs, want ze
+      // hoort niet bij dit besluit — zichtbaar houden is eerlijker dan
+      // wegfilteren, want soms is het besluit nét anders uitgevoerd.
+      const leesVeld = (kolom) => {
+        const el = inhoud.querySelector(`.veldwaarde [data-kolom="${kolom}"]`);
+        if (el) return el.value;
+        const toon = inhoud.querySelector(`.veldwaarde [data-toon="${kolom}"]`);
+        return toon ? toon.textContent.trim() : "";
+      };
+      const besluitStrike = Number(data.waarden.besluit_strike ?? leesVeld("besluit_strike"));
+      const besluitExpiratie = String(data.waarden.besluit_expiratiedatum || "");
+      const past = (p) =>
+        Number(p.strike) === besluitStrike && String(p.expiratiedatum || "") === besluitExpiratie;
+      const treffers = uit.posities.filter(past);
+
       vak.innerHTML = `<table class="feittabel"><thead><tr>
           <th>Contract</th><th>Strike</th><th>Expiratie</th><th>Aantal</th>
           <th>Premie per contract</th><th>Uitgevoerd</th><th></th>
         </tr></thead><tbody>${uit.posities.map((p, i) => `
-          <tr><td class="feitnaam">${ontsnap(p.contract)}</td><td>${ontsnap(p.strike ?? "—")}</td>
+          <tr class="${past(p) ? "past" : "anders"}"><td class="feitnaam">${ontsnap(p.contract)}${
+            past(p) ? ` <span class="badge" style="color:#1B6B3A;background:#E3F2E7">past bij het besluit</span>` : ""}</td><td>${ontsnap(p.strike ?? "—")}</td>
             <td>${p.expiratiedatum ? toonDatum(p.expiratiedatum) : "—"}</td>
             <td>${ontsnap(p.aantal ?? "—")}${p.richting === "gekocht" ? ' <span class="faint">gekocht</span>' : ""}</td>
             <td>${p.premie_eur === null || p.premie_eur === undefined ? "—"
@@ -293,26 +311,41 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
             <td>${ontsnap(p.uitvoering_op || p.rapportdatum || "—")}</td>
             <td><button class="knop klein" data-kies="${i}">Deze nemen</button></td></tr>`).join("")}
         </tbody></table>`;
+      if (treffers.length === 1) {
+        vak.insertAdjacentHTML("afterbegin",
+          `<p class="brokerleeg">Eén open positie past bij dit besluit — strike ${ontsnap(besluitStrike)},
+           expiratie ${besluitExpiratie ? toonDatum(besluitExpiratie) : "—"}. Die is hieronder overgenomen;
+           kies een andere regel als het anders gelopen is.</p>`);
+      } else if (besluitStrike && !treffers.length) {
+        vak.insertAdjacentHTML("afterbegin",
+          `<p class="brokerleeg">Geen open positie met strike ${ontsnap(besluitStrike)} en expiratie
+           ${besluitExpiratie ? toonDatum(besluitExpiratie) : "—"}. Kies de regel die het geworden is, of vul met de hand in.</p>`);
+      }
+
       vak.insertAdjacentHTML("beforeend", handmatigKnop);
       const h = vak.querySelector("#handmatig");
       if (h) h.addEventListener("click", toonTranche);
 
+      const neemOver = (p) => {
+        const zet = (kolom, waarde) => {
+          const el = inhoud.querySelector(`.veldwaarde [data-kolom="${kolom}"]`);
+          if (el && waarde !== null && waarde !== undefined) el.value = waarde;
+        };
+        zet("strike", p.strike);
+        zet("expiratiedatum", p.expiratiedatum);
+        zet("aantal", p.aantal);
+        zet("ontvangen_premie_eur", p.premie_eur);
+        zet("uitvoering_op", p.uitvoering_op);
+        zet("herkomst", "broker");
+        toonTranche();
+      };
+
       vak.querySelectorAll("[data-kies]").forEach((knop) => {
-        knop.addEventListener("click", () => {
-          const p = uit.posities[Number(knop.dataset.kies)];
-          const zet = (kolom, waarde) => {
-            const el = inhoud.querySelector(`.veldwaarde [data-kolom="${kolom}"]`);
-            if (el && waarde !== null && waarde !== undefined) el.value = waarde;
-          };
-          zet("strike", p.strike);
-          zet("expiratiedatum", p.expiratiedatum);
-          zet("aantal", p.aantal);
-          zet("ontvangen_premie_eur", p.premie_eur);
-          zet("uitvoering_op", p.uitvoering_op);
-          zet("herkomst", "broker");
-          toonTranche();
-        });
+        knop.addEventListener("click", () => neemOver(uit.posities[Number(knop.dataset.kies)]));
       });
+
+      // Past er precies één, dan is er niets te kiezen: dan is het die.
+      if (treffers.length === 1) neemOver(treffers[0]);
     }).catch(() => {
       if (vak) vak.innerHTML = `<p class="brokerleeg">De koppeling met Lynx is niet bereikbaar.</p>`;
     });
