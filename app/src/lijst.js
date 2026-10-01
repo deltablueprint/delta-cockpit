@@ -352,6 +352,15 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       <div class="tabelomhulsel"><table class="lijsttabel" style="min-width:${minBreedte}px">${colgroup}${thead}${tbody}</table></div>
     </div>`;
 
+  // De teller op het tabblad hoort te kloppen met wat eronder staat: archiveer
+  // je een regel, dan verandert het cijfer meteen in plaats van bij de
+  // volgende keer dat het scherm geladen wordt. Alleen bij een ongefilterde
+  // lijst, anders zou de teller het aantal zoekresultaten gaan tonen.
+  if (ingebed && !toestand.q && !Object.values(toestand.filters || {}).some(Boolean)) {
+    const teller = document.querySelector(`.tab[data-tabel="${tabelnaam}"] .tabtelling`);
+    if (teller) teller.textContent = tot;
+  }
+
   // ------------------------------------------------------------- gedrag
   const ga = (nieuw) => {
     const actief = document.activeElement;
