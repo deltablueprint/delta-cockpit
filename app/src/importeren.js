@@ -17,8 +17,8 @@ const VELDEN = [
   { kolom: "datum",       label: "Datum",       verplicht: true,  hint: "jjjj-mm-dd, of 14/09/2026" },
   { kolom: "tijdstip",    label: "Tijdstip",    verplicht: false, hint: "14:15" },
   { kolom: "naam",        label: "Event",       verplicht: true,  hint: "de naam van de gebeurtenis" },
-  { kolom: "soort",       label: "Soort",       verplicht: false, hint: "macro · centrale_bank · expiratie · bedrijf · politiek" },
-  { kolom: "zwaarte",     label: "Zwaarte",     verplicht: false, hint: "licht · middel · zwaar" },
+  { kolom: "soort",       label: "Soort",       verplicht: false, hint: "macro · centrale_bank · expiratie · bedrijf · politiek — leeg blijft \u2018nog in te delen\u2019" },
+  { kolom: "zwaarte",     label: "Zwaarte",     verplicht: false, hint: "licht · middel · zwaar — leeg blijft \u2018niet gewogen\u2019, het systeem vult niets in" },
   { kolom: "tijdzone",    label: "Tijdzone",    verplicht: false, hint: "Europe/Brussels · America/New_York — leeg = Brussel" },
   { kolom: "toelichting", label: "Toelichting", verplicht: false, hint: "" },
 ];

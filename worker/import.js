@@ -57,6 +57,8 @@ export async function uitvoeren(env, ik, regels) {
     if (actie === "vervangen" && regel.vervangt) {
       opdrachten.push(
         env.DB.prepare(
+          // Bij vervangen blijft een bestaande zwaarte staan als het document
+          // er geen meegeeft: die was een menselijk oordeel.
           `update event set datum = ?, tijdstip = ?, naam = ?, soort = coalesce(?, soort),
                   zwaarte = coalesce(?, zwaarte), toelichting = ?, bron = 'import',
                   revisie = revisie + 1
@@ -74,7 +76,7 @@ export async function uitvoeren(env, ik, regels) {
     opdrachten.push(
       env.DB.prepare(
         `insert into event (datum, tijdstip, naam, soort, zwaarte, bron, toelichting, aangemaakt_door, tijdzone)
-         values (?, ?, ?, coalesce(?, 'macro'), coalesce(?, 'middel'), 'import', ?, ?, coalesce(?, 'Europe/Brussels'))`
+         values (?, ?, ?, coalesce(?, 'onbekend'), coalesce(?, 'niet gewogen'), 'import', ?, ?, coalesce(?, 'Europe/Brussels'))`
       ).bind(rij.datum, rij.tijdstip, rij.naam, rij.soort, rij.zwaarte, rij.toelichting, ik.id, rij.tijdzone)
     );
     toegevoegd++;
