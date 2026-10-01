@@ -538,6 +538,15 @@ Dit is de zwaarste regel van hoofdstuk 10. Wie een scherm ontwerpt begint hier, 
 
 ### 10.0f Positie is één record met een status
 
+**Wat er in etappe 11 gebouwd is (fase 1, met de hand).** De tabel `positie` staat er met het proces **POSITIE** als zes standen van één statusveld, en met het exitplan als velden op het record. Vier dingen regelt het systeem, de rest is het gewone recordscherm:
+
+1. **Een go laat de eerste tranche ontstaan.** Bij het vastleggen van een go-uitkomst maakt het systeem de tranche aan en kopieert het besluit erin — strike, expiratiedatum en inzet — én bewaart apart *wat het besluit zei*. Overtypen is precies hoe een uitvoering ongemerkt van een besluit gaat afwijken.
+2. **De uitvoering wordt tegen het besluit gelegd.** Verschilt de strike of de expiratie, of ligt de inzet meer dan de tolerantie onder het besluit, dan zet het systeem *afwijking* op ja en stelt het soort voor. De tolerantie staat op `portefeuille_instelling`, niet in de code. Tijdens het invullen is dat een waarschuwing; **de tranche kan pas gaan lopen als de afwijking geduid is.**
+3. **Het exitplan gaat vóór de order.** Zolang stoploss, eventregel en wie dagelijks volgt niet gevuld zijn, komt de tranche niet voorbij *besluit goedgekeurd*. Volgorde, geen waarschuwing.
+4. **De stoploss wordt niet verruimd.** Aanscherpen mag; een hogere ask wordt geweigerd en in de audit trail genoteerd.
+
+De cyclus volgt zijn tranches: gaat er één bewaken, dan staat de cyclus *in positie*; is elke tranche gesloten, dan begint de post-analyse. Wat de brokerkoppeling straks doet — ophalen en voorstellen — doet een mens nu met de hand; wat het systeem nooit doet, blijft hetzelfde: orders plaatsen.
+
 `positie` heeft **één recordscherm** met het proces **POSITIE** (besluit goedgekeurd → exitplan vastgelegd → order bij Lynx → uitvoering geïmporteerd → bewaken → uitkomst vastgelegd) en één statusveld dat zegt waar de tranche staat. De lijst *Posities* opent dat record; wat eerder losse actieschermen waren, zijn statussen ervan.
 
 Bovenaan staat altijd hetzelfde formulier: tranche, cyclus, status, expiratie, contracten, ontvangen premie, besluit, exitplan en aandeel van de portefeuille. Daaronder wisselt het beeld met de status:
@@ -870,7 +879,7 @@ GET    /api/barometer/:cyclus     afgeleide toestand voor de ledenapp
 | 8 | *Fase 2 — buiten de MVP.* Regelbeheer | Regels samenstellen uit bouwstenen, doorrekenen tegen de lopende cyclus |
 | 9 | Eventskalender | Eventtabel, jaarscript, handmatig bijmaken, import, related list op periode |
 | 10 ✓ | Blind versturen, quorum en onthullen | `inzending` als kindtabel van de cyclus, vergrendelen bij versturen, **serverzijdige afscherming van positie, strike, expiratie, inzet en reden**, quorum per processtap, openen zodra het gehaald is, het meetingscherm met de inzendingen open, en één vastgelegde uitkomst op het beoordelingsmoment |
-| 11 | Positie en publicatie | Het positierecord met zijn zes stappen en statussen (10.0f), brokerkoppeling, **vergelijking uitkomst ↔ uitvoering met afwijkingsregistratie**, exitplan als velden, tranches, uitkomst vastleggen, communiceren naar leden |
+| 11 ~ | Positie en publicatie | Het positierecord met zijn zes stappen en statussen (10.0f), brokerkoppeling, **vergelijking uitkomst ↔ uitvoering met afwijkingsregistratie**, exitplan als velden, tranches, uitkomst vastleggen, communiceren naar leden |
 | 11b | Portefeuille | Portefeuille-instellingen, blootstelling en reserve over alle open tranches, sizing als voorwaarde, portefeuillestrook op het overzicht |
 | 12 | Dashboard en post-analyse | Het operationele dashboard met zijn vijf toestanden inclusief het terugkijken op een afgesloten cyclus, procesbeheer en Mijn taken als gegroepeerde lijst, positielijst, exitdrempels met quote-toets, maandverslag met toetsing |
 | 13 | Barometer en berichten | Afgeleide toestand, endpoint, berichtsjablonen per fase, de klantkolom op het dashboard met voorstel-en-publiceer voor de barometer, automatische controle vóór publicatie |

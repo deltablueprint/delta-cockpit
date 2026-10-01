@@ -9,6 +9,7 @@
 // Wat het niet doet: oordelen. Er is geen berekening die go of no-go zegt.
 
 import { schermAf } from "./blind.js";
+import { uitBesluit } from "./positie.js";
 
 const DEELVELDEN = [
   "positie", "strike", "expiratiedatum", "inzet_pct",
@@ -322,5 +323,15 @@ export async function uitkomst(env, ik, cyclusId, body = {}) {
   }
   await env.DB.batch(vervolg);
 
-  return { id: moment.id, uitkomst: keuze };
+  // Een go laat meteen de eerste tranche ontstaan, met het besluit erin
+  // gekopieerd. Overtypen is precies hoe een uitvoering ongemerkt van een
+  // besluit gaat afwijken.
+  let positie = null;
+  if (keuze === "go") {
+    const bijgewerkt = await env.DB.prepare("select * from beoordelingsmoment where id = ?")
+      .bind(moment.id).first();
+    positie = await uitBesluit(env, ik, bijgewerkt);
+  }
+
+  return { id: moment.id, uitkomst: keuze, positie };
 }

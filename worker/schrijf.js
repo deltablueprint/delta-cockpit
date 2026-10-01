@@ -7,6 +7,7 @@
 import { toets } from "./regels.js";
 import { vulEventsBij, vulCyclitBij } from "./events.js";
 import { startMoment } from "./gonogo.js";
+import { instelling, wijktAf, stoplossVerruimd, noteerGeweigerdeStoploss } from "./positie.js";
 
 async function veldenVan(env, tabelnaam) {
   return (await env.DB.prepare(
@@ -75,6 +76,55 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
   // Validatie uit db_rule, tegen het record zoals het ná opslaan zou zijn.
   const straks = { ...huidig };
   for (const t of teSchrijven) straks[t.veld.kolom] = t.nieuweWaarde;
+
+  if (tabelnaam === "positie") {
+    // De stoploss wordt niet verruimd tijdens de looptijd. Aanscherpen mag;
+    // verruimen wordt geweigerd en genoteerd (BOUWSPEC 6).
+    const stop = teSchrijven.find((t) => t.veld.kolom === "stoploss_ask");
+    if (stop && stoplossVerruimd(stop.oudeWaarde, stop.nieuweWaarde)) {
+      await noteerGeweigerdeStoploss(env, ik, id, stop.oudeWaarde, stop.nieuweWaarde);
+      return {
+        fout: `De stoploss staat op ask ${stop.oudeWaarde} en mag tijdens de looptijd niet verruimd worden. Aanscherpen mag wel.`,
+        veld: "stoploss_ask",
+        status: 409,
+      };
+    }
+
+    // Een tranche geldt pas als uitgevoerd wanneer een afwijking geduid is.
+    // Tot dat moment is het een waarschuwing: je bent nog aan het invullen.
+    const gaatLopen = ["bewaken", "gesloten"].includes(String(straks.status));
+    const wasAlLopend = ["bewaken", "gesloten"].includes(String(huidig.status));
+    if (gaatLopen && !wasAlLopend && Number(huidig.afwijking ?? 0) === 1 &&
+        !String(straks.afwijking_toelichting ?? "").trim()) {
+      return {
+        fout: "De uitvoering wijkt af van het besluit. Leg eerst vast waarom, daarna kan de tranche gaan lopen.",
+        veld: "afwijking_toelichting",
+        status: 422,
+      };
+    }
+
+    // De uitvoering tegen het besluit leggen. Het systeem stelt vast dát er
+    // een afwijking is; waaróm blijft een mens vertellen.
+    const inst = await instelling(env);
+    const redenen = wijktAf(straks, inst ? inst.tolerantie_premie_pct : 10);
+    const afwijkend = redenen.length ? 1 : 0;
+    if (Number(straks.afwijking ?? 0) !== afwijkend) {
+      straks.afwijking = afwijkend;
+      teSchrijven.push({
+        veld: velden.find((v) => v.kolom === "afwijking"),
+        nieuweWaarde: afwijkend,
+        oudeWaarde: huidig.afwijking,
+      });
+      if (afwijkend && !straks.afwijking_soort) {
+        straks.afwijking_soort = redenen[0];
+        teSchrijven.push({
+          veld: velden.find((v) => v.kolom === "afwijking_soort"),
+          nieuweWaarde: redenen[0],
+          oudeWaarde: huidig.afwijking_soort,
+        });
+      }
+    }
+  }
   const uitslag = await toets(env, tabelnaam, straks, velden);
   if (uitslag.blokkades.length) {
     return { fout: uitslag.blokkades[0].melding, blokkades: uitslag.blokkades, status: 422 };
@@ -102,6 +152,28 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
   if (tabelnaam === "cyclus" &&
       teSchrijven.some((t) => ["geopend_op", "doelexpiratie", "afgesloten_op"].includes(t.veld.kolom))) {
     await vulEventsBij(env, id);
+  }
+
+  // De cyclus volgt zijn tranches. Loopt er één in de markt, dan staat de
+  // cyclus in positie; is elke tranche gesloten, dan is er niets meer te
+  // bewaken en begint de post-analyse. Afsluiten blijft mensenwerk.
+  if (tabelnaam === "positie" && teSchrijven.some((t) => t.veld.kolom === "status")) {
+    const rij = await env.DB.prepare("select cyclus, status from positie where id = ?").bind(id).first();
+    if (rij) {
+      if (rij.status === "bewaken") {
+        await env.DB.prepare(
+          "update cyclus set status = 'in positie' where id = ? and status in ('go-nogo', 'uitvoering ophalen')"
+        ).bind(rij.cyclus).run();
+      }
+      const open = await env.DB.prepare(
+        "select count(*) as n from positie where cyclus = ? and archief = 0 and status <> 'gesloten'"
+      ).bind(rij.cyclus).first();
+      if (open && open.n === 0) {
+        await env.DB.prepare(
+          "update cyclus set status = 'post-analyse' where id = ? and status = 'in positie'"
+        ).bind(rij.cyclus).run();
+      }
+    }
   }
 
   // Een cyclus op *go / no-go* zetten ís het openen van een beoordelingsmoment.
