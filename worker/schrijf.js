@@ -323,6 +323,12 @@ export async function maakAan(env, ik, tabelnaam, body) {
     nieuw[kolom] = w === "" ? null : w;
   }
 
+  if (tabelnaam === "positie") {
+    if (!nieuw.tranche) nieuw.tranche = await volgendeTranche(env, nieuw.cyclus);
+    const naam = contractnaam(nieuw);
+    if (naam) nieuw.contract = naam;
+  }
+
   // Verplichte velden die de gebruiker niet zelf invult (zoals de ouder) horen
   // er wel te zijn: ontbreken ze, dan is dat een duidelijke melding en geen
   // databasefout.
@@ -340,12 +346,6 @@ export async function maakAan(env, ik, tabelnaam, body) {
 
   if (velden.some((v) => v.kolom === "aangemaakt_door") && !nieuw.aangemaakt_door) {
     nieuw.aangemaakt_door = ik.id;
-  }
-
-  if (tabelnaam === "positie") {
-    if (!nieuw.tranche) nieuw.tranche = await volgendeTranche(env, nieuw.cyclus);
-    const naam = contractnaam(nieuw);
-    if (naam) nieuw.contract = naam;
   }
 
   // Onder welke versie van de instellingen dit record ontstaat, zet het
