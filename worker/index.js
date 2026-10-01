@@ -246,6 +246,7 @@ async function behandel(request, env) {
         const uit = await haalRapport(env, true);
         return json({
           fout: uit.fout || null,
+          pogingen: uit.pogingen || null,
           ruw: uit.ruw || (uit.xml ? uit.xml.slice(0, 2000) : null),
           token_ingesteld: Boolean(env.LYNX_FLEX_TOKEN),
           query_ingesteld: Boolean(env.LYNX_FLEX_QUERY),

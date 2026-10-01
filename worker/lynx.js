@@ -79,11 +79,21 @@ export async function haalRapport(env, ruw = false) {
 
   let aanvraag = "";
   let code = null;
-  let laatste = "";
+  const pogingen = [];
   for (const adres of SEND) {
-    const antwoord = await fetch(`${adres}?t=${encodeURIComponent(token)}&q=${encodeURIComponent(query)}&v=3`, { headers: KOP });
+    let antwoord;
+    try {
+      antwoord = await fetch(`${adres}?t=${encodeURIComponent(token)}&q=${encodeURIComponent(query)}&v=3`, { headers: KOP });
+    } catch (fout) {
+      pogingen.push({ host: new URL(adres).host, status: "niet bereikbaar", kort: fout.message });
+      continue;
+    }
     aanvraag = await antwoord.text();
-    laatste = `${antwoord.status} van ${new URL(adres).host}`;
+    pogingen.push({
+      host: new URL(adres).host,
+      status: antwoord.status,
+      kort: (tussen(aanvraag, "ErrorMessage") || aanvraag.replace(/\s+/g, " ").slice(0, 120) || "leeg antwoord"),
+    });
     code = tussen(aanvraag, "ReferenceCode");
     if (code) break;
 
@@ -96,10 +106,12 @@ export async function haalRapport(env, ruw = false) {
   if (!code) {
     // Zeggen wát er misging, niet dát er iets misging: anders staat er straks
     // een melding waar niemand iets mee kan.
-    const melding = tussen(aanvraag, "ErrorMessage")
-      || (tussen(aanvraag, "ErrorCode") ? `foutcode ${tussen(aanvraag, "ErrorCode")}` : null)
-      || `${laatste} — ${aanvraag.replace(/\s+/g, " ").slice(0, 160) || "leeg antwoord"}`;
-    return { fout: `Lynx gaf geen rapport terug: ${melding}`, ruw: ruw ? aanvraag.slice(0, 2000) : undefined };
+    const melding = pogingen.map((p) => `${p.host}: ${p.status} — ${p.kort}`).join(" | ");
+    return {
+      fout: `Lynx gaf geen rapport terug. ${melding}`,
+      pogingen,
+      ruw: ruw ? aanvraag.slice(0, 2000) : undefined,
+    };
   }
   const url = tussen(aanvraag, "Url") || GET_TERUGVAL;
 
