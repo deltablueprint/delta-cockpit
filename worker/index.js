@@ -2,13 +2,13 @@
 //
 // Twee regels die hier worden afgedwongen en nergens anders:
 //   1. Er is geen DELETE-route. Niets wordt verwijderd (uitgangspunt 2).
-//   2. Authenticatie is per persoon. Elke schrijfactie draagt een identiteit
-//      (BOUWSPEC 11). Er is geen gedeelde sleutel.
+//   2. Authenticatie is per persoon: e-mailadres plus wachtwoord. Elke
+//      schrijfactie draagt een identiteit (BOUWSPEC 11). Geen gedeelde sleutel.
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data, null, 2), { status, headers: JSON_HEADERS });
+function json(data, status = 200, extraKoppen = {}) {
+  return new Response(JSON.stringify(data, null, 2), { status, headers: { ...JSON_HEADERS, ...extraKoppen } });
 }
 
 async function sha256hex(tekst) {
@@ -17,16 +17,46 @@ async function sha256hex(tekst) {
 }
 
 // Wie is dit? Geeft de gebruiker terug, of null.
-// De sleutel komt mee als  Authorization: Bearer <sleutel>  en wordt gehasht
-// vergeleken. De sleutel zelf staat nergens opgeslagen.
+//
+// Aanmelden gaat met e-mailadres en wachtwoord, meegestuurd als HTTP Basic:
+//   Authorization: Basic base64("simon@deltablueprint.nl:wachtwoord")
+// Het wachtwoord staat nergens opgeslagen — alleen de SHA-256 hash ervan.
+// Het e-mailadres is de gebruikersnaam; het wachtwoord kan wijzigen zonder
+// dat de identiteit verandert.
+function gelijkInVasteTijd(a, b) {
+  if (a.length !== b.length) return false;
+  let verschil = 0;
+  for (let i = 0; i < a.length; i++) verschil |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return verschil === 0;
+}
+
 async function wieIsDit(request, env) {
   const kop = request.headers.get("authorization") || "";
-  const sleutel = kop.startsWith("Bearer ") ? kop.slice(7).trim() : "";
-  if (!sleutel) return null;
-  const hash = await sha256hex(sleutel);
-  return await env.DB.prepare(
-    "select id, naam, korte_naam from gebruiker where sleutel_hash = ? and actief = 1"
-  ).bind(hash).first();
+  if (!kop.startsWith("Basic ")) return null;
+
+  let ontcijferd;
+  try {
+    ontcijferd = atob(kop.slice(6).trim());
+  } catch {
+    return null;
+  }
+  const scheiding = ontcijferd.indexOf(":");
+  if (scheiding < 1) return null;
+
+  const email = ontcijferd.slice(0, scheiding).trim().toLowerCase();
+  const wachtwoord = ontcijferd.slice(scheiding + 1);
+  if (!email || !wachtwoord) return null;
+
+  const gebruiker = await env.DB.prepare(
+    "select id, naam, korte_naam, email, wachtwoord_hash from gebruiker where lower(email) = ? and actief = 1"
+  ).bind(email).first();
+
+  if (!gebruiker || !gebruiker.wachtwoord_hash) return null;
+
+  const hash = await sha256hex(wachtwoord);
+  if (!gelijkInVasteTijd(hash, gebruiker.wachtwoord_hash)) return null;
+
+  return { id: gebruiker.id, naam: gebruiker.naam, korte_naam: gebruiker.korte_naam, email: gebruiker.email };
 }
 
 // /api/meta — de applicatie leest hier haar eigen vorm.
@@ -96,7 +126,7 @@ export default {
     if (pad.startsWith("/api/")) {
       const ik = await wieIsDit(request, env);
       if (!ik) {
-        return json({ fout: "Niet herkend. Stuur je sleutel mee als Authorization: Bearer <sleutel>." }, 401);
+        return json({ fout: "Niet herkend. Meld je aan met je e-mailadres en wachtwoord." }, 401, { "www-authenticate": 'Basic realm="Delta Blueprint Cockpit", charset="UTF-8"' });
       }
 
       if (pad === "/api/meta") return json(await meta(env));

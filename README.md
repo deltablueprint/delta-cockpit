@@ -36,18 +36,20 @@ npm run db:migrate:staging   # migraties op staging
 npm run deploy:staging       # uitrollen naar staging
 ```
 
-## Sleutel instellen
+## Aanmelden
 
-Authenticatie is per persoon; er is geen gedeelde sleutel. De sleutel zelf staat
-nergens opgeslagen — alleen de SHA-256 hash ervan.
+Aanmelden gaat met **e-mailadres en wachtwoord**, per persoon. Het wachtwoord
+staat nergens opgeslagen — alleen de SHA-256 hash ervan. Het e-mailadres is de
+gebruikersnaam, zodat een wachtwoord gewijzigd kan worden zonder dat de
+identiteit verandert.
 
 ```bash
-node scripts/sleutel.mjs 'jouw wachtwoordzin'      # print de hash
+node scripts/wachtwoord.mjs 'jouw wachtwoord'     # print de hash
 npx wrangler d1 execute delta-cockpit-staging --remote --env staging \
-  --command "update gebruiker set sleutel_hash='<hash>' where id='simon'"
+  --command "update gebruiker set wachtwoord_hash='<hash>', wachtwoord_gezet_op=datetime('now') where email='simon@deltablueprint.nl'"
 ```
 
-Bewaar de zin in je wachtwoordmanager. Kwijt is kwijt: dan zet je een nieuwe hash.
+Ieder zet zijn eigen wachtwoord, zodat niemand dat van een ander kent.
 
 ## Controle na een uitrol
 
@@ -55,8 +57,8 @@ Bewaar de zin in je wachtwoordmanager. Kwijt is kwijt: dan zet je een nieuwe has
 Alles onder `/api/` vraagt om een persoon:
 
 ```bash
-curl -s -H "Authorization: Bearer <jouw zin>" https://delta-cockpit-staging.dejonghe-simon.workers.dev/api/ik
-curl -s -H "Authorization: Bearer <jouw zin>" https://delta-cockpit-staging.dejonghe-simon.workers.dev/api/meta
+curl -s -u simon@deltablueprint.nl:'jouw wachtwoord' https://delta-cockpit-staging.dejonghe-simon.workers.dev/api/ik
+curl -s -u simon@deltablueprint.nl:'jouw wachtwoord' https://delta-cockpit-staging.dejonghe-simon.workers.dev/api/meta
 ```
 
 ## Takken en uitrollen
