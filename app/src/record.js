@@ -263,21 +263,32 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     };
 
     const vak = inhoud.querySelector("#brokerinhoud");
-    lynxPosities().then((uit) => {
+
+    // De knoppen onder het kader: nog eens proberen, of het zelf doen.
+    const knoppenAansluiten = () => {
+      const opnieuw = vak.querySelector("#opnieuw");
+      if (opnieuw) opnieuw.addEventListener("click", () => { ophalen(true); });
+      const handmatig = vak.querySelector("#handmatig");
+      if (handmatig) handmatig.addEventListener("click", toonTranche);
+    };
+
+    const ophalen = (nogEens = false) => {
+      if (vak) vak.innerHTML = `<p class="brokerleeg">Bezig met ophalen bij Lynx&hellip;${
+        nogEens ? " Het rapport wordt op aanvraag gemaakt; dat duurt soms een halve minuut." : ""}</p>`;
+      lynxPosities().then((uit) => {
       if (!vak) return;
-      const handmatigKnop = verborgen.length
-        ? `<p class="brokerleeg"><button class="knop klein tweede" id="handmatig">De tranche met de hand invullen</button></p>`
-        : "";
+      const handmatigKnop = `<p class="brokerleeg">
+        <button class="knop klein tweede" id="opnieuw">Opnieuw ophalen</button>
+        ${verborgen.length ? `<button class="knop klein tweede" id="handmatig">De tranche met de hand invullen</button>` : ""}
+      </p>`;
       if (!uit.koppeling) {
         vak.innerHTML = `<p class="brokerleeg">${ontsnap(uit.reden || "Geen koppeling met Lynx.")}</p>${handmatigKnop}`;
-        const h = vak.querySelector("#handmatig");
-        if (h) h.addEventListener("click", toonTranche);
+        knoppenAansluiten();
         return;
       }
       if (!uit.posities.length) {
         vak.innerHTML = `<p class="brokerleeg">Er staat niets open bij Lynx.</p>${handmatigKnop}`;
-        const h = vak.querySelector("#handmatig");
-        if (h) h.addEventListener("click", toonTranche);
+        knoppenAansluiten();
         return;
       }
       // Welke open positie hoort bij dit besluit? Gelijke strike én gelijke
@@ -323,8 +334,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       }
 
       vak.insertAdjacentHTML("beforeend", handmatigKnop);
-      const h = vak.querySelector("#handmatig");
-      if (h) h.addEventListener("click", toonTranche);
+      knoppenAansluiten();
 
       const neemOver = (p) => {
         const zet = (kolom, waarde) => {
@@ -346,9 +356,12 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
 
       // Past er precies één, dan is er niets te kiezen: dan is het die.
       if (treffers.length === 1) neemOver(treffers[0]);
-    }).catch(() => {
-      if (vak) vak.innerHTML = `<p class="brokerleeg">De koppeling met Lynx is niet bereikbaar.</p>`;
-    });
+      }).catch(() => {
+        if (vak) vak.innerHTML = `<p class="brokerleeg">De koppeling met Lynx is niet bereikbaar.</p>`;
+      });
+    };
+
+    ophalen();
   }
 
   // ---- een andere keuze, andere gegevens ----

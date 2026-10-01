@@ -95,10 +95,11 @@ export async function haalRapport(env, ruw = false) {
   }
   const url = tussen(aanvraag, "Url") || GET_TERUGVAL;
 
-  // Het rapport wordt op aanvraag gemaakt; de eerste keer vragen is soms te
-  // vroeg. Drie keer proberen is genoeg — blijft het uit, dan zeggen we dat
-  // in plaats van een leeg scherm te tonen.
-  for (let poging = 0; poging < 3; poging++) {
+  // Het rapport wordt op aanvraag gemaakt, en dat duurt bij IBKR seconden tot
+  // een halve minuut. We wachten dus met oplopende tussenpozen in plaats van
+  // drie keer snel achter elkaar te vragen en dan op te geven.
+  const wachttijden = [800, 1200, 2000, 3000, 4000, 5000, 6000, 8000];
+  for (let poging = 0; poging < wachttijden.length; poging++) {
     const antwoord = await fetch(`${url}?t=${encodeURIComponent(token)}&q=${encodeURIComponent(code)}&v=3`, { headers: KOP });
     const xml = await antwoord.text();
     if (xml.includes("<FlexQueryResponse")) return { xml };
@@ -106,9 +107,9 @@ export async function haalRapport(env, ruw = false) {
     if (fout && !/generation in progress|not ready/i.test(fout)) {
       return { fout: `Lynx: ${fout}`, ruw: ruw ? xml.slice(0, 2000) : undefined };
     }
-    await wacht(1200);
+    await wacht(wachttijden[poging]);
   }
-  return { fout: "Het rapport bij Lynx was nog niet klaar. Probeer het zo nog eens." };
+  return { fout: "Het rapport bij Lynx was na een halve minuut nog niet klaar." };
 }
 
 // Wat er open staat, met de openingstransactie erbij: die draagt de premie die
