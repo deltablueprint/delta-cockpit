@@ -19,8 +19,8 @@ export async function vulEventsBij(env, cyclusId) {
   if (!einde) return { bijgezet: 0 };
 
   const uitkomst = await env.DB.prepare(
-    `insert or ignore into cyclus_event (cyclus, event, behandeling)
-     select ?, e.id, 'nog te wegen'
+    `insert or ignore into cyclus_event (cyclus, event, behandeling, zwaarte)
+     select ?, e.id, 'nog te wegen', e.zwaarte
        from event e
       where e.archief = 0 and e.datum >= ? and e.datum <= ?`
   ).bind(cyclusId, cyclus.geopend_op, einde).run();

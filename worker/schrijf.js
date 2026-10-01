@@ -72,16 +72,6 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
     return { fout: uitslag.blokkades[0].melding, blokkades: uitslag.blokkades, status: 422 };
   }
 
-  // Wie de zwaarte van een event aanpast, zet daarmee vast dat het een
-  // menselijk oordeel is. Dat hoeft niemand apart aan te vinken.
-  if (tabelnaam === "event" && teSchrijven.some((t) => t.veld.kolom === "zwaarte")
-      && huidig.zwaarte_overschreven !== undefined && !huidig.zwaarte_overschreven) {
-    teSchrijven.push({
-      veld: { kolom: "zwaarte_overschreven", label: "Zwaarte met de hand gezet", audit: 0 },
-      nieuweWaarde: 1, oudeWaarde: 0,
-    });
-  }
-
   const heeftRevisie = huidig.revisie !== undefined;
   const zetten = teSchrijven.map((t) => `"${t.veld.kolom}" = ?`).join(", ")
     + (heeftRevisie ? ", revisie = revisie + 1" : "");
