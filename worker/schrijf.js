@@ -116,7 +116,7 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
 
     // Kiest iemand een ander besluit, dan gaat ook wat dát besluit zei mee.
     if (teSchrijven.some((t) => t.veld.kolom === "beoordelingsmoment")) {
-      const besluit = await neemBesluitOver(env, straks.beoordelingsmoment);
+      const besluit = await neemBesluitOver(env, straks.beoordelingsmoment, straks.status);
       for (const [kolom, waarde] of Object.entries(besluit || {})) {
         if (String(straks[kolom] ?? "") === String(waarde ?? "")) continue;
         straks[kolom] = waarde;
@@ -352,8 +352,11 @@ export async function maakAan(env, ik, tabelnaam, body) {
 
   if (tabelnaam === "positie") {
     if (!nieuw.tranche) nieuw.tranche = await volgendeTranche(env, nieuw.cyclus);
-    const besluit = await neemBesluitOver(env, nieuw.beoordelingsmoment);
-    if (besluit) Object.assign(nieuw, besluit);
+    const besluit = await neemBesluitOver(env, nieuw.beoordelingsmoment, "besluit goedgekeurd");
+    for (const [kolom, waarde] of Object.entries(besluit || {})) {
+      // Wat iemand zelf invulde blijft staan; de rest komt uit het besluit.
+      if (nieuw[kolom] === null || nieuw[kolom] === undefined || nieuw[kolom] === "") nieuw[kolom] = waarde;
+    }
     const pt = await premieInPunten(env, nieuw);
     if (pt !== null) nieuw.ontvangen_premie_pt = pt;
     const naam = contractnaam(nieuw);

@@ -227,7 +227,12 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     kiezer.addEventListener("change", () => {
       const gekozen = lijst.find((k) => String(k.id) === String(kiezer.value));
       if (!gekozen) return;
+      // Is er al uitgevoerd, dan blijft wat er in de markt gebeurd is staan;
+      // alleen 'wat het besluit zei' wordt dan bijgewerkt.
+      const standveld = inhoud.querySelector('.veldwaarde [data-kolom="status"]');
+      const nogNiets = isNieuw || !standveld || standveld.value === "besluit goedgekeurd";
       for (const [veld, waarde] of Object.entries(gekozen.overnemen || {})) {
+        if (!nogNiets && !veld.startsWith("besluit_")) continue;
         const el = inhoud.querySelector(`.veldwaarde [data-kolom="${veld}"]`);
         if (el) el.value = waarde ?? "";
         const toon = inhoud.querySelector(`.veldwaarde [data-toon="${veld}"]`);

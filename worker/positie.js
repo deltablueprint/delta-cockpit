@@ -271,10 +271,15 @@ export async function besluitOpties(env, cyclusId) {
     return rijen.map((r) => ({
       id: r.id,
       titel: `${r.datum}${r.strike ? ` — strike ${r.strike}` : ""}${r.aanleiding ? ` · ${r.aanleiding}` : ""}`,
+      // Wat vastgelegd wordt als 'dit zei het besluit', en wat de tranche
+      // ervan overneemt zolang er nog niets is uitgevoerd.
       overnemen: {
         besluit_strike: r.strike,
         besluit_expiratiedatum: r.expiratiedatum,
         besluit_inzet_pct: r.inzet_pct,
+        strike: r.strike,
+        expiratiedatum: r.expiratiedatum,
+        inzet_pct: r.inzet_pct,
       },
     }));
   } catch {
@@ -285,18 +290,27 @@ export async function besluitOpties(env, cyclusId) {
 // Wat het besluit zei, overgeschreven op de tranche. Kopiëren en niet opzoeken:
 // een besluit dat later wordt bijgesteld mag de vergelijking met déze
 // uitvoering niet met terugwerkende kracht veranderen.
-export async function neemBesluitOver(env, momentId) {
+export async function neemBesluitOver(env, momentId, stand) {
   if (!momentId) return null;
   try {
     const m = await env.DB.prepare(
       "select strike, expiratiedatum, inzet_pct from beoordelingsmoment where id = ?"
     ).bind(momentId).first();
     if (!m) return null;
-    return {
+    const uit = {
       besluit_strike: m.strike,
       besluit_expiratiedatum: m.expiratiedatum,
       besluit_inzet_pct: m.inzet_pct,
     };
+    // Zolang er niets is uitgevoerd, is de tranche nog het besluit. Daarna
+    // staat er een werkelijkheid in die velden die een voornemen niet mag
+    // overschrijven.
+    if (!stand || stand === "besluit goedgekeurd") {
+      uit.strike = m.strike;
+      uit.expiratiedatum = m.expiratiedatum;
+      uit.inzet_pct = m.inzet_pct;
+    }
+    return uit;
   } catch {
     return null;
   }
