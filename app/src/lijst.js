@@ -151,6 +151,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     <div class="lijstkop">
       ${ICOON.menu}
       <span class="lijsttitel">${ontsnap(data.tabel.label_mv)}</span>
+      ${data.tabel.import_toegestaan ? `<a class="knop klein" href="#/import/${tabelnaam}">Inlezen uit document</a>` : ""}
       <span class="zoeklabel">Zoeken</span>
       <select class="zoekveld" aria-label="Zoekveld"><option>Alle velden</option>${
         kolommen.map((k) => `<option value="${k.kolom}"${toestand.zoekkolom === k.kolom ? " selected" : ""}>${ontsnap(k.label)}</option>`).join("")
@@ -249,9 +250,6 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     <div class="titelrij">
       <h1>${ontsnap(data.tabel.label_mv)}</h1>
       <span class="sub">${tot} ${tot === 1 ? "regel" : "regels"}</span>
-      <span class="recordacties">
-        ${data.tabel.import_toegestaan ? `<a class="knop tweede" href="#/import/${tabelnaam}">Inlezen uit document</a>` : ""}
-      </span>
     </div>`) + `
     <div class="lijst${ingebed ? " ingebed" : ""}">${relatiekop}${ingebed ? "" : toolbar + filterrij}
       <div class="tabelomhulsel"><table class="lijsttabel" style="min-width:${minBreedte}px">${colgroup}${thead}${tbody}</table></div>
