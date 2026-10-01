@@ -118,8 +118,14 @@ export function leesPosities(xml) {
 
   const trades = elementen(xml, "Trade").filter((t) => (t.assetCategory || "").toUpperCase() === "OPT");
 
+  const vandaag = new Date().toISOString().slice(0, 10);
+
   return elementen(xml, "OpenPosition")
     .filter((p) => (p.assetCategory || "").toUpperCase() === "OPT")
+    // Wat dicht is, hoort hier niet te staan: een regel met aantal nul is een
+    // gesloten positie, en een contract waarvan de expiratie voorbij is ook.
+    .filter((p) => (getal(p.position) ?? getal(p.quantity) ?? 0) !== 0)
+    .filter((p) => !p.expiry || (datum(p.expiry) || "9999") >= vandaag)
     .map((p) => {
       // De openingstransactie van dit contract: zelfde contract, verkocht,
       // openend. Daar staat de ontvangen premie in punten.
