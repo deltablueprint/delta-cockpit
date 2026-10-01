@@ -138,7 +138,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     }
 
     return `
-      <div class="formsectie${sectie.accent ? " nadruk" : ""}">
+      <div class="formsectie${sectie.accent ? " nadruk" : ""}" data-sectie="${ontsnap(sectie.naam)}">
         ${secties.length > 1 ? `<div class="formsectiekop">${ontsnap(sectie.label)}</div>` : ""}
         <div class="formkolommen">
           <div class="formkolom">${links.map(veldHtml).join("")}</div>
@@ -188,11 +188,11 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       </span>
     </div>
     ${procesHtml}
+    <div class="formulier">${sectieHtml}</div>
     ${toonBroker ? `<div class="brokervak" id="brokervak">
       <div class="brokerkop">Open posities bij Lynx<span class="feitmeta">lezend — het systeem plaatst nooit zelf een order</span></div>
       <div class="brokerinhoud" id="brokerinhoud">Bezig met ophalen&hellip;</div>
     </div>` : ""}
-    <div class="formulier">${sectieHtml}</div>
     ${relatieHtml}`;
 
   // ---- gerelateerde lijsten vullen ----
@@ -242,16 +242,42 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   const punten = (n) => Number(n).toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 3 });
 
   // ---- wat er bij de broker open staat ----
+  // Het kader hoort onder het besluit: eerst waarom, dan wat er in de markt
+  // staat, dan pas de tranche. Zolang er niets gekozen is, staat het formulier
+  // van de tranche er niet — een leeg formulier naast een lijst waaruit je
+  // kunt kiezen, nodigt uit tot overtypen.
   if (toonBroker) {
+    const brokervak = inhoud.querySelector("#brokervak");
+    const besluitsectie = inhoud.querySelector('.formsectie[data-sectie="besluit"]');
+    if (brokervak && besluitsectie) besluitsectie.after(brokervak);
+
+    const verborgen = isNieuw
+      ? [...inhoud.querySelectorAll(".formsectie")].filter((el) => el.dataset.sectie !== "besluit")
+      : [];
+    verborgen.forEach((el) => { el.hidden = true; });
+
+    const toonTranche = () => {
+      verborgen.forEach((el) => { el.hidden = false; });
+      const handmatig = inhoud.querySelector("#handmatig");
+      if (handmatig) handmatig.hidden = true;
+    };
+
     const vak = inhoud.querySelector("#brokerinhoud");
     lynxPosities().then((uit) => {
       if (!vak) return;
+      const handmatigKnop = verborgen.length
+        ? `<p class="brokerleeg"><button class="knop klein tweede" id="handmatig">De tranche met de hand invullen</button></p>`
+        : "";
       if (!uit.koppeling) {
-        vak.innerHTML = `<p class="brokerleeg">${ontsnap(uit.reden || "Geen koppeling met Lynx.")}</p>`;
+        vak.innerHTML = `<p class="brokerleeg">${ontsnap(uit.reden || "Geen koppeling met Lynx.")}</p>${handmatigKnop}`;
+        const h = vak.querySelector("#handmatig");
+        if (h) h.addEventListener("click", toonTranche);
         return;
       }
       if (!uit.posities.length) {
-        vak.innerHTML = `<p class="brokerleeg">Er staat niets open bij Lynx.</p>`;
+        vak.innerHTML = `<p class="brokerleeg">Er staat niets open bij Lynx.</p>${handmatigKnop}`;
+        const h = vak.querySelector("#handmatig");
+        if (h) h.addEventListener("click", toonTranche);
         return;
       }
       vak.innerHTML = `<table class="feittabel"><thead><tr>
@@ -267,6 +293,10 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
             <td>${ontsnap(p.uitvoering_op || p.rapportdatum || "—")}</td>
             <td><button class="knop klein" data-kies="${i}">Deze nemen</button></td></tr>`).join("")}
         </tbody></table>`;
+      vak.insertAdjacentHTML("beforeend", handmatigKnop);
+      const h = vak.querySelector("#handmatig");
+      if (h) h.addEventListener("click", toonTranche);
+
       vak.querySelectorAll("[data-kies]").forEach((knop) => {
         knop.addEventListener("click", () => {
           const p = uit.posities[Number(knop.dataset.kies)];
@@ -280,6 +310,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
           zet("ontvangen_premie_eur", p.premie_eur);
           zet("uitvoering_op", p.uitvoering_op);
           zet("herkomst", "broker");
+          toonTranche();
         });
       });
     }).catch(() => {
