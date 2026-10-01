@@ -143,6 +143,22 @@ async function behandel(request, env) {
       return json({ ok: true, omgeving: env.OMGEVING, database: db, tijd: new Date().toISOString() });
     }
 
+    // Het rapport van Lynx wordt aangeleverd door een machine die wél bij IBKR
+    // mag. Dat is geen mens: hij meldt zich niet aan met e-mailadres en
+    // wachtwoord maar met een eigen sleutel, en hij kan ook niets anders dan
+    // dit ene ding.
+    if (pad === "/api/lynx/rapport" && request.method === "POST") {
+      const sleutel = request.headers.get("x-lynx-sleutel") || "";
+      const verwacht = env.LYNX_PUSH_SLEUTEL || "";
+      if (!verwacht || !gelijkInVasteTijd(sleutel, verwacht)) {
+        return json({ fout: "Niet herkend." }, 401);
+      }
+      const xml = await request.text();
+      const uit = await neemRapportAan(env, xml, "script");
+      if (uit.fout) return json(uit, uit.status || 400);
+      return json(uit);
+    }
+
     // Alles onder /api/ vraagt om een persoon.
     if (pad.startsWith("/api/")) {
       const ik = await wieIsDit(request, env);
@@ -237,24 +253,6 @@ async function behandel(request, env) {
 
       // Wat er bij de broker open staat. Lezend; het systeem plaatst nooit
       // zelf een order.
-      // Het rapport wordt aangeleverd door een machine die wél bij IBKR mag.
-      // Eigen sleutel, los van de aanmelding: dit is geen mens maar een script.
-      if (pad === "/api/lynx/rapport" && request.method === "POST") {
-        const sleutel = request.headers.get("x-lynx-sleutel") || "";
-        const verwacht = env.LYNX_PUSH_SLEUTEL || "";
-        if (!verwacht || !gelijkInVasteTijd(sleutel, verwacht)) {
-          return json({ fout: "Niet herkend." }, 401);
-        }
-        const xml = await request.text();
-        const uit = await neemRapportAan(env, xml, "script");
-        if (uit.fout) return json(uit, uit.status || 400);
-        return json(uit);
-      }
-      if (pad === "/api/lynx/rapport" && request.method === "GET") {
-        const r = await laatsteRapport(env);
-        return json({ aangeleverd: Boolean(r), opgehaald_op: r ? r.opgehaald_op : null });
-      }
-
       if (pad === "/api/lynx/posities" && request.method === "GET") {
         return json(await openPosities(env));
       }
