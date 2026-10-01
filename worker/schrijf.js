@@ -17,6 +17,19 @@ async function veldenVan(env, tabelnaam) {
   ).bind(tabelnaam).all()).results;
 }
 
+// Wat de database zelf al van een kolom weet: of hij leeg mag zijn en of er
+// een standaardwaarde op staat.
+async function kolominfo(env, tabelnaam) {
+  try {
+    const r = await env.DB.prepare(
+      "select name, \"notnull\", dflt_value from pragma_table_info(?)"
+    ).bind(tabelnaam).all();
+    return Object.fromEntries(r.results.map((k) => [k.name, k]));
+  } catch {
+    return {};
+  }
+}
+
 async function tabelVan(env, tabelnaam) {
   return await env.DB.prepare(
     "select * from db_table where naam = ? and actief = 1"
@@ -363,14 +376,23 @@ export async function maakAan(env, ik, tabelnaam, body) {
     if (naam) nieuw.contract = naam;
   }
 
-  // Verplichte velden die de gebruiker niet zelf invult (zoals de ouder) horen
-  // er wel te zijn: ontbreken ze, dan is dat een duidelijke melding en geen
-  // databasefout.
+  // Verplichte velden die de gebruiker niet zelf invult. Ontbreken ze, dan is
+  // dat een duidelijke melding en geen databasefout — maar alleen als er echt
+  // niets is om op terug te vallen. Een veld dat niet op het aanmaakformulier
+  // staat en in de database een standaardwaarde heeft, laten we gewoon aan de
+  // database over: anders vraagt het systeem om iets wat het zelf al weet.
+  const info = await kolominfo(env, tabelnaam);
   for (const veld of velden.filter((v) => v.verplicht)) {
-    if (nieuw[veld.kolom] === undefined || nieuw[veld.kolom] === null || nieuw[veld.kolom] === "") {
-      if (veld.standaard) nieuw[veld.kolom] = veld.standaard;
-      else return { fout: `${veld.label} is verplicht.`, veld: veld.kolom, status: 422 };
+    const leeg = nieuw[veld.kolom] === undefined || nieuw[veld.kolom] === null || nieuw[veld.kolom] === "";
+    if (!leeg) continue;
+    if (veld.standaard) { nieuw[veld.kolom] = veld.standaard; continue; }
+
+    const kolom = info[veld.kolom];
+    if (kolom && (kolom.dflt_value !== null || !kolom.notnull)) {
+      delete nieuw[veld.kolom];   // de database vult hem zelf in
+      continue;
     }
+    return { fout: `${veld.label} is verplicht.`, veld: veld.kolom, status: 422 };
   }
 
   const uitslag = await toets(env, tabelnaam, nieuw, velden);

@@ -127,7 +127,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     }
 
     return `
-      <div class="formsectie">
+      <div class="formsectie${sectie.accent ? " nadruk" : ""}">
         ${secties.length > 1 ? `<div class="formsectiekop">${ontsnap(sectie.label)}</div>` : ""}
         <div class="formkolommen">
           <div class="formkolom">${links.map(veldHtml).join("")}</div>

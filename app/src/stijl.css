@@ -580,3 +580,20 @@ body.sleept .lijsttabel { pointer-events: none; }
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   background: #FDF6E6; color: var(--ink2);
 }
+
+/* Een sectie met nadruk (db_sectie.accent). Op het positieformulier is het
+   besluit niet zomaar de eerste sectie: het is waar de tranche uit voortkomt.
+   Dat hoor je te zien zonder het te lezen. */
+.formsectie.nadruk {
+  background: #F3F8FB; border-left: 3px solid var(--blue);
+  border-bottom: 1px solid var(--b1);
+}
+.formsectie.nadruk .formsectiekop {
+  background: none; border-top: none; border-bottom: 1px solid #D5E4EC;
+  color: var(--blue); font-size: 10.5px;
+}
+.formsectie.nadruk .veldlabel { color: var(--mut); }
+.formsectie.nadruk .alleenlezen { font-size: 14px; font-weight: 600; color: var(--ink); }
+.formsectie.nadruk select, .formsectie.nadruk input {
+  background: #fff; border-color: #BFD5E0;
+}
