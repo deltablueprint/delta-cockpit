@@ -10,7 +10,7 @@ import { wijzig, archiveer, dupliceer, maakAan, sjabloon } from "./schrijf.js";
 import { record } from "./record.js";
 import { voorbereiden, uitvoeren } from "./import.js";
 import { stand, startMoment, versturen, uitkomst as gonogoUitkomst } from "./gonogo.js";
-import { openPosities } from "./lynx.js";
+import { openPosities, haalRapport } from "./lynx.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
@@ -239,6 +239,17 @@ async function behandel(request, env) {
       // zelf een order.
       if (pad === "/api/lynx/posities" && request.method === "GET") {
         return json(await openPosities(env));
+      }
+      // Om te zien wat Lynx werkelijk antwoordt als er iets misgaat. Het token
+      // staat er niet in: alleen wat er terugkwam.
+      if (pad === "/api/lynx/diagnose" && request.method === "GET") {
+        const uit = await haalRapport(env, true);
+        return json({
+          fout: uit.fout || null,
+          ruw: uit.ruw || (uit.xml ? uit.xml.slice(0, 2000) : null),
+          token_ingesteld: Boolean(env.LYNX_FLEX_TOKEN),
+          query_ingesteld: Boolean(env.LYNX_FLEX_QUERY),
+        });
       }
 
       // ---- de go/no-go (etappe 10) ----

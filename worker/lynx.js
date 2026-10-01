@@ -14,8 +14,14 @@
 // voor het vastleggen van een uitvoering is dat genoeg, voor het bewaken van
 // een stoploss niet — dat is een andere bron.
 
-const SEND = "https://ndcdyn.interactivebrokers.com/AccountManagement/FlexWebService/SendRequest";
-const GET = "https://ndcdyn.interactivebrokers.com/AccountManagement/FlexWebService/GetStatement";
+// IBKR heeft twee adressen voor dezelfde dienst; welke werkt verschilt per
+// account. We proberen de nieuwe en vallen terug op de oude, in plaats van te
+// gokken welke het bij jou is.
+const SEND = [
+  "https://ndcdyn.interactivebrokers.com/AccountManagement/FlexWebService/SendRequest",
+  "https://www.interactivebrokers.com/Universal/servlet/FlexStatementService.SendRequest",
+];
+const GET_TERUGVAL = "https://www.interactivebrokers.com/Universal/servlet/FlexStatementService.GetStatement";
 const KOP = { "user-agent": "Java/DeltaBlueprintCockpit", accept: "application/xml" };
 
 // Het antwoord is XML met gegevens in attributen. Een volledige parser is hier
@@ -61,22 +67,33 @@ async function wacht(ms) {
   await new Promise((r) => setTimeout(r, ms));
 }
 
-export async function haalRapport(env) {
+export async function haalRapport(env, ruw = false) {
   const token = env.LYNX_FLEX_TOKEN;
   const query = env.LYNX_FLEX_QUERY;
   if (!token || !query) {
     return { fout: "Er staat nog geen token of query-id voor Lynx ingesteld." };
   }
 
-  const eerste = await fetch(`${SEND}?t=${encodeURIComponent(token)}&q=${encodeURIComponent(query)}&v=3`, { headers: KOP });
-  const aanvraag = await eerste.text();
-
-  const code = tussen(aanvraag, "ReferenceCode");
-  if (!code) {
-    const melding = tussen(aanvraag, "ErrorMessage") || tussen(aanvraag, "Status") || "onbekende fout";
-    return { fout: `Lynx gaf geen rapport terug: ${melding}` };
+  let aanvraag = "";
+  let code = null;
+  let laatste = "";
+  for (const adres of SEND) {
+    const antwoord = await fetch(`${adres}?t=${encodeURIComponent(token)}&q=${encodeURIComponent(query)}&v=3`, { headers: KOP });
+    aanvraag = await antwoord.text();
+    laatste = `${antwoord.status} van ${new URL(adres).host}`;
+    code = tussen(aanvraag, "ReferenceCode");
+    if (code) break;
   }
-  const url = tussen(aanvraag, "Url") || GET;
+
+  if (!code) {
+    // Zeggen wát er misging, niet dát er iets misging: anders staat er straks
+    // een melding waar niemand iets mee kan.
+    const melding = tussen(aanvraag, "ErrorMessage")
+      || (tussen(aanvraag, "ErrorCode") ? `foutcode ${tussen(aanvraag, "ErrorCode")}` : null)
+      || `${laatste} — ${aanvraag.replace(/\s+/g, " ").slice(0, 160) || "leeg antwoord"}`;
+    return { fout: `Lynx gaf geen rapport terug: ${melding}`, ruw: ruw ? aanvraag.slice(0, 2000) : undefined };
+  }
+  const url = tussen(aanvraag, "Url") || GET_TERUGVAL;
 
   // Het rapport wordt op aanvraag gemaakt; de eerste keer vragen is soms te
   // vroeg. Drie keer proberen is genoeg — blijft het uit, dan zeggen we dat
@@ -86,7 +103,9 @@ export async function haalRapport(env) {
     const xml = await antwoord.text();
     if (xml.includes("<FlexQueryResponse")) return { xml };
     const fout = tussen(xml, "ErrorMessage");
-    if (fout && !/generation in progress|not ready/i.test(fout)) return { fout: `Lynx: ${fout}` };
+    if (fout && !/generation in progress|not ready/i.test(fout)) {
+      return { fout: `Lynx: ${fout}`, ruw: ruw ? xml.slice(0, 2000) : undefined };
+    }
     await wacht(1200);
   }
   return { fout: "Het rapport bij Lynx was nog niet klaar. Probeer het zo nog eens." };
