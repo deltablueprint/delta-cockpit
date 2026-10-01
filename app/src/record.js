@@ -262,7 +262,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
             <td>${p.expiratiedatum ? toonDatum(p.expiratiedatum) : "—"}</td>
             <td>${ontsnap(p.aantal ?? "—")}${p.richting === "gekocht" ? ' <span class="faint">gekocht</span>' : ""}</td>
             <td>${p.premie_eur === null || p.premie_eur === undefined ? "—"
-                 : `€ ${euro(p.premie_eur)}${p.premie_pt ? ` <span class="faint">· ${punten(p.premie_pt)} pt</span>` : ""}`}</td>
+                 : `€ ${euro(p.premie_eur)}${p.premie_pt ? ` <span class="faint">· ${punten(p.premie_pt)} pt</span>` : ""}${
+                     p.premie_bron === "positie" ? ` <span class="faint" title="Komt van de positie zelf: dat is de kostprijs ná commissie, iets lager dan de prijs waartegen geschreven is.">na kosten</span>` : ""}`}</td>
             <td>${ontsnap(p.uitvoering_op || p.rapportdatum || "—")}</td>
             <td><button class="knop klein" data-kies="${i}">Deze nemen</button></td></tr>`).join("")}
         </tbody></table>`;

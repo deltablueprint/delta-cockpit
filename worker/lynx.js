@@ -138,8 +138,14 @@ export function leesPosities(xml) {
       // De prijs waartegen geopend is staat ook op de positie zelf
       // (costBasisPrice). Is de openingstransactie binnen de periode van het
       // rapport gevallen, dan is die preciezer — anders is dit genoeg.
-      const premiePunten = (opening ? getal(opening.tradePrice) : null)
-        ?? getal(p.openPrice) ?? getal(p.costBasisPrice);
+      // De prijs waartegen geschreven is, komt het liefst uit de
+      // openingstransactie: dat is de brutopremie zoals ze gequoteerd werd.
+      // De prijs op de positie zelf (openPrice / costBasisPrice) is bij IBKR
+      // de kostprijs ná commissie — voor een geschreven put dus iets lager.
+      // Allebei zijn waar; ze meten iets anders, en dat hoort er dus bij te
+      // staan in plaats van stilletjes door elkaar te lopen.
+      const uitTransactie = opening ? getal(opening.tradePrice) : null;
+      const premiePunten = uitTransactie ?? getal(p.openPrice) ?? getal(p.costBasisPrice);
 
       return {
         conid: p.conid,
@@ -150,6 +156,7 @@ export function leesPosities(xml) {
         aantal: Math.abs(getal(p.position) ?? getal(p.quantity) ?? 0) || null,
         premie_eur: premiePunten === null ? null : Math.round(premiePunten * multiplier * 100) / 100,
         premie_pt: premiePunten,
+        premie_bron: uitTransactie !== null && uitTransactie !== undefined ? "transactie" : "positie",
         uitvoering_op: tijdstip(opening && opening.dateTime),
         richting: (p.side === "Short" || (getal(p.position) ?? 0) < 0) ? "geschreven" : "gekocht",
         marktprijs: getal(p.markPrice),
