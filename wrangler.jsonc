@@ -7,11 +7,13 @@
 
   "vars": { "OMGEVING": "productie" },
 
+  // Eén bindingnaam in alle omgevingen: env.DB.
+  // Zo hoeft geen enkele regel code te weten of hij op staging of productie draait.
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "delta-cockpit",
-      "database_id": "VUL_IN_NA_WRANGLER_D1_CREATE",
+      "database_id": "7bc931ab-838a-46d0-9982-fe33c52fd1b5",
       "migrations_dir": "migrations"
     }
   ],
@@ -24,7 +26,7 @@
         {
           "binding": "DB",
           "database_name": "delta-cockpit-staging",
-          "database_id": "VUL_IN_NA_WRANGLER_D1_CREATE",
+          "database_id": "169a57ac-0047-4d5d-a05e-e204521727a2",
           "migrations_dir": "migrations"
         }
       ]
