@@ -105,17 +105,27 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     const breed = eigen.filter((v) => v.type === "lang");
     let smal = eigen.filter((v) => v.type !== "lang");
 
-    // De status staat op elk formulier op dezelfde plek: tweede regel links.
-    // Hij zegt waar een record staat, en dat hoor je op elk scherm op dezelfde
-    // plaats te vinden in plaats van te moeten zoeken.
-    const procesVeld = data.tabel.proces_veld;
-    const plek = smal.findIndex((v) => v.kolom === procesVeld);
-    if (procesVeld && plek > -1) {
-      const [veld] = smal.splice(plek, 1);
-      smal.splice(Math.min(2, smal.length), 0, veld);
+    // Waar een veld staat, zegt de definitielaag: db_field.kolom_rechts. Zegt
+    // geen enkel veld van deze tabel er iets over, dan blijft het om en om —
+    // zo veranderen formulieren die niets ingesteld hebben niet.
+    const kiestZelf = smal.some((v) => v.kolom_rechts);
+    let links;
+    let rechts;
+    if (kiestZelf) {
+      links = smal.filter((v) => !v.kolom_rechts);
+      rechts = smal.filter((v) => v.kolom_rechts);
+    } else {
+      // De status staat dan op elk formulier op dezelfde plek: tweede links.
+      const procesVeld = data.tabel.proces_veld;
+      const plek = smal.findIndex((v) => v.kolom === procesVeld);
+      if (procesVeld && plek > -1) {
+        const [veld] = smal.splice(plek, 1);
+        smal.splice(Math.min(2, smal.length), 0, veld);
+      }
+      links = smal.filter((_, i) => i % 2 === 0);
+      rechts = smal.filter((_, i) => i % 2 === 1);
     }
-    const links = smal.filter((_, i) => i % 2 === 0);
-    const rechts = smal.filter((_, i) => i % 2 === 1);
+
     return `
       <div class="formsectie">
         ${secties.length > 1 ? `<div class="formsectiekop">${ontsnap(sectie.label)}</div>` : ""}

@@ -9,7 +9,7 @@ import { vulEventsBij, vulCyclitBij } from "./events.js";
 import { startMoment } from "./gonogo.js";
 import { instelling, wijktAf, stoplossVerruimd, noteerGeweigerdeStoploss,
          volgendeTranche, contractnaam, zetExitplanKlaar, exitplanCompleet,
-         herberekenExitplan, besluitOpties, neemBesluitOver } from "./positie.js";
+         herberekenExitplan, besluitOpties, neemBesluitOver, premieInPunten } from "./positie.js";
 
 async function veldenVan(env, tabelnaam) {
   return (await env.DB.prepare(
@@ -128,6 +128,19 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
       }
     }
 
+    // De premie in punten volgt uit de contractwaarde.
+    if (teSchrijven.some((t) => t.veld.kolom === "ontvangen_premie_eur")) {
+      const pt = await premieInPunten(env, straks);
+      if (pt !== null && pt !== Number(huidig.ontvangen_premie_pt)) {
+        straks.ontvangen_premie_pt = pt;
+        teSchrijven.push({
+          veld: velden.find((v) => v.kolom === "ontvangen_premie_pt"),
+          nieuweWaarde: pt,
+          oudeWaarde: huidig.ontvangen_premie_pt,
+        });
+      }
+    }
+
     // De contractnaam volgt uit de expiratie en de strike; hem met de hand
     // laten typen levert vroeg of laat een naam die niet klopt.
     const naam = contractnaam(straks);
@@ -192,7 +205,7 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
   }
 
   if (tabelnaam === "positie" &&
-      teSchrijven.some((t) => ["ontvangen_premie_pt", "strike"].includes(t.veld.kolom))) {
+      teSchrijven.some((t) => ["ontvangen_premie_pt", "ontvangen_premie_eur", "strike"].includes(t.veld.kolom))) {
     await herberekenExitplan(env, id, straks);
   }
 
@@ -341,6 +354,8 @@ export async function maakAan(env, ik, tabelnaam, body) {
     if (!nieuw.tranche) nieuw.tranche = await volgendeTranche(env, nieuw.cyclus);
     const besluit = await neemBesluitOver(env, nieuw.beoordelingsmoment);
     if (besluit) Object.assign(nieuw, besluit);
+    const pt = await premieInPunten(env, nieuw);
+    if (pt !== null) nieuw.ontvangen_premie_pt = pt;
     const naam = contractnaam(nieuw);
     if (naam) nieuw.contract = naam;
   }

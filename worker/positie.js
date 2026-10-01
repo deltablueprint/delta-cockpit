@@ -301,3 +301,15 @@ export async function neemBesluitOver(env, momentId) {
     return null;
   }
 }
+
+// De premie wordt ingevuld in contractwaarde en gerekend in punten. Eén van
+// de twee is de invoer en de ander volgt eruit; ze allebei laten invullen
+// levert vroeg of laat twee waarheden op (BOUWSPEC 5.4).
+export async function premieInPunten(env, rij) {
+  const eur = Number(rij.ontvangen_premie_eur);
+  if (!Number.isFinite(eur)) return null;
+  const inst = await instelling(env);
+  const multiplier = inst && inst.multiplier ? Number(inst.multiplier) : 10;
+  if (!multiplier) return null;
+  return Math.round((eur / multiplier) * 100) / 100;
+}
