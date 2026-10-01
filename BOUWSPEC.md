@@ -1,6 +1,6 @@
 # Delta Blueprint — bouwspecificatie operationeel dashboard
 
-**Versie 3.3 · 1 oktober 2026**
+**Versie 3.4 · 1 oktober 2026**
 
 Dit bestand is de geconsolideerde bron waarop het bouwen zich baseert. Besluiten worden genomen in het bouwplan-document en in het go/no-go-protocol van Jacqueline; dit bestand is het resultaat daarvan, bijgewerkt zodra er iets verandert. Wijkt dit bestand af van een genomen besluit, dan is dit bestand verouderd en moet het worden bijgewerkt — niet het besluit.
 
@@ -803,7 +803,7 @@ GET    /api/barometer/:cyclus     afgeleide toestand voor de ledenapp
 ```
 
 - Geen DELETE-route.
-- Authenticatie volgens het bestaande model van de delta-proxy worker: bearer token, SHA-256 hash-allowlist.
+- **Aanmelden gaat met e-mailadres en wachtwoord, per persoon.** Het e-mailadres is de gebruikersnaam (`simon@deltablueprint.nl`), het wachtwoord staat er los van en kan gewijzigd worden zonder dat de identiteit verandert. Verstuurd als HTTP Basic over TLS; het wachtwoord staat nergens opgeslagen, alleen de SHA-256 hash ervan, en de vergelijking gebeurt in vaste tijd. Dit vervangt het model van de delta-proxy worker, waar één sleutel tegelijk identiteit én wachtwoord was: dat kende geen "wachtwoord vergeten" zonder ook de identiteit kwijt te raken.
 - Elk record draagt een revisie voor botsingsdetectie bij gelijktijdig bewerken.
 - De inhoud van een `inzending` van een ander wordt niet teruggegeven zolang het quorum niet gehaald is: **positie, strike, expiratie, inzet en reden ontbreken**, via welk endpoint ze ook worden opgevraagd. Verplichte testgevallen: "haal de inzendingen op van een beoordelingsmoment waarvan het quorum niet gehaald is" geeft per andere deelnemer alleen naam, status en tijdstip; "filter de lijst op strike" geeft die records niet prijs.
 - Authenticatie is **per persoon**; er is geen gedeelde sleutel. Elke schrijfactie draagt de identiteit van de indiener.
@@ -826,7 +826,7 @@ GET    /api/barometer/:cyclus     afgeleide toestand voor de ledenapp
 | # | Etappe | Aan het eind werkt |
 | --- | --- | --- |
 | 0 | Repository en omgevingen | Repo gekoppeld, staging en productie, eerste automatische uitrol |
-| 1 | Fundament | D1 aangemaakt, definitietabellen gevuld, **configuratieversie en versiekolommen op de rekenlaag**, **`handelsdag` gevuld voor 2026–2027**, persoonsgebonden sleutels, `/api/meta` levert definities, lege app met navigatie |
+| 1 | Fundament | D1 aangemaakt, definitietabellen gevuld, **configuratieversie en versiekolommen op de rekenlaag**, **`handelsdag` gevuld voor 2026–2027**, aanmelden met e-mailadres en wachtwoord, `/api/meta` levert definities, lege app met navigatie |
 | 2 | Lijst lezen | Cycli en voorwaarden zichtbaar, sorteerbaar, gefilterd |
 | 3 | Formulier lezen | Record opent met velden in secties en related lists |
 | 4 | Schrijven | Opslaan, New-knop, validatie uit `db_rule`, audit trail |
@@ -852,7 +852,7 @@ Na etappe 4 is een echte cyclus volledig vast te leggen. Werken op desktop, iPad
 
 ## 14. Openstaande punten
 
-*Opgelost in versie 1.0: versiebeheer van de rekenlaag (3.4), blootstelling en sizing op portefeuilleniveau (6.1), de handelskalender als tabel (3.2), het splitsen van voorgenomen en uitgevoerde posities (3.3), registratie van afwijking tussen besluit en uitvoering (6), plus de vier standen met "niet gemeten" (4.4), de chartanalyse volgens de metadata-lijn (4.3b) en persoonsgebonden sleutels (1).*
+*Opgelost in versie 1.0: versiebeheer van de rekenlaag (3.4), blootstelling en sizing op portefeuilleniveau (6.1), de handelskalender als tabel (3.2), het splitsen van voorgenomen en uitgevoerde posities (3.3), registratie van afwijking tussen besluit en uitvoering (6), plus de vier standen met "niet gemeten" (4.4), de chartanalyse volgens de metadata-lijn (4.3b) en aanmelden per persoon (1, 11).*
 
 1. **Premie-referentie na een rol** — per tranche, cumulatief, of gesplitst. Voorstel: gesplitst. Blokkeert etappe 12.
 2. **Inzet van de tweede tranche** — vast te leggen regel of oordeel per situatie? Blokkeert niets, maar bepaalt of het een voorwaarde wordt.
