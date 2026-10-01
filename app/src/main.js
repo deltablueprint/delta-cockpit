@@ -2,6 +2,7 @@ import { isAangemeld, aanmeldingWissen, ik, meta as haalMeta } from "./api.js";
 import { aanmeldscherm } from "./aanmelden.js";
 import { schil, menuBijwerken, schilVergeten } from "./schil.js";
 import { lijstscherm, toestandUitUrl, huidigeLijst } from "./lijst.js";
+import { recordscherm } from "./record.js";
 
 let persoon = null;
 let meta = null;
@@ -21,6 +22,22 @@ function teken() {
   const { kruimel, inhoud } = schil(persoon, meta, pad, afmelden);
 
   menuBijwerken(pad);
+
+  // /t/<tabel>/nieuw  en  /t/<tabel>/<id>
+  const recordRoute = pad.match(/^\/t\/([a-z_]+)\/(nieuw|\d+)$/);
+  if (recordRoute) {
+    huidigeLijst.tabelnaam = null;
+    huidigeLijst.url = null;
+    const p = new URLSearchParams(zoekdeel);
+    const ouderParam = p.get("ouder");
+    recordscherm(inhoud, kruimel, recordRoute[1], recordRoute[2] === "nieuw" ? "nieuw" : Number(recordRoute[2]), meta, {
+      tab: p.get("tab"),
+      ouder: ouderParam && ouderParam.includes(":")
+        ? { tabel: ouderParam.split(":")[0], id: ouderParam.split(":")[1] }
+        : null,
+    });
+    return;
+  }
 
   const lijstRoute = pad.match(/^\/t\/([a-z_]+)$/);
   if (lijstRoute) {

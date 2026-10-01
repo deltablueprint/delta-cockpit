@@ -45,8 +45,13 @@ export const gezondheid = () => haal("/api/gezondheid");
 export const lijst = (tabel, params) =>
   haal(`/api/t/${tabel}${params && [...params].length ? "?" + params : ""}`);
 
-export const archiveer = (tabel, ids, reden) =>
-  haal(`/api/t/${tabel}/archiveer`, { methode: "POST", body: { ids, reden } });
+export const record = (tabel, id) => haal(`/api/t/${tabel}/${id}`);
 
-export const dupliceer = (tabel, id) =>
-  haal(`/api/t/${tabel}/${id}/dupliceer`, { methode: "POST" });
+export const bewaar = (tabel, id, velden, revisie, reden) =>
+  haal(`/api/t/${tabel}/${id}`, { methode: "PATCH", body: { velden, revisie, reden } });
+
+export const maakAan = (tabel, velden) =>
+  haal(`/api/t/${tabel}`, { methode: "POST", body: { velden } });
+
+export const nieuwSjabloon = (tabel, ouder) =>
+  haal(`/api/t/${tabel}/nieuw${ouder ? `?ouder=${ouder.tabel}:${ouder.id}` : ""}`);

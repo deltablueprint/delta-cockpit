@@ -4,6 +4,8 @@
 //   3. Alleen velden die in de definitielaag staan en niet alleen-lezen zijn,
 //      kunnen geschreven worden.
 
+import { toets } from "./regels.js";
+
 async function veldenVan(env, tabelnaam) {
   return (await env.DB.prepare(
     "select * from db_field where tabel = ? and actief = 1"
@@ -36,6 +38,17 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
   const huidig = await env.DB.prepare(`select * from "${tabelnaam}" where id = ?`).bind(id).first();
   if (!huidig) return { fout: `Geen ${tabel.label.toLowerCase()} met nummer ${id}.`, status: 404 };
 
+  // Botsingsdetectie: wie opslaat op een verouderde revisie krijgt het record
+  // terug in plaats van andermans werk te overschrijven.
+  if (body.revisie !== undefined && huidig.revisie !== undefined &&
+      Number(body.revisie) !== Number(huidig.revisie)) {
+    return {
+      fout: "Iemand anders heeft dit record intussen gewijzigd.",
+      status: 409,
+      huidig,
+    };
+  }
+
   const teSchrijven = [];
   for (const [kolom, nieuweWaarde] of Object.entries(body.velden || {})) {
     const veld = velden.find((v) => v.kolom === kolom);
@@ -48,9 +61,19 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
       teSchrijven.push({ veld, nieuweWaarde, oudeWaarde: huidig[kolom] });
     }
   }
-  if (!teSchrijven.length) return { ongewijzigd: true, id };
+  if (!teSchrijven.length) return { ongewijzigd: true, id, revisie: huidig.revisie };
 
-  const zetten = teSchrijven.map((t) => `"${t.veld.kolom}" = ?`).join(", ");
+  // Validatie uit db_rule, tegen het record zoals het ná opslaan zou zijn.
+  const straks = { ...huidig };
+  for (const t of teSchrijven) straks[t.veld.kolom] = t.nieuweWaarde;
+  const uitslag = await toets(env, tabelnaam, straks, velden);
+  if (uitslag.blokkades.length) {
+    return { fout: uitslag.blokkades[0].melding, blokkades: uitslag.blokkades, status: 422 };
+  }
+
+  const heeftRevisie = huidig.revisie !== undefined;
+  const zetten = teSchrijven.map((t) => `"${t.veld.kolom}" = ?`).join(", ")
+    + (heeftRevisie ? ", revisie = revisie + 1" : "");
   const opdrachten = [
     env.DB.prepare(`update "${tabelnaam}" set ${zetten} where id = ?`)
       .bind(...teSchrijven.map((t) => t.nieuweWaarde), id),
@@ -65,7 +88,12 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
     ),
   ];
   await env.DB.batch(opdrachten);
-  return { id, gewijzigd: teSchrijven.map((t) => t.veld.kolom) };
+  return {
+    id,
+    revisie: heeftRevisie ? Number(huidig.revisie) + 1 : undefined,
+    gewijzigd: teSchrijven.map((t) => t.veld.kolom),
+    waarschuwingen: uitslag.waarschuwingen,
+  };
 }
 
 // -------------------------------------------------------------- archiveren
@@ -131,4 +159,74 @@ async function heeftKolom(env, tabel, kolom) {
     "select count(*) as n from pragma_table_info(?) where name = ?"
   ).bind(tabel, kolom).first();
   return r && r.n > 0;
+}
+
+// ---------------------------------------------------------------- aanmaken
+// Een record wordt gemaakt vanaf zijn ouder (BOUWSPEC 10.0). Komt er een
+// ouder mee, dan wordt die verwijzing meteen ingevuld en vastgezet.
+export async function maakAan(env, ik, tabelnaam, body) {
+  const tabel = await tabelVan(env, tabelnaam);
+  if (!tabel) return { fout: `Onbekende tabel: ${tabelnaam}`, status: 404 };
+
+  const velden = await veldenVan(env, tabelnaam);
+  const nieuw = {};
+
+  for (const [kolom, w] of Object.entries(body.velden || {})) {
+    const veld = velden.find((v) => v.kolom === kolom);
+    if (!veld) return { fout: `Onbekend veld: ${kolom}`, status: 400 };
+    if (veld.alleen_lezen && kolom !== body.ouderkolom) continue;
+    nieuw[kolom] = w === "" ? null : w;
+  }
+
+  for (const veld of velden.filter((v) => v.verplicht && !v.alleen_lezen)) {
+    if (nieuw[veld.kolom] === undefined || nieuw[veld.kolom] === null || nieuw[veld.kolom] === "") {
+      if (veld.standaard) nieuw[veld.kolom] = veld.standaard;
+      else return { fout: `${veld.label} is verplicht.`, veld: veld.kolom, status: 422 };
+    }
+  }
+
+  const uitslag = await toets(env, tabelnaam, nieuw, velden);
+  if (uitslag.blokkades.length) {
+    return { fout: uitslag.blokkades[0].melding, blokkades: uitslag.blokkades, status: 422 };
+  }
+
+  if (velden.some((v) => v.kolom === "aangemaakt_door") && !nieuw.aangemaakt_door) {
+    nieuw.aangemaakt_door = ik.id;
+  }
+
+  const kolommen = Object.keys(nieuw);
+  if (!kolommen.length) return { fout: "Niets om op te slaan.", status: 400 };
+
+  const rij = await env.DB.prepare(
+    `insert into "${tabelnaam}" (${kolommen.map((k) => `"${k}"`).join(", ")})
+     values (${kolommen.map(() => "?").join(", ")}) returning id`
+  ).bind(...kolommen.map((k) => nieuw[k])).first();
+
+  await auditregel(env, ik, tabelnaam, rij.id, "gebeurtenis", { gebeurtenis: "aangemaakt" }).run();
+  return { id: rij.id, waarschuwingen: uitslag.waarschuwingen };
+}
+
+// Een leeg record om mee te beginnen: standaardwaarden uit de definitielaag,
+// en de verwijzing naar de ouder al ingevuld.
+export async function sjabloon(env, tabelnaam, ouder) {
+  const tabel = await tabelVan(env, tabelnaam);
+  if (!tabel) return { fout: `Onbekende tabel: ${tabelnaam}`, status: 404 };
+  const velden = await veldenVan(env, tabelnaam);
+  const secties = (await env.DB.prepare(
+    "select * from db_sectie where tabel = ? order by volgorde"
+  ).bind(tabelnaam).all()).results;
+
+  const waarden = {};
+  for (const v of velden) waarden[v.kolom] = v.standaard ?? null;
+
+  let ouderkolom = null;
+  if (ouder) {
+    const veld = velden.find((v) => v.verwijst_naar === ouder.tabel);
+    if (veld) { waarden[veld.kolom] = Number(ouder.id); ouderkolom = veld.kolom; }
+  }
+
+  return {
+    tabel: { naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv, titel_veld: tabel.titel_veld },
+    secties, velden, waarden, ouderkolom, nieuw: true, relaties: [], verwijzingen: {},
+  };
 }

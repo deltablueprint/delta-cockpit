@@ -6,7 +6,8 @@
 //      schrijfactie draagt een identiteit (BOUWSPEC 11). Geen gedeelde sleutel.
 
 import { lijst } from "./lijst.js";
-import { wijzig, archiveer, dupliceer } from "./schrijf.js";
+import { wijzig, archiveer, dupliceer, maakAan, sjabloon } from "./schrijf.js";
+import { record } from "./record.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
@@ -139,20 +140,41 @@ export default {
       // /api/t/<tabel> — de lijst
       const lijstPad = pad.match(/^\/api\/t\/([a-z_]+)$/);
       if (lijstPad) {
-        if (request.method !== "GET") {
-          return json({ fout: "Nieuwe records maak je aan vanaf het record waar ze bij horen." }, 405);
+        if (request.method === "POST") {
+          const body = await request.json().catch(() => ({}));
+          const gemaakt = await maakAan(env, ik, lijstPad[1], body);
+          if (gemaakt.fout) return json(gemaakt, gemaakt.status || 400);
+          return json(gemaakt, 201);
         }
+        if (request.method !== "GET") return json({ fout: "Deze methode bestaat niet." }, 405);
         const uitkomst = await lijst(env, lijstPad[1], url.searchParams);
         if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
         return json(uitkomst);
       }
 
-      // /api/t/<tabel>/<id> — één record wijzigen
+      // /api/t/<tabel>/nieuw — een leeg record om mee te beginnen
+      const nieuwPad = pad.match(/^\/api\/t\/([a-z_]+)\/nieuw$/);
+      if (nieuwPad && request.method === "GET") {
+        const ouderParam = url.searchParams.get("ouder");
+        const ouder = ouderParam && ouderParam.includes(":")
+          ? { tabel: ouderParam.split(":")[0], id: ouderParam.split(":")[1] }
+          : null;
+        const uitkomst = await sjabloon(env, nieuwPad[1], ouder);
+        if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
+        return json(uitkomst);
+      }
+
+      // /api/t/<tabel>/<id> — één record lezen of wijzigen
       const recordPad = pad.match(/^\/api\/t\/([a-z_]+)\/(\d+)$/);
+      if (recordPad && request.method === "GET") {
+        const uitkomst = await record(env, recordPad[1], Number(recordPad[2]));
+        if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
+        return json(uitkomst);
+      }
       if (recordPad && request.method === "PATCH") {
         const body = await request.json().catch(() => ({}));
         const uitkomst = await wijzig(env, ik, recordPad[1], Number(recordPad[2]), body);
-        if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
+        if (uitkomst.fout) return json(uitkomst, uitkomst.status || 400);
         return json(uitkomst);
       }
 

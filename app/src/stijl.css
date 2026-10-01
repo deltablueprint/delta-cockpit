@@ -186,10 +186,6 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
 .zoekregel td { padding: 4px 5px; background: var(--soft); border-bottom: 1px solid var(--b1); }
 .zoekregel input { height: 23px; padding: 0 6px; font-size: 11px; color: var(--mut); }
 
-.vink, .icoonkol { width: 34px; }
-.icoonkol { width: 28px; padding-left: 4px; padding-right: 4px; }
-.lijsttabel input[type="checkbox"] { width: 13px; height: 13px; accent-color: var(--blue); }
-
 .recordlink { font-weight: 600; text-decoration: none; }
 .recordlink:hover { text-decoration: underline; }
 .faint { color: var(--faint); }
@@ -205,24 +201,63 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
   .paginatekst { display: none; }
 }
 
-/* --- selecteren en acties --- */
-.tandwiel {
-  height: 20px; width: 20px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
-  background: transparent; border: none; cursor: pointer;
+/* ============================================================================
+   Het recordscherm
+   ========================================================================== */
+.knoppen { margin-left: auto; display: flex; gap: 7px; }
+.knop {
+  height: 32px; padding: 0 14px; font-size: 12.5px; font-weight: 600; font-family: inherit;
+  color: #fff; background: var(--blue); border: 1px solid var(--blue); border-radius: 2px;
+  cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
 }
-.tandwiel:hover { background: rgba(0,0,0,.06); border-radius: 2px; }
+.knop.tweede { color: var(--ink2); background: #fff; border-color: #D8D5CE; font-weight: 400; }
+.knop.klein { height: 26px; padding: 0 11px; font-size: 12px; }
+.knop[disabled] { opacity: .6; cursor: default; }
 
-.selectiebalk {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  padding: 7px 10px; background: var(--bluebg); border-bottom: 1px solid #B4CBD8;
+.formulier { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 8px; margin-bottom: 10px; }
+.sectie { background: #fff; border: 1px solid var(--b1); border-radius: 3px; padding: 11px 14px 13px; }
+.sectiekop {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.6px; color: var(--dim);
+  text-transform: uppercase; margin-bottom: 9px;
 }
-.selectietekst { font-size: 12px; color: var(--ink); }
-.actieknop {
-  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px;
-  font-size: 12px; font-family: inherit; color: var(--ink);
-  background: #fff; border: 1px solid #D8D5CE; border-radius: 2px; cursor: pointer;
+.velden { display: grid; grid-template-columns: 170px minmax(0, 1fr); row-gap: 7px; column-gap: 10px; align-items: center; }
+.veldlabel { font-size: 12.5px; color: var(--mut); }
+.ster { color: var(--red); }
+.veldwaarde input, .veldwaarde select, .veldwaarde textarea {
+  width: 100%; height: 28px; padding: 0 9px; font-size: 12.5px; font-family: inherit; color: var(--ink);
+  background: #fff; border: 1px solid #D8D5CE; border-radius: 2px;
 }
-.actieknop:hover:not([disabled]) { border-color: var(--blue); color: var(--blue); }
-.actieknop[disabled] { color: var(--faint); cursor: default; }
-.actieknop.leeg { margin-left: 0; background: transparent; border-color: transparent; color: var(--mut); }
-.selectienote { margin-left: auto; font-size: 11.5px; color: var(--mut); }
+.veldwaarde textarea { height: auto; padding: 6px 9px; line-height: 1.45; resize: vertical; }
+.veldwaarde input:focus, .veldwaarde select:focus, .veldwaarde textarea:focus { outline: 2px solid var(--bluebg); border-color: var(--blue); }
+.alleenlezen { font-size: 12.5px; color: var(--ink2); }
+.waarschuwing { color: var(--amb); }
+.fouttekst { color: var(--red); }
+.pijlje { color: var(--faint); }
+
+/* --- gerelateerde lijsten --- */
+.tabbalk { display: flex; gap: 2px; border-bottom: 1px solid var(--b1); margin-bottom: -1px; }
+.tab {
+  display: flex; align-items: center; gap: 6px; padding: 7px 11px; white-space: nowrap;
+  color: var(--mut); font-size: 12.5px; text-decoration: none;
+  border: 1px solid transparent; border-radius: 3px 3px 0 0;
+}
+.tab.actief { background: #fff; border-color: var(--b1); border-bottom-color: #fff; color: var(--ink); font-weight: 700; }
+.tabtelling { font-size: 10.5px; color: var(--faint); background: var(--head); border-radius: 9px; padding: 0 6px; }
+.relatieinhoud { background: #fff; border: 1px solid var(--b1); border-radius: 0 3px 3px 3px; padding: 0; }
+.relatieinhoud.los { margin-bottom: 8px; border-radius: 3px; }
+.lijst.ingebed { border: none; }
+.rlkop {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--b1);
+}
+.rltitel { font-size: 12.5px; font-weight: 700; }
+.rlmeta { font-size: 11.5px; color: var(--mut); }
+.rlkop .knop { margin-left: auto; }
+
+/* --- bewerken in de lijst --- */
+td.bewerkt { padding: 2px 4px; background: var(--bluebg); }
+td.bewerkt input, td.bewerkt select {
+  width: 100%; height: 26px; padding: 0 6px; font-size: 12px; font-family: inherit;
+  border: 1px solid var(--blue); border-radius: 2px;
+}
+td.bezigcel { opacity: .6; }
+td.zojuist { background: var(--grnbg); transition: background 1s; }

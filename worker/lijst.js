@@ -114,7 +114,11 @@ export async function lijst(env, tabelnaam, params) {
   const limiet = Math.min(parseInt(params.get("limiet") || "50", 10) || 50, MAX);
   const offset = Math.max(parseInt(params.get("offset") || "0", 10) || 0, 0);
 
-  const selectie = ["id", ...kolommen.filter((k) => k !== "id")].map((k) => `"${k}"`).join(", ");
+  // De revisie gaat mee zodat bewerken in de lijst kan zien of iemand anders
+  // het record intussen heeft gewijzigd.
+  const heeftRevisie = await kolomBestaatInDb(env, tabelnaam, "revisie");
+  const selectie = ["id", ...(heeftRevisie ? ["revisie"] : []), ...kolommen.filter((k) => k !== "id")]
+    .map((k) => `"${k}"`).join(", ");
 
   const [rijen, telling] = await Promise.all([
     env.DB.prepare(`select ${selectie} from "${tabelnaam}" ${waarSql} ${orderSql} limit ? offset ?`)
