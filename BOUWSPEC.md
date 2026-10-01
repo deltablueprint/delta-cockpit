@@ -519,6 +519,8 @@ Dit is de zwaarste regel van hoofdstuk 10. Wie een scherm ontwerpt begint hier, 
 
 **Het model is lijst → record → gerelateerde lijsten.** Elke tabel heeft precies één lijstscherm en één recordscherm. Op het record staat bovenaan het formulier met de eigen velden, daaronder de records die eraan hangen als tabbladen. Er bestaat geen scherm dat iets anders is dan één van die twee, op drie benoemde uitzonderingen na (hieronder). Een scherm bouwen begint dus altijd met de vraag: *van welke tabel is dit de lijst of het record?* Is daar geen antwoord op, dan is het geen scherm maar een tabblad.
 
+**Een verwijzing naar de eigen tabel is geen kindlijst.** `doorgerold naar` wijst van de ene tranche naar de volgende; dat maakt de opvolger geen onderdeel van zijn voorganger. Zulke verwijzingen staan als veld op het formulier, nooit als tabblad eronder — anders zou elk record zichzelf als gerelateerde lijst dragen.
+
 **Een kindtabel heeft geen eigen menu-ingang en geen eigen lijstscherm.** Ze verschijnt als **gerelateerde lijst** op het record van haar ouder; dat tabblad *is* de lijst. Alleen tabellen die zelfstandig betekenis hebben — cycli, posities, publicaties, besluiten, processen — krijgen een eigen lijst in het menu. Stappen horen bij een proces, aanleidingen bij het proces Publicatie, voorwaarden bij een cyclus: die staan nergens los.
 
 **Records worden gemaakt vanaf hun ouder, nooit vanuit het menu.** Een instapvoorwaarde maak je op de cyclus, een stap op het proces, een aanleiding op het proces Publicatie, een publicatie vanaf haar aanleiding. Het menu opent lijsten en dashboards; onder BEHEER staat alleen inrichting. De breadcrumb toont die ouderketen altijd volledig: *Beheer › Processen › Publicatie › Aanleidingen › Uitkomst van een tranche*.

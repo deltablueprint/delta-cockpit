@@ -31,6 +31,11 @@ export async function record(env, tabelnaam, id, ik) {
 
   const relaties = [];
   for (const k of kinderen) {
+    // Een veld dat naar de eigen tabel wijst is een verwijzing naar een
+    // zusterrecord, geen kindlijst: 'doorgerold naar' maakt van de opvolger
+    // geen onderdeel van deze tranche. Zulke verwijzingen staan als veld op
+    // het formulier en niet als tabblad eronder.
+    if (k.tabel === tabelnaam) continue;
     // De teller telt wat je in de lijst ziet: gearchiveerde regels horen daar
     // niet bij. Stond er 2 terwijl er één regel stond, dan klopte er iets —
     // en een teller waarin je niet gelooft, is erger dan geen teller.
