@@ -557,12 +557,18 @@ body.sleept .lijsttabel { pointer-events: none; }
 
 /* Aanvinken in een gerelateerde lijst: daar maak je regels aan, dus daar ruim
    je een vergissing ook op. Archiveren, niet verwijderen. */
-.lijsttabel th.vink, .lijsttabel td.vink { padding: 8px 6px 8px 10px; cursor: default; }
+/* Vinkje en prullenbak staan in dezelfde kolom en dus op dezelfde as:
+   allebei gecentreerd, zodat ze recht onder elkaar staan. */
+.lijsttabel th.vink, .lijsttabel td.vink {
+  padding: 6px 0; text-align: center; cursor: default; overflow: visible;
+}
+.lijsttabel th.vink input, .lijsttabel td.vink input { display: inline-block; vertical-align: middle; }
 .lijsttabel tr.gekozen td { background: var(--bluebg); }
 /* De prullenbak is een icoon naast 'Nieuw', geen knop met een kader eromheen:
    hij hoort pas op te vallen als er iets aangevinkt staat. */
 .rlweg {
-  width: 24px; height: 24px; padding: 0; margin: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; padding: 0; margin: 0; vertical-align: middle;
   border: 0; background: none; color: var(--mut);
 }
 .rlweg:hover { color: var(--red); border: 0; background: none; }
