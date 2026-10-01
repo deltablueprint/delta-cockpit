@@ -515,7 +515,9 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       e.preventDefault();
       e.stopPropagation();
       const kolom = greep.dataset.sleep;
-      const index = kolommen.findIndex((k) => k.kolom === kolom);
+      // De kolom met de vinkjes staat vooraan in de colgroup maar niet in de
+      // kolomlijst. Zonder die verschuiving versleep je de buurman.
+      const index = kolommen.findIndex((k) => k.kolom === kolom) + (metVinkjes ? 1 : 0);
       const col = tabel.querySelectorAll("col")[index];
       const beginX = e.clientX;
       const beginBreedte = col.getBoundingClientRect().width;
