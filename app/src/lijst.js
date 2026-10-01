@@ -293,7 +293,8 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         <th class="vuller"></th>
       </tr>
       <tr class="zoekregel">
-        ${metVinkjes ? `<td class="vink"></td>` : ""}
+        ${metVinkjes ? `<td class="vink"><button class="ikoonknop rlweg" id="rlweg" hidden
+            title="Aangevinkte regels archiveren" aria-label="Aangevinkte regels archiveren">${ICOON.prullenbak}</button></td>` : ""}
         ${kolommen.map((k) => `<td><input type="text" data-kolom="${k.kolom}"
             aria-label="Zoeken in ${ontsnap(k.label)}" value="${ontsnap(toestand.filters[k.kolom] || "")}"
             placeholder="Zoeken"${k.type === "datum" || k.type === "tijdstip" ? ' title="Bijvoorbeeld: 2026 · jul · jul 2026 · 6 jul 2026 · 202607 · 6/7/2026"' : ""}></td>`).join("")}
@@ -338,8 +339,6 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       <span class="rltitel">${ontsnap(ingebed.label || data.tabel.label_mv)}</span>
       ${ingebed.toonTelling ? `<span class="rlmeta">${tot} ${tot === 1 ? ontsnap(data.tabel.label.toLowerCase()) : ontsnap(data.tabel.label_mv.toLowerCase())}</span>` : ""}
       <a class="knop" href="#/t/${tabelnaam}/nieuw?ouder=${ingebed.ouder.tabel}:${ingebed.ouder.id}">Nieuw</a>
-      <button class="ikoonknop rlweg" id="rlweg" hidden title="Aangevinkte regels archiveren"
-              aria-label="Aangevinkte regels archiveren">${ICOON.prullenbak}</button>
       <span class="rlselectie" id="rlselectie"></span>
     </div>`;
 
