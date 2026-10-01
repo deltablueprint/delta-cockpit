@@ -79,7 +79,11 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   // én leeg is, vertelt niets: die laten we weg in plaats van een rij
   // streepjes te tonen.
   const alleSecties = data.secties.length ? data.secties : [{ naam: "algemeen", label: data.tabel.label }];
-  const standNu = data.proces ? data.waarden[data.proces.veld] : null;
+  // Op een nieuw record staat de stand nog niet in de waarden; die komt dan
+  // uit de procesbalk, die hem al kent.
+  const standNu = data.proces
+    ? (data.waarden[data.proces.veld] ?? data.proces.nu)
+    : null;
   const secties = alleSecties.filter((sectie) => {
     if (isNieuw && sectie.verbergen_bij_nieuw) return false;
     // Een sectie kan bij bepaalde standen horen (db_sectie.standen). Leeg
@@ -164,7 +168,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   // de broker open staat: daar kies je de positie in plaats van haar over te
   // typen.
   const toonBroker = tabelnaam === "positie" &&
-    ["besluit goedgekeurd", "order bij lynx"].includes(String(data.waarden.status || ""));
+    ["besluit goedgekeurd", "order bij lynx"].includes(String(standNu || ""));
 
   const terugNaar = data.ouder
     ? { href: `#/t/${data.ouder.tabel}/${data.ouder.id}`, label: `Terug naar ${data.ouder.titel}` }
