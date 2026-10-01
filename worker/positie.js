@@ -113,3 +113,31 @@ export async function noteerGeweigerdeStoploss(env, ik, id, oud, nieuw) {
     oude: String(oud), nieuwe: String(nieuw),
   }).run();
 }
+
+// Het nummer van de tranche volgt uit de cyclus: het is een telling, geen
+// keuze. En de contractnaam stelt het systeem samen uit wat er al staat —
+// OESX, de expiratiemaand en de strike — zodat hij nooit afwijkt van de
+// velden eronder.
+export async function volgendeTranche(env, cyclusId) {
+  if (!cyclusId) return 1;
+  try {
+    const r = await env.DB.prepare(
+      "select coalesce(max(tranche), 0) + 1 as n from positie where cyclus = ? and archief = 0"
+    ).bind(cyclusId).first();
+    return r ? r.n : 1;
+  } catch {
+    return 1;
+  }
+}
+
+const MAAND = ["JAN", "FEB", "MRT", "APR", "MEI", "JUN", "JUL", "AUG", "SEP", "OKT", "NOV", "DEC"];
+
+export function contractnaam(rij) {
+  if (!rij || !rij.expiratiedatum || rij.strike === null || rij.strike === undefined || rij.strike === "") {
+    return null;
+  }
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(rij.expiratiedatum));
+  if (!m) return null;
+  const strike = Number(rij.strike);
+  return `OESX ${m[3]}${MAAND[Number(m[2]) - 1]}${m[1].slice(2)} ${Number.isInteger(strike) ? strike : strike.toFixed(1)} PUT`;
+}

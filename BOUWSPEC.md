@@ -545,6 +545,8 @@ Dit is de zwaarste regel van hoofdstuk 10. Wie een scherm ontwerpt begint hier, 
 3. **Het exitplan gaat vóór de order.** Zolang stoploss, eventregel en wie dagelijks volgt niet gevuld zijn, komt de tranche niet voorbij *besluit goedgekeurd*. Volgorde, geen waarschuwing.
 4. **De stoploss wordt niet verruimd.** Aanscherpen mag; een hogere ask wordt geweigerd en in de audit trail genoteerd.
 
+**Het formulier vraagt alleen wat je dan weet.** Het nummer van de tranche telt het systeem uit de cyclus, de contractnaam stelt het samen uit expiratie en strike, de stoploss staat op ask 60,0 en het winstanker begint op 70 % van de ontvangen premie. Secties die pas later iets te melden hebben — de uitvoering en de uitkomst — staan niet op het aanmaakformulier (`db_sectie.verbergen_bij_nieuw`), en een sectie waarvan alles alleen-lezen én leeg is wordt helemaal niet getoond: een rij streepjes is geen informatie.
+
 De cyclus volgt zijn tranches: gaat er één bewaken, dan staat de cyclus *in positie*; is elke tranche gesloten, dan begint de post-analyse. Wat de brokerkoppeling straks doet — ophalen en voorstellen — doet een mens nu met de hand; wat het systeem nooit doet, blijft hetzelfde: orders plaatsen.
 
 `positie` heeft **één recordscherm** met het proces **POSITIE** (besluit goedgekeurd → exitplan vastgelegd → order bij Lynx → uitvoering geïmporteerd → bewaken → uitkomst vastgelegd) en één statusveld dat zegt waar de tranche staat. De lijst *Posities* opent dat record; wat eerder losse actieschermen waren, zijn statussen ervan.

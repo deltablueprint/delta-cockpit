@@ -22,6 +22,14 @@ function leeg(w) {
 }
 
 function vergelijk(links, operator, rechts) {
+  // Gelijk en ongelijk kunnen wél met een leeg veld overweg: een leeg veld is
+  // niet gelijk aan 'exitplan uitgevoerd'. Eerder gaf dat 'niets om te
+  // vergelijken' — waardoor een regel die alleen bij die uitkomst hoort te
+  // gelden, bij een leeg formulier meteen aansloeg.
+  if (operator === "=" || operator === "!=") {
+    if (leeg(links) && leeg(rechts)) return operator === "=";
+    if (leeg(links) || leeg(rechts)) return operator === "!=";
+  }
   if (leeg(links) || leeg(rechts)) return true;   // niets om te vergelijken
   const a = isNaN(Number(links)) ? String(links) : Number(links);
   const b = isNaN(Number(rechts)) ? String(rechts) : Number(rechts);

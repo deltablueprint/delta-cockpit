@@ -7,7 +7,8 @@
 import { toets } from "./regels.js";
 import { vulEventsBij, vulCyclitBij } from "./events.js";
 import { startMoment } from "./gonogo.js";
-import { instelling, wijktAf, stoplossVerruimd, noteerGeweigerdeStoploss } from "./positie.js";
+import { instelling, wijktAf, stoplossVerruimd, noteerGeweigerdeStoploss,
+         volgendeTranche, contractnaam } from "./positie.js";
 
 async function veldenVan(env, tabelnaam) {
   return (await env.DB.prepare(
@@ -101,6 +102,18 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
         veld: "afwijking_toelichting",
         status: 422,
       };
+    }
+
+    // De contractnaam volgt uit de expiratie en de strike; hem met de hand
+    // laten typen levert vroeg of laat een naam die niet klopt.
+    const naam = contractnaam(straks);
+    if (naam && naam !== huidig.contract) {
+      straks.contract = naam;
+      teSchrijven.push({
+        veld: velden.find((v) => v.kolom === "contract"),
+        nieuweWaarde: naam,
+        oudeWaarde: huidig.contract,
+      });
     }
 
     // De uitvoering tegen het besluit leggen. Het systeem stelt vast dát er
@@ -314,6 +327,12 @@ export async function maakAan(env, ik, tabelnaam, body) {
     nieuw.aangemaakt_door = ik.id;
   }
 
+  if (tabelnaam === "positie") {
+    if (!nieuw.tranche) nieuw.tranche = await volgendeTranche(env, nieuw.cyclus);
+    const naam = contractnaam(nieuw);
+    if (naam) nieuw.contract = naam;
+  }
+
   // Onder welke versie van de instellingen dit record ontstaat, zet het
   // systeem zelf. Dat is een feit over het moment, geen keuze van wie klikt.
   if (velden.some((v) => v.kolom === "configuratieversie") && !nieuw.configuratieversie) {
@@ -363,6 +382,10 @@ export async function sjabloon(env, tabelnaam, ouder) {
         ouderInfo = { tabel: ot.naam, label_mv: ot.label_mv, id: Number(ouder.id), titel: r ? r.titel : `${ot.label} ${ouder.id}` };
       }
     }
+  }
+
+  if (tabelnaam === "positie" && ouder && ouder.tabel === "cyclus") {
+    waarden.tranche = await volgendeTranche(env, Number(ouder.id));
   }
 
   let proces = null;

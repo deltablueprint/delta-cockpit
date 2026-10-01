@@ -74,7 +74,20 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   const velden = data.velden.filter(
     (v) => v.toon_op_formulier !== 0 && (v.sectie !== "systeem" || !isNieuw)
   );
-  const secties = data.secties.length ? data.secties : [{ naam: "algemeen", label: data.tabel.label }];
+  // Een sectie kan zeggen dat ze bij het aanmaken nog niets te melden heeft
+  // (db_sectie.verbergen_bij_nieuw). En een sectie waarvan alles alleen-lezen
+  // én leeg is, vertelt niets: die laten we weg in plaats van een rij
+  // streepjes te tonen.
+  const alleSecties = data.secties.length ? data.secties : [{ naam: "algemeen", label: data.tabel.label }];
+  const secties = alleSecties.filter((sectie) => {
+    if (isNieuw && sectie.verbergen_bij_nieuw) return false;
+    const eigen = velden.filter((v) => (v.sectie || "algemeen") === sectie.naam);
+    if (!eigen.length) return false;
+    const allesLeegEnVast = eigen.every(
+      (v) => v.alleen_lezen && (data.waarden[v.kolom] === null || data.waarden[v.kolom] === undefined || data.waarden[v.kolom] === "")
+    );
+    return !allesLeegEnVast;
+  });
 
   const veldHtml = (v) => `
     <label class="veldlabel" for="veld-${v.kolom}">${v.verplicht ? '<span class="ster">*</span> ' : ""}${ontsnap(v.label)}</label>
