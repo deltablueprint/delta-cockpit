@@ -5,6 +5,7 @@
 //      kunnen geschreven worden.
 
 import { toets } from "./regels.js";
+import { vulEventsBij } from "./events.js";
 
 async function veldenVan(env, tabelnaam) {
   return (await env.DB.prepare(
@@ -98,6 +99,13 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
     ),
   ];
   await env.DB.batch(opdrachten);
+
+  // Schoof de looptijd op, dan horen de events uit de nieuwe periode erbij.
+  if (tabelnaam === "cyclus" &&
+      teSchrijven.some((t) => ["geopend_op", "doelexpiratie", "afgesloten_op"].includes(t.veld.kolom))) {
+    await vulEventsBij(env, id);
+  }
+
   return {
     id,
     revisie: heeftRevisie ? Number(huidig.revisie) + 1 : undefined,
@@ -220,6 +228,7 @@ export async function maakAan(env, ik, tabelnaam, body) {
   ).bind(...kolommen.map((k) => nieuw[k])).first();
 
   await auditregel(env, ik, tabelnaam, rij.id, "gebeurtenis", { gebeurtenis: "aangemaakt" }).run();
+  if (tabelnaam === "cyclus") await vulEventsBij(env, rij.id);
   return { id: rij.id, waarschuwingen: uitslag.waarschuwingen };
 }
 

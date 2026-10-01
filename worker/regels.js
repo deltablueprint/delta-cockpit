@@ -43,6 +43,17 @@ function voldoet(voorwaarde, record, velden) {
   const mitsDeel = /^(\S+)\s+nietleeg_als\s+(.+)$/.exec(tekst);
   if (mitsDeel) {
     const [, veld, rest] = mitsDeel;
+
+    // vorm:  <veld> nietleeg_als <veld> notin a|b
+    const lijstVorm = /^(\S+)\s+(notin|in)\s+(.+)$/.exec(rest.trim());
+    if (lijstVorm) {
+      const [, ander, soort, opsomming] = lijstVorm;
+      const waarden = opsomming.split("|").map((w) => w.trim());
+      const staatErin = waarden.includes(String(record[ander] ?? ""));
+      const geldt = soort === "in" ? staatErin : !staatErin;
+      return geldt ? !leeg(record[veld]) : true;
+    }
+
     const op = OPERATOREN.find((o) => rest.includes(o));
     if (!op) return true;
     const [l, r] = rest.split(op);
