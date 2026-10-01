@@ -19,6 +19,7 @@ const VELDEN = [
   { kolom: "naam",        label: "Event",       verplicht: true,  hint: "de naam van de gebeurtenis" },
   { kolom: "soort",       label: "Soort",       verplicht: false, hint: "macro · centrale_bank · expiratie · bedrijf · politiek" },
   { kolom: "zwaarte",     label: "Zwaarte",     verplicht: false, hint: "licht · middel · zwaar" },
+  { kolom: "tijdzone",    label: "Tijdzone",    verplicht: false, hint: "Europe/Brussels · America/New_York — leeg = Brussel" },
   { kolom: "toelichting", label: "Toelichting", verplicht: false, hint: "" },
 ];
 
@@ -72,6 +73,7 @@ function raad(kop, kolom) {
     naam: ["naam", "name", "event", "gebeurtenis", "omschrijving", "description", "title", "titel"],
     soort: ["soort", "type", "category", "categorie", "kind"],
     zwaarte: ["zwaarte", "impact", "importance", "belang", "gewicht"],
+    tijdzone: ["tijdzone", "timezone", "zone", "tz"],
     toelichting: ["toelichting", "opmerking", "note", "comment", "detail"],
   }[kolom];
   const i = kop.findIndex((k) => woorden.some((w) => k.toLowerCase().includes(w)));
@@ -101,14 +103,19 @@ export function importscherm(inhoud, kruimel, meta) {
     inhoud.innerHTML = omhulsel(1, `
       <p class="uitleg">Kies een bestand met komma's, puntkomma's of tabs als scheiding — een CSV uit
       Excel of een export uit je kalenderbron. Je mag de inhoud ook gewoon plakken.</p>
-      <p><input type="file" id="bestand" accept=".csv,.tsv,.txt,text/csv,text/plain"></p>
-      <p class="uitleg">Of plakken:</p>
+      <div class="bestandsrij">
+        <label class="knop tweede" for="bestand">Bestand kiezen</label>
+        <input type="file" id="bestand" class="verborgeninvoer" accept=".csv,.tsv,.txt,text/csv,text/plain">
+        <span class="bestandsnaam" id="bestandsnaam">Geen bestand gekozen</span>
+      </div>
+      <p class="uitleg">Of plak de inhoud:</p>
       <textarea id="geplakt" rows="6" placeholder="datum;tijdstip;event;impact&#10;2026-10-08;14:15;ECB-rentebesluit;zwaar"></textarea>
       <div class="knoprij"><button class="knop" id="verder">Verder</button></div>`);
 
     inhoud.querySelector("#bestand").addEventListener("change", (e) => {
       const bestand = e.target.files[0];
       if (!bestand) return;
+      inhoud.querySelector("#bestandsnaam").textContent = bestand.name;
       const lezer = new FileReader();
       lezer.onload = () => { inhoud.querySelector("#geplakt").value = lezer.result; };
       lezer.readAsText(bestand);

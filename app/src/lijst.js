@@ -57,13 +57,10 @@ function datum(s) {
   return m ? `${Number(m[3])} ${MAANDEN[Number(m[2]) - 1]} ${m[1]}` : ontsnap(s);
 }
 
-function waarde(veld, w, meta) {
+function waarde(veld, w, meta, rij = {}) {
   if (w === null || w === undefined || w === "") return `<span class="faint">&mdash;</span>`;
-  if (veld.type === "keuze") {
-    const keuzes = meta.keuzes[`${veld.tabel}.${veld.kolom}`] || [];
-    const k = keuzes.find((x) => x.waarde === w);
-    const [fg, bg] = KLEUR[k ? k.kleur : "grijs"] || KLEUR.grijs;
-    return `<span class="badge" style="color:${fg};background:${bg}">${ontsnap(k ? k.label : w)}</span>`;
+  if (veld.type === "keuze" || veld.type === "tijd" || veld.type === "verwijzing") {
+    return lees(veld, w, meta, {}, rij);
   }
   if (veld.kolom.endsWith("_pt")) {
     const n = Number(w);
@@ -159,7 +156,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         kolommen.map((k) => `<option value="${k.kolom}"${toestand.zoekkolom === k.kolom ? " selected" : ""}>${ontsnap(k.label)}</option>`).join("")
       }</select>
       <input id="zoek" class="zoek" type="text" aria-label="Zoeken" value="${ontsnap(toestand.q)}" placeholder="Zoeken">
-      ${data.tabel.import_toegestaan ? `<a class="knop klein tweede" href="#/import/${tabelnaam}">Inlezen uit document</a>` : ""}
+      ${data.tabel.import_toegestaan ? `<a class="knop tweede" href="#/import/${tabelnaam}">Inlezen uit document</a>` : ""}
       <span class="pagina">
         ${knop(ICOON.eerste, 0, toestand.offset === 0, "Eerste pagina")}
         ${knop(ICOON.vorige, Math.max(toestand.offset - PAGINA, 0), toestand.offset === 0, "Vorige pagina")}
@@ -231,8 +228,8 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
             const tip = platteTekst(k, r[k.kolom], meta);
             return `<td data-kolom="${k.kolom}" class="${rechtsUit(k) ? "rechts " : ""}${toestand.sorteer === k.kolom ? "gesorteerd" : ""}"${tip ? ` title="${ontsnap(tip)}"` : ""}>${
               i === 0
-                ? `<a href="#/t/${tabelnaam}/${r.id}" class="recordlink">${waarde(k, r[k.kolom], meta)}</a>`
-                : waarde(k, r[k.kolom], meta)
+                ? `<a href="#/t/${tabelnaam}/${r.id}" class="recordlink">${waarde(k, r[k.kolom], meta, r)}</a>`
+                : waarde(k, r[k.kolom], meta, r)
             }</td>`;
           }).join("")}
           <td class="vuller"></td>
@@ -244,7 +241,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     <div class="rlkop">
       <span class="rltitel">${ontsnap(ingebed.label || data.tabel.label_mv)}</span>
       <span class="rlmeta">${tot} ${tot === 1 ? ontsnap(data.tabel.label.toLowerCase()) : ontsnap(data.tabel.label_mv.toLowerCase())}</span>
-      <a class="knop klein" href="#/t/${tabelnaam}/nieuw?ouder=${ingebed.ouder.tabel}:${ingebed.ouder.id}">Nieuw</a>
+      <a class="knop" href="#/t/${tabelnaam}/nieuw?ouder=${ingebed.ouder.tabel}:${ingebed.ouder.id}">Nieuw</a>
     </div>`;
 
   inhoud.innerHTML = (ingebed ? "" : `

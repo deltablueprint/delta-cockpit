@@ -66,7 +66,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     <label class="veldlabel" for="veld-${v.kolom}">${v.verplicht ? '<span class="ster">*</span> ' : ""}${ontsnap(v.label)}</label>
     <div class="veldwaarde"${v.live ? ` data-live="${tabelnaam}.${id}.${v.kolom}"` : ""}>${
       v.alleen_lezen
-        ? `<span class="alleenlezen livewaarde">${lees(v, data.waarden[v.kolom], meta, data.verwijzingen)}</span>`
+        ? `<span class="alleenlezen livewaarde">${lees(v, data.waarden[v.kolom], meta, data.verwijzingen, data.waarden)}</span>`
         : invoer(v, data.waarden[v.kolom], meta)
     }${v.live ? `<span class="hartje-vak" title="loopt live mee">${HARTSLAG}</span>` : ""}</div>`;
 

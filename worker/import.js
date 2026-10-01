@@ -6,7 +6,7 @@
 // Er wordt niets overschreven zonder dat iemand dat per regel heeft gezegd,
 // en elke import laat een spoor na in de audit trail.
 
-const TOEGESTAAN = ["datum", "tijdstip", "naam", "soort", "zwaarte", "toelichting"];
+const TOEGESTAAN = ["datum", "tijdstip", "naam", "soort", "zwaarte", "toelichting", "tijdzone"];
 
 function schoon(rij) {
   const uit = {};
@@ -73,9 +73,9 @@ export async function uitvoeren(env, ik, regels) {
 
     opdrachten.push(
       env.DB.prepare(
-        `insert into event (datum, tijdstip, naam, soort, zwaarte, bron, toelichting, aangemaakt_door)
-         values (?, ?, ?, coalesce(?, 'macro'), coalesce(?, 'middel'), 'import', ?, ?)`
-      ).bind(rij.datum, rij.tijdstip, rij.naam, rij.soort, rij.zwaarte, rij.toelichting, ik.id)
+        `insert into event (datum, tijdstip, naam, soort, zwaarte, bron, toelichting, aangemaakt_door, tijdzone)
+         values (?, ?, ?, coalesce(?, 'macro'), coalesce(?, 'middel'), 'import', ?, ?, coalesce(?, 'Europe/Brussels'))`
+      ).bind(rij.datum, rij.tijdstip, rij.naam, rij.soort, rij.zwaarte, rij.toelichting, ik.id, rij.tijdzone)
     );
     toegevoegd++;
   }

@@ -2,6 +2,7 @@
 // wat je ermee kunt. Elk nieuw type is hier één regel, niet een scherm.
 
 import { avatarMetNaam } from "./avatar.js";
+import { inBrussel } from "./tijdzone.js";
 
 const MAANDEN = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
 
@@ -26,10 +27,18 @@ export function keuzesVoor(meta, veld) {
 }
 
 // Lezen: wat er op het scherm staat als je niet aan het bewerken bent.
-export function lees(veld, waarde, meta, verwijzingen = {}) {
+export function lees(veld, waarde, meta, verwijzingen = {}, rij = {}) {
   if (waarde === null || waarde === undefined || waarde === "") {
     return `<span class="faint">&mdash;</span>`;
   }
+  if (veld.type === "tijd") {
+    const om = inBrussel(rij.datum, waarde, rij.tijdzone || "Europe/Brussels");
+    if (!om) return ontsnap(waarde);
+    const tip = om.zelfde ? "" : ` title="${ontsnap(waarde)} in ${ontsnap(rij.tijdzone)}"`;
+    return `<span${tip}>${om.tijd} <span class="zonetekst">${om.afkorting}</span>${
+      om.zelfde ? "" : `<span class="zoneherkomst">${ontsnap(waarde)} lokaal</span>`}</span>`;
+  }
+
   switch (veld.type) {
     case "keuze": {
       const k = keuzesVoor(meta, veld).find((x) => x.waarde === waarde);
@@ -77,7 +86,7 @@ export function invoer(veld, waarde, meta, extra = "") {
       <option value="0"${!Number(w) ? " selected" : ""}>nee</option>
       <option value="1"${Number(w) ? " selected" : ""}>ja</option></select>`;
   }
-  const soort = veld.type === "datum" ? "date" : veld.type === "getal" ? "number" : "text";
+  const soort = veld.type === "datum" ? "date" : veld.type === "tijd" ? "time" : veld.type === "getal" ? "number" : "text";
   const stap = veld.type === "getal" ? ' step="any"' : "";
   return `<input id="${id}" data-kolom="${veld.kolom}" type="${soort}"${stap} value="${ontsnap(w)}" ${extra}>`;
 }
