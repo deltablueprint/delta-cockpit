@@ -9,7 +9,8 @@ De bron van waarheid voor wat er gebouwd wordt is **BOUWSPEC.md**.
 | --- | --- |
 | `worker/` | De Cloudflare Worker: API en datalaag |
 | `migrations/` | SQL-migraties voor D1, genummerd, nooit achteraf gewijzigd |
-| `app/` | De front-end (Vite) — komt in etappe 1 |
+| `app/` | De front-end: Vite, vanilla JavaScript, vier bouwstenen |
+| `dist/` | De gebouwde front-end (niet in git) |
 | `docs/` | Achtergronddocumenten |
 | `legacy/` | De bestaande Cockpit, draait voorlopig door |
 
@@ -26,7 +27,9 @@ De bron van waarheid voor wat er gebouwd wordt is **BOUWSPEC.md**.
 npm install                  # eenmalig
 npx wrangler login           # eenmalig, opent de browser
 
-npm run dev                  # lokaal draaien
+npm run dev:api              # worker lokaal op :8787
+npm run dev:app              # front-end lokaal, stuurt /api door naar de worker
+npm run build                # front-end bouwen naar dist/
 npm run db:migrate:local     # migraties lokaal toepassen
 
 npm run db:migrate           # migraties op productie

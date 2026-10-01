@@ -1,0 +1,93 @@
+/* Delta Blueprint Cockpit — de vormtaal uit het bouwplan (10.0a).
+   Kleuren staan hier één keer; geen scherm verzint een eigen palet. */
+:root {
+  --navbg: #0B425F;  --navbg2: #08293D; --navact: #136289;
+  --navtxt: #CFE0EA; --navdim: #7FA6BC;
+  --cream: #F7F6F3;  --b1: #E8E6E1;     --b2: #F0EEEA;
+  --head: #F2F0EC;   --soft: #FAF9F6;
+  --ink: #0F0E0D;    --ink2: #3A3835;   --ink3: #4A4845;
+  --mut: #6E6C68;    --dim: #8A8884;    --faint: #A5A29C;
+  --blue: #136289;   --bluebg: #E6EEF3;
+  --grn: #1F5E45;    --grnbg: #DCEBE2;
+  --amb: #8A5A12;    --ambbg: #F7E7C6;
+  --red: #9A3227;    --redbg: #F7E0DC;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px; color: var(--ink); background: var(--cream);
+}
+a { color: var(--blue); }
+
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* ---- balk bovenaan ---- */
+.appbar {
+  display: flex; align-items: center; gap: 10px; height: 44px; flex-shrink: 0;
+  padding: 0 14px; background: var(--navbg2); color: #fff;
+}
+.appbar .merk { font-size: 14px; font-weight: 700; letter-spacing: .2px; }
+.appbar .sub { font-size: 12px; color: var(--navdim); }
+.appbar .rechts { margin-left: auto; display: flex; align-items: center; gap: 9px; font-size: 12.5px; }
+.appbar .bol {
+  width: 24px; height: 24px; border-radius: 50%; background: var(--navact);
+  display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700;
+}
+
+/* ---- menu links ---- */
+.romp { display: flex; flex-grow: 1; min-height: 0; }
+.menu { width: 232px; flex-shrink: 0; background: var(--navbg); overflow-y: auto; padding-bottom: 14px; }
+.menu .groep {
+  padding: 11px 12px 4px 14px; font-size: 9.5px; font-weight: 700;
+  letter-spacing: 1.3px; color: var(--navdim);
+}
+.menu a {
+  display: flex; align-items: center; padding: 6px 10px 6px 16px;
+  color: var(--navtxt); text-decoration: none; font-size: 12.5px;
+}
+.menu a:hover { background: rgba(255,255,255,.06); }
+.menu a.actief {
+  background: var(--navact); color: #fff; font-weight: 600;
+  padding-left: 13px; border-left: 3px solid #63808F;
+}
+
+/* ---- werkvlak ---- */
+.werkvlak { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; background: var(--cream); }
+.kruimel {
+  display: flex; align-items: center; gap: 7px; height: 34px; flex-shrink: 0;
+  padding: 0 16px; background: #fff; border-bottom: 1px solid var(--b1);
+  font-size: 12.5px; color: var(--mut);
+}
+.inhoud { flex-grow: 1; overflow: auto; padding: 14px 16px; }
+.titelrij { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
+.titelrij h1 { margin: 0; font-size: 18px; font-weight: 700; }
+.titelrij .sub { font-size: 12px; color: var(--mut); }
+
+.kaart { background: #fff; border: 1px solid var(--b1); border-radius: 3px; padding: 14px 16px; }
+.leeg { color: var(--mut); line-height: 1.6; }
+
+/* ---- aanmelden ---- */
+.aanmelden { display: flex; align-items: center; justify-content: center; height: 100vh; background: var(--navbg2); }
+.aanmelden form {
+  width: 340px; background: #fff; border-radius: 4px; padding: 22px 24px 20px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.aanmelden h1 { margin: 0; font-size: 17px; }
+.aanmelden p { margin: 0 0 6px; font-size: 12px; color: var(--mut); line-height: 1.5; }
+label { font-size: 11.5px; color: var(--mut); }
+input {
+  height: 32px; padding: 0 10px; font-size: 13px; font-family: inherit; color: var(--ink);
+  background: #fff; border: 1px solid #D8D5CE; border-radius: 2px; width: 100%;
+}
+button {
+  height: 34px; padding: 0 14px; font-size: 13px; font-weight: 600; font-family: inherit;
+  color: #fff; background: var(--blue); border: 1px solid var(--blue); border-radius: 2px; cursor: pointer;
+}
+button[disabled] { opacity: .6; cursor: default; }
+.fout { font-size: 12px; color: var(--red); background: var(--redbg); border-radius: 2px; padding: 7px 9px; }
+
+@media (max-width: 760px) {
+  .menu { display: none; }
+}

@@ -8,9 +8,13 @@
     "deploy:staging": "wrangler deploy --env staging",
     "db:migrate": "wrangler d1 migrations apply delta-cockpit --remote --env=\"\"",
     "db:migrate:staging": "wrangler d1 migrations apply delta-cockpit-staging --remote --env staging",
-    "db:migrate:local": "wrangler d1 migrations apply delta-cockpit --local"
+    "db:migrate:local": "wrangler d1 migrations apply delta-cockpit --local",
+    "build": "vite build",
+    "dev:app": "vite",
+    "dev:api": "wrangler dev"
   },
   "devDependencies": {
-    "wrangler": "^4"
+    "wrangler": "^4",
+    "vite": "^7"
   }
 }

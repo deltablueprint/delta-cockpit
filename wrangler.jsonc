@@ -8,6 +8,15 @@
 
   "vars": { "OMGEVING": "productie" },
 
+  // De front-end wordt als statische bestanden geserveerd; alles onder /api/
+  // gaat eerst naar de worker. Onbekende paden geven index.html terug,
+  // zodat de app zijn eigen routes afhandelt.
+  "assets": {
+    "directory": "dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+
   // Eén bindingnaam in alle omgevingen: env.DB.
   // Zo hoeft geen enkele regel code te weten of hij op staging of productie draait.
   "d1_databases": [
@@ -24,6 +33,11 @@
       "name": "delta-cockpit-staging",
       "workers_dev": true,
       "vars": { "OMGEVING": "staging" },
+      "assets": {
+        "directory": "dist",
+        "not_found_handling": "single-page-application",
+        "run_worker_first": ["/api/*"]
+      },
       "d1_databases": [
         {
           "binding": "DB",
