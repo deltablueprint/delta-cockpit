@@ -305,7 +305,7 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
     ${verstuurdHtml}
     <div class="feiten">${eventsHtml}${voorwaardenHtml}</div>
     ${inzendingenHtml}
-    ${open ? `<div class="formulier">${alVerstuurd ? mijnHtml : ""}${uitkomstHtml}</div>` : ""}`;
+    ${open ? `<div class="formulier">${uitkomstHtml}</div>` : ""}`;
 
   const melding = inhoud.querySelector("#gmelding");
 
