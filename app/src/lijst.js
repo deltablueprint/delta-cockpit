@@ -369,7 +369,12 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
             rijgegevens.revisie = uitkomst.revisie ?? rijgegevens.revisie;
           }
           cel.classList.remove("bewerkt", "bezigcel");
-          cel.innerHTML = lees(veld, nieuweWaarde, meta);
+          const getoond = lees(veld, nieuweWaarde, meta);
+          // De eerste kolom blijft de ingang naar het record; na het bewerken
+          // moet die link er dus weer omheen.
+          cel.innerHTML = cel.cellIndex === 0
+            ? `<a href="#/t/${tabelnaam}/${id}" class="recordlink">${getoond}</a>`
+            : getoond;
           cel.classList.add("zojuist");
           setTimeout(() => cel.classList.remove("zojuist"), 1200);
         } catch (fout) {

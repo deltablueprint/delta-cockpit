@@ -50,8 +50,11 @@ export const record = (tabel, id) => haal(`/api/t/${tabel}/${id}`);
 export const bewaar = (tabel, id, velden, revisie, reden) =>
   haal(`/api/t/${tabel}/${id}`, { methode: "PATCH", body: { velden, revisie, reden } });
 
-export const maakAan = (tabel, velden) =>
-  haal(`/api/t/${tabel}`, { methode: "POST", body: { velden } });
+export const maakAan = (tabel, velden, ouderkolom) =>
+  haal(`/api/t/${tabel}`, { methode: "POST", body: { velden, ouderkolom } });
+
+export const zetAvatar = (avatar) =>
+  haal("/api/ik/avatar", { methode: "PATCH", body: { avatar } });
 
 export const nieuwSjabloon = (tabel, ouder) =>
   haal(`/api/t/${tabel}/nieuw${ouder ? `?ouder=${ouder.tabel}:${ouder.id}` : ""}`);

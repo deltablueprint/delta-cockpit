@@ -174,11 +174,18 @@ export async function maakAan(env, ik, tabelnaam, body) {
   for (const [kolom, w] of Object.entries(body.velden || {})) {
     const veld = velden.find((v) => v.kolom === kolom);
     if (!veld) return { fout: `Onbekend veld: ${kolom}`, status: 400 };
-    if (veld.alleen_lezen && kolom !== body.ouderkolom) continue;
+    // Een alleen-lezen veld blijft leeg, behalve de verwijzing naar de ouder:
+    // die wordt bij het aanmaken juist vastgezet.
+    const isOuder = veld.type === "verwijzing" && w !== null && w !== "" &&
+                    (kolom === body.ouderkolom || veld.toon_op_formulier === 0);
+    if (veld.alleen_lezen && !isOuder) continue;
     nieuw[kolom] = w === "" ? null : w;
   }
 
-  for (const veld of velden.filter((v) => v.verplicht && !v.alleen_lezen)) {
+  // Verplichte velden die de gebruiker niet zelf invult (zoals de ouder) horen
+  // er wel te zijn: ontbreken ze, dan is dat een duidelijke melding en geen
+  // databasefout.
+  for (const veld of velden.filter((v) => v.verplicht)) {
     if (nieuw[veld.kolom] === undefined || nieuw[veld.kolom] === null || nieuw[veld.kolom] === "") {
       if (veld.standaard) nieuw[veld.kolom] = veld.standaard;
       else return { fout: `${veld.label} is verplicht.`, veld: veld.kolom, status: 422 };
@@ -220,13 +227,33 @@ export async function sjabloon(env, tabelnaam, ouder) {
   for (const v of velden) waarden[v.kolom] = v.standaard ?? null;
 
   let ouderkolom = null;
+  let ouderInfo = null;
   if (ouder) {
     const veld = velden.find((v) => v.verwijst_naar === ouder.tabel);
-    if (veld) { waarden[veld.kolom] = Number(ouder.id); ouderkolom = veld.kolom; }
+    if (veld) {
+      waarden[veld.kolom] = Number(ouder.id);
+      ouderkolom = veld.kolom;
+      const ot = await env.DB.prepare("select naam, label, label_mv, titel_veld from db_table where naam = ?")
+        .bind(ouder.tabel).first();
+      if (ot) {
+        const r = await env.DB.prepare(`select "${ot.titel_veld}" as titel from "${ot.naam}" where id = ?`)
+          .bind(ouder.id).first();
+        ouderInfo = { tabel: ot.naam, label_mv: ot.label_mv, id: Number(ouder.id), titel: r ? r.titel : `${ot.label} ${ouder.id}` };
+      }
+    }
+  }
+
+  let proces = null;
+  if (tabel.proces_veld) {
+    const stappen = (await env.DB.prepare(
+      "select waarde, label from db_choice where tabel = ? and kolom = ? and actief = 1 order by volgorde"
+    ).bind(tabelnaam, tabel.proces_veld).all()).results;
+    if (stappen.length) proces = { veld: tabel.proces_veld, nu: waarden[tabel.proces_veld] ?? stappen[0].waarde, stappen };
   }
 
   return {
-    tabel: { naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv, titel_veld: tabel.titel_veld },
-    secties, velden, waarden, ouderkolom, nieuw: true, relaties: [], verwijzingen: {},
+    tabel: { naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv, titel_veld: tabel.titel_veld, proces_veld: tabel.proces_veld },
+    secties, velden, waarden, ouderkolom, ouder: ouderInfo, proces,
+    nieuw: true, relaties: [], verwijzingen: {},
   };
 }

@@ -1,6 +1,8 @@
 // De veldrenderer: één plek waar een veldtype bepaalt hoe het eruitziet en
 // wat je ermee kunt. Elk nieuw type is hier één regel, niet een scherm.
 
+import { avatarMetNaam } from "./avatar.js";
+
 const MAANDEN = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
 
 export const ontsnap = (t) =>
@@ -34,8 +36,12 @@ export function lees(veld, waarde, meta, verwijzingen = {}) {
       const [fg, bg] = KLEUR[k ? k.kleur : "grijs"] || KLEUR.grijs;
       return `<span class="badge" style="color:${fg};background:${bg}">${ontsnap(k ? k.label : waarde)}</span>`;
     }
-    case "verwijzing":
+    case "verwijzing": {
+      if (veld.verwijst_naar === "gebruiker" && meta.gebruikers && meta.gebruikers[waarde]) {
+        return avatarMetNaam(meta.gebruikers[waarde]);
+      }
       return ontsnap(verwijzingen[veld.kolom] ?? waarde);
+    }
     case "datum":
       return toonDatum(waarde);
     case "tijdstip":

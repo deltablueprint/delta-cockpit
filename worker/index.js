@@ -65,13 +65,14 @@ async function wieIsDit(request, env) {
 
 // /api/meta — de applicatie leest hier haar eigen vorm.
 async function meta(env) {
-  const [tabellen, velden, keuzes, modules, weergaven, versie] = await Promise.all([
+  const [tabellen, velden, keuzes, modules, weergaven, versie, gebruikers] = await Promise.all([
     env.DB.prepare("select * from db_table where actief = 1 order by volgorde, label").all(),
     env.DB.prepare("select * from db_field where actief = 1 order by tabel, volgorde").all(),
     env.DB.prepare("select * from db_choice where actief = 1 order by tabel, kolom, volgorde").all(),
     env.DB.prepare("select * from db_module where actief = 1 order by volgorde").all(),
     env.DB.prepare("select * from db_view where actief = 1").all(),
     env.DB.prepare("select * from configuratieversie order by nummer desc limit 1").first(),
+    env.DB.prepare("select id, naam, korte_naam, avatar, kleur from gebruiker where actief = 1").all(),
   ]);
 
   // Het menu komt gegroepeerd terug, in de volgorde van db_module.
@@ -95,6 +96,7 @@ async function meta(env) {
 
   return {
     configuratieversie: versie,
+    gebruikers: Object.fromEntries(gebruikers.results.map((g) => [g.id, g])),
     menu: groepen,
     tabellen: tabellen.results.map((t) => ({
       ...t,
@@ -106,7 +108,19 @@ async function meta(env) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
+    try {
+      return await behandel(request, env);
+    } catch (fout) {
+      // Een onverwachte fout mag nooit als Cloudflare-foutpagina terugkomen:
+      // dan weet je niet wat er stuk is.
+      return json({ fout: `Er ging iets mis: ${fout.message}` }, 500);
+    }
+  },
+};
+
+async function behandel(request, env) {
+  {
     const url = new URL(request.url);
     const pad = url.pathname;
 
@@ -135,7 +149,27 @@ export default {
 
       if (pad === "/api/meta") return json(await meta(env));
 
-      if (pad === "/api/ik") return json(ik);
+      if (pad === "/api/ik" && request.method === "GET") {
+        const g = await env.DB.prepare(
+          "select id, naam, korte_naam, email, avatar, kleur from gebruiker where id = ?"
+        ).bind(ik.id).first();
+        return json(g || ik);
+      }
+
+      // Je eigen avatar. Alleen die van jezelf: iemand anders zijn gezicht
+      // veranderen hoort niet te kunnen.
+      if (pad === "/api/ik/avatar" && request.method === "PATCH") {
+        const body = await request.json().catch(() => ({}));
+        const avatar = body.avatar;
+        if (avatar !== null && (typeof avatar !== "string" || !avatar.startsWith("data:image/"))) {
+          return json({ fout: "Dat is geen afbeelding." }, 400);
+        }
+        if (avatar && avatar.length > 200000) {
+          return json({ fout: "De afbeelding is te groot; kies een kleinere." }, 413);
+        }
+        await env.DB.prepare("update gebruiker set avatar = ? where id = ?").bind(avatar, ik.id).run();
+        return json({ ok: true });
+      }
 
       // /api/t/<tabel> — de lijst
       const lijstPad = pad.match(/^\/api\/t\/([a-z_]+)$/);
@@ -203,5 +237,5 @@ export default {
     return new Response("Delta Blueprint Cockpit", {
       headers: { "content-type": "text/plain; charset=utf-8" },
     });
-  },
-};
+  }
+}

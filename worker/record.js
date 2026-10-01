@@ -53,10 +53,35 @@ export async function record(env, tabelnaam, id) {
     } catch { /* verwijzing naar een tabel zonder id-kolom: laat staan */ }
   }
 
+  // De ouder van dit record, voor de breadcrumb en de terugknop.
+  let ouder = null;
+  const ouderveld = velden.results.find((v) => v.type === "verwijzing" && v.toon_op_formulier === 0 && rij[v.kolom]);
+  if (ouderveld) {
+    const ot = await env.DB.prepare("select naam, label, label_mv, titel_veld from db_table where naam = ?")
+      .bind(ouderveld.verwijst_naar).first();
+    if (ot) {
+      const r = await env.DB.prepare(`select "${ot.titel_veld}" as titel from "${ot.naam}" where id = ?`)
+        .bind(rij[ouderveld.kolom]).first();
+      ouder = { tabel: ot.naam, label_mv: ot.label_mv, id: rij[ouderveld.kolom], titel: r ? r.titel : `${ot.label} ${rij[ouderveld.kolom]}` };
+    }
+  }
+
+  // De procesbalk bovenaan: de keuzes van het statusveld, in volgorde.
+  let proces = null;
+  if (tabel.proces_veld) {
+    const stappen = (await env.DB.prepare(
+      "select waarde, label from db_choice where tabel = ? and kolom = ? and actief = 1 order by volgorde"
+    ).bind(tabelnaam, tabel.proces_veld).all()).results;
+    if (stappen.length) proces = { veld: tabel.proces_veld, nu: rij[tabel.proces_veld], stappen };
+  }
+
   return {
+    ouder,
+    proces,
     tabel: {
       naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv,
       titel_veld: tabel.titel_veld, related_weergave: tabel.related_weergave,
+      proces_veld: tabel.proces_veld,
     },
     secties: secties.results,
     velden: velden.results,

@@ -6,10 +6,10 @@
 delete from voorwaarde;
 delete from cyclus;
 
-insert into cyclus (id, label, status, fase, geopend_op, doelexpiratie, volgend_analysemoment, deelnemers, toelichting, aangemaakt_door) values
-  (1,'Cyclus 2026-10','go-nogo',    2,'2026-09-14','2026-11-20','2026-09-29','Pieter, Jacqueline, Simon','Voorbeeld — lopende cyclus','simon'),
-  (2,'Cyclus 2026-09','afgesloten', 5,'2026-08-10','2026-09-18',null,        'Pieter, Jacqueline, Simon','Voorbeeld — afgesloten met winst','simon'),
-  (3,'Cyclus 2026-08','afgesloten', 5,'2026-07-06','2026-08-21',null,        'Pieter, Jacqueline, Simon','Voorbeeld','simon');
+insert into cyclus (id, label, status, geopend_op, doelexpiratie, volgend_analysemoment, toelichting, aangemaakt_door) values
+  (1,'Cyclus 2026-10','go-nogo',   '2026-09-14','2026-11-20','2026-09-29','Voorbeeld — lopende cyclus','simon'),
+  (2,'Cyclus 2026-09','afgesloten','2026-08-10','2026-09-18',null,        'Voorbeeld — afgesloten met winst','jacqueline'),
+  (3,'Cyclus 2026-08','afgesloten','2026-07-06','2026-08-21',null,        'Voorbeeld','pieter');
 
 update cyclus set resultaat_pt = 24.0,  eerste_instap='2026-08-14', afgesloten_op='2026-09-18' where id = 2;
 update cyclus set resultaat_pt = 38.5,  eerste_instap='2026-07-10', afgesloten_op='2026-08-21' where id = 3;

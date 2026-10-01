@@ -7,6 +7,9 @@ const LOGO = `<svg viewBox="0 0 296.1 251.9" width="15" height="13" aria-hidden=
   <polygon points="296.1 251.9 139.2 251.9 256.9 185.1 296.1 251.9" fill="#FFFFFF"/>
   <polygon points="76.9 251.9 0 251.9 76.7 121.6 76.9 251.9" fill="#FFFFFF"/></svg>`;
 
+import { avatar, verklein } from "./avatar.js";
+import { zetAvatar } from "./api.js";
+
 let gebouwd = null;
 
 // Markeert het actieve menu-item zonder de schil opnieuw te bouwen.
@@ -28,8 +31,7 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
   const wortel = document.getElementById("app");
   wortel.className = "";
 
-  const initialen = (persoon.korte_naam || persoon.naam || "?")
-    .split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  const mijnAvatar = () => avatar(persoon, 24);
 
   const menu = meta.menu.map((groep) => `
     <div class="groep">${groep.groep}</div>
@@ -48,7 +50,7 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
           <span id="hartslag" class="hartslag bijgewerkt"></span>
           <span id="hartslagtekst" class="hartslagtekst"></span>
         </span>
-        <span class="bol">${initialen}</span>
+        <button class="avatarknop" id="mijnavatar" title="Je foto wijzigen" aria-label="Je foto wijzigen">${mijnAvatar()}</button>
         <span>${persoon.naam}</span>
         <a href="#afmelden" id="afmelden" style="color: var(--navdim); text-decoration: none;">afmelden</a>
       </span>
@@ -64,6 +66,29 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
   wortel.querySelector("#afmelden").addEventListener("click", (e) => {
     e.preventDefault();
     afmelden();
+  });
+
+  // Op je eigen foto klikken opent de bestandskiezer. De afbeelding wordt
+  // eerst verkleind tot 128 bij 128, zodat er geen megabytes in de database
+  // belanden; alleen je eigen foto kun je wijzigen.
+  const avatarknop = wortel.querySelector("#mijnavatar");
+  avatarknop.addEventListener("click", () => {
+    const kiezer = document.createElement("input");
+    kiezer.type = "file";
+    kiezer.accept = "image/*";
+    kiezer.addEventListener("change", async () => {
+      const bestand = kiezer.files && kiezer.files[0];
+      if (!bestand) return;
+      try {
+        const klein = await verklein(bestand, 128);
+        await zetAvatar(klein);
+        persoon.avatar = klein;
+        avatarknop.innerHTML = avatar(persoon, 24);
+      } catch (fout) {
+        alert(fout.message);
+      }
+    });
+    kiezer.click();
   });
 
   gebouwd = {

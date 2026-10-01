@@ -31,7 +31,7 @@ a { color: var(--blue); }
 .appbar .merk { font-size: 14px; font-weight: 700; letter-spacing: .2px; }
 .appbar .sub { font-size: 12px; color: var(--navdim); }
 .appbar .rechts { margin-left: auto; display: flex; align-items: center; gap: 9px; font-size: 12.5px; }
-.appbar .bol {
+.appbar .bol-oud {
   width: 24px; height: 24px; border-radius: 50%; background: var(--navact);
   display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700;
 }
@@ -215,12 +215,9 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
 .knop[disabled] { opacity: .6; cursor: default; }
 
 .formulier { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 8px; margin-bottom: 10px; }
-.sectie { background: #fff; border: 1px solid var(--b1); border-radius: 3px; padding: 11px 14px 13px; }
-.sectiekop {
-  font-size: 9.5px; font-weight: 700; letter-spacing: 1.6px; color: var(--dim);
-  text-transform: uppercase; margin-bottom: 9px;
-}
-.velden { display: grid; grid-template-columns: 170px minmax(0, 1fr); row-gap: 7px; column-gap: 10px; align-items: center; }
+
+
+
 .veldlabel { font-size: 12.5px; color: var(--mut); }
 .ster { color: var(--red); }
 .veldwaarde input, .veldwaarde select, .veldwaarde textarea {
@@ -270,3 +267,68 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
 .hartslag.bijgewerkt { background: #4FD39B; }
 .hartslag.gepauzeerd { background: var(--navdim); }
 .hartslag.offline { background: #E07A6B; }
+
+/* ============================================================================
+   Het recordscherm — de vorm van ServiceNow, in ons eigen palet
+   ========================================================================== */
+
+/* De balk met de naam van het record en de acties erin. */
+.recordbalk {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 9px 14px; background: var(--head); border: 1px solid var(--b1);
+  border-radius: 3px 3px 0 0;
+}
+.recordnaam { font-size: 15px; font-weight: 700; color: var(--ink); }
+.recordmelding { font-size: 12px; color: var(--mut); }
+.recordacties { margin-left: auto; display: flex; align-items: center; gap: 7px; }
+.ikoonknop {
+  height: 30px; width: 30px; display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; border: 1px solid #D8D5CE; border-radius: 2px; color: var(--mut); cursor: pointer;
+}
+.ikoonknop:hover { color: var(--blue); border-color: var(--blue); }
+
+/* Chevrons: lichtblauw is gedaan, donkerblauw is waar je nu staat. */
+.chevrons { display: flex; gap: 2px; background: #fff; border: 1px solid var(--b1); border-top: none; padding: 9px 12px; }
+.chevron {
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 6px;
+  flex: 1 1 0; min-width: 0; height: 30px; padding: 0 18px 0 24px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%);
+}
+.chevron:first-child { padding-left: 16px; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%); }
+.chevron:last-child { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 12px 50%); }
+.chevron.gedaan { background: #BBD6E5; color: #0B425F; }
+.chevron.nu     { background: var(--blue); color: #fff; }
+.chevron.straks { background: #E8E6E1; color: var(--faint); }
+
+/* Het formulier: twee kolommen labels en velden, geen kaarten. */
+.formulier {
+  background: #fff; border: 1px solid var(--b1); border-top: none;
+  border-radius: 0 0 3px 3px; padding: 4px 0 14px; margin-bottom: 10px;
+}
+.formsectie { padding: 10px 16px 2px; }
+.formsectie + .formsectie { border-top: 1px solid var(--b2); padding-top: 12px; }
+.formsectiekop {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.6px; color: var(--dim);
+  text-transform: uppercase; margin-bottom: 10px;
+}
+.formkolommen { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 34px; }
+.formkolom { display: grid; grid-template-columns: 170px minmax(0, 1fr); row-gap: 9px; column-gap: 12px; align-items: center; align-content: start; }
+.formbreed { display: grid; grid-template-columns: 170px minmax(0, 1fr); row-gap: 9px; column-gap: 12px; align-items: start; margin-top: 9px; }
+.veldlabel { font-size: 12.5px; color: var(--ink2); text-align: right; }
+.ster { color: var(--red); }
+
+@media (max-width: 1000px) {
+  .formkolommen { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* --- avatars --- */
+.avatar {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  border-radius: 50%; overflow: hidden; color: #fff; font-weight: 700;
+}
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.persoon { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.avatarknop { padding: 0; background: none; border: none; cursor: pointer; display: inline-flex; border-radius: 50%; }
+.avatarknop:hover { outline: 2px solid var(--navact); outline-offset: 1px; }
