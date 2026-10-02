@@ -229,13 +229,19 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     ? opties.tab
     : relaties.length ? relaties[0].tabel : null;
 
+  // De pagina staat meteen op de hoogte van de grootste lijst. Anders groeit ze
+  // als je van een kort tabblad naar een lang wisselt, en moet je scrollen naar
+  // wat er net nog paste. Vijftig is wat één pagina van een lijst toont.
+  const meesteRegels = Math.min(50, Math.max(0, ...relaties.map((r) => r.aantal || 0)));
+  const vakhoogte = relaties.length ? Math.max(meesteRegels * 33 + 150, 220) : 0;
+
   const relatieHtml = !relaties.length ? "" : tabbladen
     ? `<div class="relatieblok"><div class="tabbalk">
          ${relaties.map((r) => `
            <a href="#/t/${tabelnaam}/${id}?tab=${r.tabel}" data-tabel="${r.tabel}" class="tab ${r.tabel === actiefTab ? "actief" : ""}">
              ${ontsnap(r.label)}<span class="tabtelling">${r.aantal}</span></a>`).join("")}
        </div>
-       <div id="relatievak" class="relatieinhoud"></div></div>`
+       <div id="relatievak" class="relatieinhoud" style="min-height:${vakhoogte}px"></div></div>`
     : `<div class="relatieblok">${relaties.map((r) => `<div id="relatie-${r.tabel}" class="relatieinhoud los"></div>`).join("")}</div>`;
 
   // Op een tranche die nog niet uitgevoerd is, hoort het kader met wat er bij

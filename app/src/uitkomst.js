@@ -330,11 +330,18 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
       idfilters: { beoordelingsmoment: String(moment.id) }, filters: {}, },
   ];
 
+  // Elk tabblad krijgt zijn eigen vak en ze worden alle vier meteen gevuld. Dan
+  // staat de pagina op de hoogte van de grootste lijst: van tabblad wisselen
+  // verschuift niets meer, en je hoeft niet te scrollen naar wat er net nog
+  // paste.
   const relatieHtml = `
     <div class="relatieblok"><div class="tabbalk">
       ${relaties.map((r, n) => `<a href="#" data-sleutel="${r.sleutel}" class="tab ${n === 0 ? "actief" : ""}">${
         ontsnap(r.label)}</a>`).join("")}
-    </div><div id="relatievak" class="relatieinhoud"></div></div>`;
+    </div><div class="relatieinhoud" id="relatievak">
+      ${relaties.map((r, n) => `<div class="relatievak" data-sleutel="${r.sleutel}"${
+        n === 0 ? "" : " hidden"}></div>`).join("")}
+    </div></div>`;
 
   inhoud.innerHTML = `
     <div class="recordbalk">
@@ -434,16 +441,16 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
 
   // De lijsten onderaan zijn de echte lijsten van de applicatie: zelfde
   // kolommen, zelfde zoekvensters, alleen niets dat hier gewijzigd mag worden.
-  function toonRelatie(r) {
-    const vak = inhoud.querySelector("#relatievak");
-    if (!vak) return;
+  function vulRelatie(r) {
+    const vak = inhoud.querySelector(`.relatievak[data-sleutel="${r.sleutel}"]`);
+    if (!vak) return Promise.resolve();
     if (!r.tabel) {
       vak.innerHTML = `<div class="lijst"><div class="rlkop"><span class="rltitel">Technische analyse</span></div>
         <p class="paneelleeg">De chartanalyse is nog niet gebouwd (etappe 11b). Tot dan hoort de lezing van de
           charts in de motivering van de inzendingen.</p></div>`;
-      return;
+      return Promise.resolve();
     }
-    lijstscherm(vak, { textContent: "" }, r.tabel, meta, {
+    return lijstscherm(vak, { textContent: "" }, r.tabel, meta, {
       q: "", sorteer: null, richting: "asc", offset: 0,
       filters: { ...r.filters }, idfilters: { ...r.idfilters },
       ingebed: { ouder: { tabel: "beoordelingsmoment", id: moment.id },
@@ -451,14 +458,26 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
                  magNieuw: false },
     });
   }
-  toonRelatie(relaties[0]);
+  // Alle tabbladen zichtbaar vullen, de hoogste hoogte vasthouden, en dan pas
+  // alles behalve het eerste wegklappen. Verborgen meten gaat niet: dan is
+  // alles nul hoog.
+  (async () => {
+    const vakken = [...inhoud.querySelectorAll(".relatievak")];
+    vakken.forEach((v) => { v.hidden = false; });
+    await Promise.all(relaties.map(vulRelatie));
+    const hoogste = Math.max(0, ...vakken.map((v) => v.offsetHeight));
+    const bak = inhoud.querySelector("#relatievak");
+    if (bak && hoogste) bak.style.minHeight = `${hoogste}px`;
+    vakken.forEach((v, n) => { v.hidden = n !== 0; });
+  })();
+
   inhoud.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", (e) => {
       e.preventDefault();
-      const r = relaties.find((x) => x.sleutel === tab.dataset.sleutel);
-      if (!r) return;
       inhoud.querySelectorAll(".tab").forEach((t) => t.classList.toggle("actief", t === tab));
-      toonRelatie(r);
+      inhoud.querySelectorAll(".relatievak").forEach((v) => {
+        v.hidden = v.dataset.sleutel !== tab.dataset.sleutel;
+      });
     });
   });
 }
