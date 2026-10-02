@@ -902,18 +902,18 @@ body.sleept .lijsttabel { pointer-events: none; }
 .geenbalk { position: absolute; top: 4px; left: 0; font-size: 11.5px; color: var(--mut); }
 
 
-/* De portefeuille als twee balken met wit ertussen. Links de ruimte die het
-   plafond toelaat — lichtgroen wat vrij is, donkergroen wat er al uitstaat en
-   een tint ertussen voor wat dit besluit erbij zou leggen. Rechts de reserve
-   die er altijd moet blijven. De scheiding tussen beide ís het plafond. */
+/* De portefeuille als twee balken met wit ertussen. Links het beschikbare
+   kapitaal dat het plafond toelaat — lichtgroen wat vrij is, donkergroen wat er
+   al uitstaat en een tint ertussen voor wat dit besluit erbij zou leggen.
+   Rechts de marge die er altijd moet blijven. De scheiding ís het plafond. */
 .kapitaalvak { padding: 18px 20px 8px; }
 .kapitaalbalk { display: flex; gap: 6px; height: 30px; }
 .kbalk {
   position: relative; display: flex; overflow: hidden;
   border: 1px solid var(--b1); border-radius: 3px;
 }
-.kbalk.ruimte { background: #DFF0E2; }
-.kbalk.reserve { background: #DEDAD2; }
+.kbalk.beschikbaar { background: #DFF0E2; }
+.kbalk.marge { background: #EEECE8; }
 .kdeel.ingezet { background: #3F7A58; }
 .kdeel.voorstel { background: #8FBF9D; transition: width .12s linear; }
 .kdeel.voorstel.over { background: #C8766B; }

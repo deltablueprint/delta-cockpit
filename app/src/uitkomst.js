@@ -231,12 +231,12 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
   const kapitaal = Number(p.kapitaal || 0);
   const margePct = kapitaal ? Math.min(100, (marge / kapitaal) * 100) : 0;
 
-  // Twee balken naast elkaar, met wit ertussen. Links de ruimte die het plafond
-  // toelaat — lichtgroen wat vrij is, donkergroen wat er al uitstaat. Rechts de
-  // reserve die er altijd moet blijven. De scheiding tussen de twee ís het
-  // plafond; daar hoeft geen streepje bij.
+  // Twee balken naast elkaar, met wit ertussen. Links het beschikbare kapitaal
+  // dat het plafond toelaat — lichtgroen wat vrij is, donkergroen wat er al
+  // uitstaat. Rechts de marge die er altijd moet blijven. De scheiding tussen
+  // de twee ís het plafond; daar hoeft geen streepje bij.
   const plafondPct = p.max_inzet_pct ? Math.min(100, Number(p.max_inzet_pct)) : 100;
-  const reservePct = Math.max(100 - plafondPct, 0);
+  const margePlafondPct = Math.max(100 - plafondPct, 0);
   // Binnen de linkerbalk rekenen we in procenten van die balk, niet van het
   // kapitaal: anders klopt de vulling niet.
   const binnen = (pct) => (plafondPct ? Math.min(100, (pct / plafondPct) * 100) : 0);
@@ -251,17 +251,17 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
         } · multiplier ${euro(p.multiplier)} per punt</span></div>
       <div class="kapitaalvak">
         <div class="kapitaalbalk">
-          <div class="kbalk ruimte" style="flex-basis:${plafondPct}%">
+          <div class="kbalk beschikbaar" style="flex-basis:${plafondPct}%">
             <span class="kdeel ingezet" style="width:${binnen(margePct)}%"></span>
             <span class="kdeel voorstel" id="kvoorstel" style="width:0"></span>
           </div>
-          ${reservePct ? `<div class="kbalk reserve" style="flex-basis:${reservePct}%"></div>` : ""}
+          ${margePlafondPct ? `<div class="kbalk marge" style="flex-basis:${margePlafondPct}%"></div>` : ""}
         </div>
         <div class="kapitaalonder">
-          <span class="konderschrift" style="flex-basis:${plafondPct}%">ruimte &middot; ${
+          <span class="konderschrift" style="flex-basis:${plafondPct}%">beschikbaar kapitaal &middot; ${
             getal(plafondPct, 0)} % van het kapitaal</span>
-          ${reservePct ? `<span class="konderschrift" style="flex-basis:${reservePct}%">reserve &middot; ${
-            getal(reservePct, 0)} %</span>` : ""}
+          ${margePlafondPct ? `<span class="konderschrift" style="flex-basis:${margePlafondPct}%">marge &middot; ${
+            getal(margePlafondPct, 0)} %</span>` : ""}
         </div>
         <div class="kapitaallegenda">
           <span class="klegend"><i class="vlak ingezet"></i>
