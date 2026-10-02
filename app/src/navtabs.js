@@ -84,7 +84,7 @@ export function navtabsAansluiten(wortel) {
       favlijst.innerHTML = favorieten.length
         ? favorieten.map((f) => `
             <a href="#${ontsnap(f.route)}" class="navregel" data-route="${ontsnap(f.route)}">
-              <span class="navikoon" style="color:${KLEUREN[f.kleur] || KLEUREN.blauw}">${ikoon(f.icoon, 15)}</span>
+              <span class="navikoon" style="color:${KLEUREN[f.kleur] || KLEUREN.blauw}">${ikoon(f.icoon, 17)}</span>
               <span class="navtekst">${ontsnap(f.label)}</span>
             </a>`).join("")
         : `<p class="navleeg">Nog geen favorieten. Sta je op een lijst of een record die je vaker nodig hebt,

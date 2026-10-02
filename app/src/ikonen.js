@@ -48,17 +48,19 @@ export function ikoon(naam, maat = 16) {
     stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 }
 
-// De kleuren van een favoriet. Ze zijn er om uit elkaar te houden, niet om te
-// versieren: één verzadigde tint per kleur, allemaal even donker, zodat geen
-// enkele favoriet harder roept dan een andere.
+// De kleuren van een favoriet. Ze zijn er om uit elkaar te houden: fel genoeg
+// om op de donkere navigatiekolom te leven en op het witte scherm meteen te
+// herkennen, en onderling even sterk, zodat geen enkele favoriet harder roept
+// dan een andere.
 export const KLEUREN = {
-  blauw:     "#1F6FA8",
-  groen:     "#2E7D4F",
-  oranje:    "#C27A16",
-  rood:      "#B23A2E",
-  paars:     "#6B4FA8",
-  turkoois:  "#17807D",
-  roze:      "#B23A72",
-  grijs:     "#5F5A51",
+  blauw:     "#2F80ED",
+  turkoois:  "#13B5AE",
+  groen:     "#2FA84F",
+  geel:      "#F2B705",
+  oranje:    "#F2810D",
+  rood:      "#E04434",
+  roze:      "#E53B8C",
+  paars:     "#8B5CF6",
+  grijs:     "#8B8379",
 };
 export const KLEURNAMEN = Object.keys(KLEUREN);

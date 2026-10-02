@@ -5,7 +5,7 @@
 // serverzijdig, zodat ze meekomen op een andere computer, en allebei strikt
 // persoonlijk — de geschiedenis van een ander is niet te bekijken.
 
-const KLEUREN = ["blauw", "groen", "oranje", "rood", "paars", "turkoois", "roze", "grijs"];
+const KLEUREN = ["blauw", "turkoois", "groen", "geel", "oranje", "rood", "roze", "paars", "grijs"];
 const BEWAAR = 30;   // zoveel bezoeken houden we vast
 
 const schoon = (w, max = 120) => String(w ?? "").trim().slice(0, max);
@@ -58,11 +58,12 @@ export async function favorietWijzigen(env, ik, id, body = {}) {
   return { id };
 }
 
-// Weghalen is archiveren, net als overal: de regel verdwijnt uit beeld en
-// blijft bestaan.
+// Een favoriet gaat echt weg. Dit is geen record maar een instelling: hij legt
+// niets vast over een cyclus, een besluit of een positie, alleen waar jij graag
+// heen gaat. Hem archiveren zou een lijst opbouwen die niemand ooit nog leest.
 export async function favorietWeg(env, ik, id) {
   await env.DB.prepare(
-    "update favoriet set archief = 1 where id = ? and gebruiker = ?"
+    "delete from favoriet where id = ? and gebruiker = ?"
   ).bind(id, ik.id).run();
   return { ok: true };
 }

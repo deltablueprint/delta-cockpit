@@ -27,7 +27,7 @@ export async function favorietenscherm(inhoud, kruimel, bijWijziging) {
 
   const lijstHtml = () => lijst.map((f, i) => `
     <li class="favregel ${f.id === gekozen ? "actief" : ""}" data-id="${f.id}">
-      <span class="favikoon" style="color:${KLEUREN[f.kleur] || KLEUREN.blauw}">${ikoon(f.icoon, 16)}</span>
+      <span class="favikoon" style="color:${KLEUREN[f.kleur] || KLEUREN.blauw}">${ikoon(f.icoon, 18)}</span>
       <span class="favnaam">${ontsnap(f.label)}</span>
       <span class="favorde">
         <button class="ikoonknop" data-op="omhoog" data-id="${f.id}" ${i === 0 ? "disabled" : ""}
@@ -60,7 +60,7 @@ export async function favorietenscherm(inhoud, kruimel, bijWijziging) {
             <div class="veldwaarde"><span class="ikoonkiezer" style="color:${KLEUREN[f.kleur] || KLEUREN.blauw}">${
               IKOONNAMEN.map((n) => `
               <button type="button" class="ikoonvak ${n === f.icoon ? "actief" : ""}" data-icoon="${n}"
-                title="${n}" aria-label="${n}">${ikoon(n, 19)}</button>`).join("")}</span></div>
+                title="${n}" aria-label="${n}">${ikoon(n, 24)}</button>`).join("")}</span></div>
           </div>
         </div>
         <div class="knoprij">

@@ -1,7 +1,9 @@
 // Delta Blueprint Cockpit — worker
 //
 // Twee regels die hier worden afgedwongen en nergens anders:
-//   1. Er is geen DELETE-route. Niets wordt verwijderd (uitgangspunt 2).
+//   1. Er is geen DELETE-route op records. Niets wat vastgelegd is wordt
+//      verwijderd (uitgangspunt 2). Uitzondering: een favoriet en je eigen
+//      geschiedenis — dat zijn persoonlijke instellingen, geen vastlegging.
 //   2. Authenticatie is per persoon: e-mailadres plus wachtwoord. Elke
 //      schrijfactie draagt een identiteit (BOUWSPEC 11). Geen gedeelde sleutel.
 
@@ -132,7 +134,14 @@ async function behandel(request, env) {
     const url = new URL(request.url);
     const pad = url.pathname;
 
-    if (request.method === "DELETE") {
+    // Er is geen DELETE op records. De uitzondering is wat geen vastlegging is
+    // maar een persoonlijke instelling: een favoriet en je eigen geschiedenis.
+    // Die bewaren niets over een cyclus, een besluit of een positie — ze zeggen
+    // alleen waar jij graag heen gaat en waar je net was. Zoiets hoort gewoon
+    // weg te kunnen, en het archiveren ervan zou een lijst opbouwen die niemand
+    // ooit nog wil lezen.
+    const magWeg = /^\/api\/favoriet\/\d+$/.test(pad) || pad === "/api/bezoek";
+    if (request.method === "DELETE" && !magWeg) {
       return json({ fout: "Er is geen DELETE-route. Records worden gearchiveerd, niet verwijderd." }, 405);
     }
 

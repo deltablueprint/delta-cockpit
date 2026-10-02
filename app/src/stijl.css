@@ -1033,14 +1033,14 @@ body.sleept .lijsttabel { pointer-events: none; }
 
 .kleurkiezer { display: flex; flex-wrap: wrap; gap: 7px; }
 .kleurvak {
-  width: 30px; height: 30px; border: 2px solid transparent; border-radius: 3px;
+  width: 34px; height: 34px; border: 2px solid transparent; border-radius: 3px;
   cursor: pointer; padding: 0;
 }
 .kleurvak.actief { border-color: var(--ink); box-shadow: inset 0 0 0 2px #fff; }
 
-.ikoonkiezer { display: flex; flex-wrap: wrap; gap: 4px; max-width: 480px; }
+.ikoonkiezer { display: flex; flex-wrap: wrap; gap: 4px; max-width: 540px; }
 .ikoonvak {
-  width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;
   border: 1px solid transparent; border-radius: 3px; background: none; cursor: pointer; color: inherit;
 }
 .ikoonvak:hover { background: var(--soft); }
