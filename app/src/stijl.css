@@ -48,6 +48,45 @@ a { color: var(--blue); }
   width: 232px; flex-shrink: 0; background: var(--navbg);
   display: flex; flex-direction: column; min-height: 0;
 }
+/* --- de drie tabbladen van de navigator: alles, favorieten, geschiedenis ---
+   Het menu toont wat er is; de twee andere tonen waar jij bent. Ze zitten in
+   dezelfde kolom en dragen dus dezelfde donkere achtergrond. */
+.navtabs { display: flex; flex-shrink: 0; background: var(--navbg2); }
+.navtab {
+  flex: 1 1 0; display: flex; align-items: center; justify-content: center;
+  height: 34px; border: 0; background: none; color: var(--navdim); cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.navtab:hover { color: #fff; }
+.navtab.actief { color: #fff; background: var(--navbg); border-bottom-color: #63808F; }
+
+.navpaneel { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+.navpaneel[hidden] { display: none; }
+.navkop {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  padding: 10px 10px 8px 14px; font-size: 10px; font-weight: 700;
+  letter-spacing: 1.2px; text-transform: uppercase; color: var(--navdim);
+}
+.navkop span:first-child { flex: 1 1 auto; }
+.navknopje {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 5px; border: 0; border-radius: 2px;
+  background: rgba(255, 255, 255, .08); color: var(--navtxt); cursor: pointer;
+  font-size: 10px; letter-spacing: .6px; text-transform: uppercase; text-decoration: none;
+}
+.navknopje:hover { background: rgba(255, 255, 255, .18); color: #fff; }
+.navlijst { flex: 1 1 auto; overflow-y: auto; padding-bottom: 14px; }
+.navregel {
+  display: flex; align-items: center; gap: 9px; padding: 7px 14px;
+  color: var(--navtxt); text-decoration: none; font-size: 12.5px;
+}
+.navregel:hover { background: var(--navact); color: #fff; }
+.navikoon { display: inline-flex; flex-shrink: 0; }
+.navtekst { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.navsoort { display: block; font-style: normal; font-size: 10.5px; color: var(--navdim); }
+.navtijd { flex-shrink: 0; font-size: 10.5px; color: var(--navdim); }
+.navleeg { margin: 4px 14px; font-size: 11.5px; line-height: 1.5; color: var(--navdim); }
+
 .menufilter {
   display: flex; align-items: center; gap: 7px; flex-shrink: 0;
   margin: 8px; padding: 0 9px; height: 30px;
@@ -977,3 +1016,32 @@ body.sleept .lijsttabel { pointer-events: none; }
 
 .uitkomstvast { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; font-size: 12.5px; }
 .uitkomstvast p { width: 100%; margin: 4px 0 0; color: var(--ink2); line-height: 1.5; }
+
+/* --- favorieten inrichten --- */
+.favscherm { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 10px; align-items: start; }
+.favlijstbewerk { margin: 0; padding: 6px 0; list-style: none; }
+.favregel {
+  display: flex; align-items: center; gap: 9px; padding: 7px 14px;
+  font-size: 12.5px; color: var(--ink2); cursor: pointer;
+}
+.favregel:hover { background: var(--soft); }
+.favregel.actief { background: var(--bluebg); color: var(--ink); font-weight: 600; }
+.favikoon { display: inline-flex; flex-shrink: 0; }
+.favnaam { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.favorde { display: flex; gap: 2px; }
+.favorde .ikoonknop { width: 20px; height: 20px; font-size: 12px; }
+
+.kleurkiezer { display: flex; flex-wrap: wrap; gap: 7px; }
+.kleurvak {
+  width: 30px; height: 30px; border: 2px solid transparent; border-radius: 3px;
+  cursor: pointer; padding: 0;
+}
+.kleurvak.actief { border-color: var(--ink); box-shadow: inset 0 0 0 2px #fff; }
+
+.ikoonkiezer { display: flex; flex-wrap: wrap; gap: 4px; max-width: 480px; }
+.ikoonvak {
+  width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid transparent; border-radius: 3px; background: none; cursor: pointer; color: inherit;
+}
+.ikoonvak:hover { background: var(--soft); }
+.ikoonvak.actief { border-color: var(--blue); background: var(--bluebg); }

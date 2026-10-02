@@ -14,6 +14,8 @@ import { openPosities, haalRapport, neemRapportAan, laatsteRapport } from "./lyn
 import { stappenVoor } from "./proces.js";
 import { sjablonen, importeer as importeerVoorwaarden } from "./voorwaarden.js";
 import { overzicht } from "./besluit.js";
+import { favorieten, favorietToevoegen, favorietWijzigen, favorietWeg,
+         favorietenVolgorde, bezoeken, bezoekBijzetten, bezoekenLeeg } from "./navigator.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
@@ -206,6 +208,42 @@ async function behandel(request, env) {
         const uitkomst = await lijst(env, lijstPad[1], url.searchParams, ik);
         if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
         return json(uitkomst);
+      }
+
+      // Favorieten en geschiedenis: de twee tabbladen van de navigator. Altijd
+      // van jezelf — er is geen weg naar die van een ander.
+      if (pad === "/api/favoriet") {
+        if (request.method === "GET") return json(await favorieten(env, ik));
+        if (request.method === "POST") {
+          const uit = await favorietToevoegen(env, ik, await request.json().catch(() => ({})));
+          if (uit.fout) return json(uit, uit.status || 400);
+          return json(uit);
+        }
+        return json({ fout: "Deze methode bestaat niet." }, 405);
+      }
+      if (pad === "/api/favoriet/volgorde" && request.method === "PUT") {
+        const body = await request.json().catch(() => ({}));
+        return json(await favorietenVolgorde(env, ik, body.ids));
+      }
+      const favPad = pad.match(/^\/api\/favoriet\/(\d+)$/);
+      if (favPad) {
+        const id = Number(favPad[1]);
+        if (request.method === "PATCH") {
+          const uit = await favorietWijzigen(env, ik, id, await request.json().catch(() => ({})));
+          if (uit.fout) return json(uit, uit.status || 400);
+          return json(uit);
+        }
+        if (request.method === "DELETE") return json(await favorietWeg(env, ik, id));
+        return json({ fout: "Deze methode bestaat niet." }, 405);
+      }
+
+      if (pad === "/api/bezoek") {
+        if (request.method === "GET") return json(await bezoeken(env, ik));
+        if (request.method === "POST") {
+          return json(await bezoekBijzetten(env, ik, await request.json().catch(() => ({}))));
+        }
+        if (request.method === "DELETE") return json(await bezoekenLeeg(env, ik));
+        return json({ fout: "Deze methode bestaat niet." }, 405);
       }
 
       // Persoonlijke voorkeuren: kolombreedtes en wat iemand verder zelf

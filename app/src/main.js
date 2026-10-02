@@ -6,6 +6,8 @@ import { recordscherm } from "./record.js";
 import { importscherm } from "./importeren.js";
 import { gonogoscherm } from "./gonogo.js";
 import { uitkomstscherm } from "./uitkomst.js";
+import { favorietenscherm } from "./favorieten.js";
+import { zetBezoek } from "./api.js";
 import { stopLive } from "./live.js";
 
 let persoon = null;
@@ -21,6 +23,18 @@ function huidigeRoute() {
 
 // Etappe 1 kent nog geen schermen: elke route toont wat er komt.
 // Etappe 2 vult /t/<tabel> met de lijst, etappe 3 het record.
+// Waar een bezoek bij hoort, in één woord: de naam van de tabel of het scherm.
+function soortVanRoute(route) {
+  const t = route.match(/^\/t\/([a-z_]+)/);
+  if (t) {
+    const tabel = (meta && meta.tabellen || []).find((x) => x.naam === t[1]);
+    return tabel ? tabel.label : t[1].replace(/_/g, " ");
+  }
+  if (route.startsWith("/uitkomst/")) return "gesprek";
+  if (route.startsWith("/gonogo/")) return "go / no-go";
+  return null;
+}
+
 function teken() {
   // Elke navigatie zet eerst alle verversing stil. Een timer van het vorige
   // scherm die daarna nog één keer tekent, zet je terug waar je vandaan kwam —
@@ -28,9 +42,30 @@ function teken() {
   stopLive();
 
   const { pad, zoekdeel } = huidigeRoute();
-  const { kruimel, inhoud } = schil(persoon, meta, pad, afmelden);
+  const geheel = schil(persoon, meta, pad, afmelden);
+  const { kruimel, inhoud } = geheel;
 
   menuBijwerken(pad);
+
+  // De geschiedenis onthoudt waar je was. De titel van het scherm is pas bekend
+  // als het geladen is, dus we kijken even later — en we schrijven alleen weg
+  // wat ook echt een scherm werd.
+  clearTimeout(teken.bezoekklok);
+  teken.bezoekklok = setTimeout(() => {
+    const route = location.hash.slice(1);
+    const titel = (document.title || "").split(" · ")[0];
+    if (!route || !titel || titel === "Delta Blueprint Cockpit") return;
+    zetBezoek({ route, titel, soort: soortVanRoute(route) }).catch(() => {});
+  }, 1200);
+
+  if (pad === "/favorieten") {
+    huidigeLijst.tabelnaam = null;
+    huidigeLijst.url = null;
+    favorietenscherm(inhoud, kruimel, () => {
+      if (geheel.navtabs) geheel.navtabs.tekenFavorieten();
+    });
+    return;
+  }
 
   if (pad === "/import/event") {
     huidigeLijst.tabelnaam = null;

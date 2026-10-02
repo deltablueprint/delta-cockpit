@@ -108,3 +108,15 @@ export const voorwaardenOvernemen = (cyclus, sleutels) =>
 export const besluitOverzicht = (moment) => haal(`/api/besluit/${moment}`);
 export const besluitUitkomst = (moment, body) =>
   haal(`/api/besluit/${moment}/uitkomst`, { methode: "POST", body });
+
+// ---- de navigator: favorieten en geschiedenis ----
+export const haalFavorieten = () => haal("/api/favoriet");
+export const maakFavoriet = (body) => haal("/api/favoriet", { methode: "POST", body });
+export const wijzigFavoriet = (id, body) => haal(`/api/favoriet/${id}`, { methode: "PATCH", body });
+export const weghaalFavoriet = (id) => haal(`/api/favoriet/${id}`, { methode: "DELETE" });
+export const zetFavorietenVolgorde = (ids) =>
+  haal("/api/favoriet/volgorde", { methode: "PUT", body: { ids } });
+
+export const haalBezoeken = () => haal("/api/bezoek");
+export const zetBezoek = (body) => haal("/api/bezoek", { methode: "POST", body });
+export const wisBezoeken = () => haal("/api/bezoek", { methode: "DELETE" });

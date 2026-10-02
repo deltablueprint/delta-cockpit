@@ -859,16 +859,16 @@ Beide componenten staan als functie in de gedeelde laag. Een nieuw scherm roept 
 #### 10.3a Favorieten
 
 - **Een favoriet is een bewaarde plek, geen tweede menu.** Hij draagt de hele staat van de URL: de tabel, het filter, de sortering en de zoekterm. *Cycli waar ik op wacht* of *Mijn open tranches* is daarmee een favoriet en geen nieuwe module in `db_module` — de inrichting van het menu blijft van de beheerder, de favorieten zijn van de gebruiker.
-- **Je maakt er een door op de ster te klikken** op de lijst of het record waar je staat, of door een module uit *Alles* naar het tabblad te slepen. Het systeem stelt een naam voor uit wat er op dat moment staat (*Cycli — status = bewaken*); je mag die overschrijven.
-- **Bewerken doe je in één scherm**: naam, een kleur uit een vaste set, en een icoon uit een vaste set. De kleur en het icoon staan voor de leesbaarheid in de lijst, niet voor decoratie: je herkent een favoriet aan zijn vorm voor je zijn naam leest. Verder: verwijderen, en slepen om de volgorde te veranderen.
-- **Per persoon, serverzijdig bewaard**, zodat je favorieten meekomen op een andere computer. Tabel `favoriet`: gebruiker, label, route, kleur, icoon, volgorde. Geen gedeelde of opgelegde favorieten — dat is wat het menu al doet.
+- **Je maakt er een met het plusje in het tabblad Favorieten**, terwijl je op de lijst of het record staat dat je wilt bewaren. De route komt uit de adresbalk, dus het filter en de sortering gaan mee; de naam wordt voorgesteld uit de titel van het scherm en is te overschrijven. Het potlood ernaast opent het inrichtingsscherm.
+- **Bewerken doe je in één scherm** (`#/favorieten`): links je favorieten in hun volgorde, rechts de gekozen favoriet met naam, bestemming, een kleur uit acht en een icoon uit dertig. De kleur en het icoon staan voor de leesbaarheid in de lijst, niet voor decoratie: je herkent een favoriet aan zijn vorm voor je zijn naam leest. Verder: verwijderen, en slepen om de volgorde te veranderen.
+- **Per persoon, serverzijdig bewaard**, zodat je favorieten meekomen op een andere computer. Tabel `favoriet`: gebruiker, label, route, kleur, icoon, volgorde. Geen gedeelde of opgelegde favorieten — dat is wat het menu al doet. Weghalen is archiveren, net als overal.
 - Een favoriet die naar een record wijst dat gearchiveerd is, blijft staan maar wordt gedoofd getoond: stil laten verdwijnen wat iemand zelf heeft vastgezet, is verwarrender dan het laten zien.
 
 #### 10.3b Geschiedenis
 
 - **De laatste dertig plekken waar je was**, nieuwste bovenaan, met het soort record, zijn titel en hoe lang geleden. Lijsten tellen mee, niet alleen records: terugkomen op een gefilterde lijst is net zo goed terugkomen.
 - **Bezoeken, geen wijzigingen.** Wie wat veranderde staat in de audit trail en hoort daar; de geschiedenis is een hulpmiddel om terug te vinden waar je was, meer niet. Twee keer achter elkaar hetzelfde record openen levert één regel op.
-- **Per persoon, serverzijdig, afgekapt op dertig.** Tabel `bezoek`: gebruiker, route, titel, tabel, record, moment. Een gebruiker kan zijn eigen geschiedenis leegmaken.
+- **Per persoon, serverzijdig, afgekapt op dertig.** Tabel `bezoek`: gebruiker, route, titel, soort, moment. Afkappen is het enige verwijderen in de applicatie, en het verwijdert geen vastlegging maar een hulpmiddel. Een gebruiker kan zijn eigen geschiedenis leegmaken.
 - De geschiedenis van een ander is niet te bekijken. Het is een werkspoor, geen toezichtsmiddel.
 
 - **Onder BEHEER staat alleen inrichting** (bouwstenen, tabellen en velden, standaardset, rollen). Operationele records worden nooit vanuit het menu aangemaakt.
@@ -964,8 +964,9 @@ GET    /api/barometer/:cyclus     afgeleide toestand voor de ledenapp
 | 9 | Eventskalender | Eventtabel, jaarscript, handmatig bijmaken, import, related list op periode |
 | 10 ✓ | Blind versturen, quorum en onthullen | `inzending` als kindtabel van de cyclus, vergrendelen bij versturen, **serverzijdige afscherming van positie, strike, expiratie, inzet en reden**, quorum per processtap, openen zodra het gehaald is, het meetingscherm met de inzendingen open, en één vastgelegde uitkomst op het beoordelingsmoment |
 | 11 ~ | Positie en publicatie | Het positierecord met zijn zes stappen en statussen (10.0f), brokerkoppeling, **vergelijking uitkomst ↔ uitvoering met afwijkingsregistratie**, exitplan als velden, tranches, uitkomst vastleggen, communiceren naar leden |
+| 11a ✓ | Favorieten en geschiedenis | De navigator met drie tabbladen: het menu, je eigen favorieten (route met filter en sortering, naam, kleur, icoon, volgorde) en de laatste dertig plekken waar je was |
 | 11b | Portefeuille | Portefeuille-instellingen, blootstelling en reserve over alle open tranches, sizing als voorwaarde, portefeuillestrook op het overzicht |
-| 12 | Dashboard en post-analyse | Het operationele dashboard met zijn vijf toestanden inclusief het terugkijken op een afgesloten cyclus, procesbeheer en Mijn taken als gegroepeerde lijst, positielijst, exitdrempels met quote-toets, maandverslag met toetsing, favorieten en geschiedenis in de navigator (10.3a/10.3b) |
+| 12 | Dashboard en post-analyse | Het operationele dashboard met zijn vijf toestanden inclusief het terugkijken op een afgesloten cyclus, procesbeheer en Mijn taken als gegroepeerde lijst, positielijst, exitdrempels met quote-toets, maandverslag met toetsing |
 | 13 | Barometer en berichten | Afgeleide toestand, endpoint, berichtsjablonen per fase, de klantkolom op het dashboard met voorstel-en-publiceer voor de barometer, automatische controle vóór publicatie |
 | 14 | Protocol van het gesprek | Vijf agendablokken, behandeling per event, exitplan als voorwaarde vóór uitvoering, stoploss-vergrendeling, schaduwevaluatie van een no-go |
 

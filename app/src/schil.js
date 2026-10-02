@@ -9,6 +9,7 @@ const LOGO = `<svg viewBox="0 0 296.1 251.9" width="15" height="13" aria-hidden=
 
 import { avatar, verklein } from "./avatar.js";
 import { zetAvatar, leesVoorkeur, zetVoorkeur } from "./api.js";
+import { navtabsHtml, navpanelenHtml, navtabsAansluiten } from "./navtabs.js";
 
 const TRECHTER = `<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
   <path d="M1.5 2.5h13L9.5 8.4v4.3l-3 1.8V8.4z" fill="none" stroke="currentColor" stroke-width="1.3"
@@ -71,12 +72,14 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
     </div>
     <div class="romp">
       <nav class="menu">
+        ${navtabsHtml()}
         <div class="menufilter">
           ${TRECHTER}
           <input id="menufilter" type="text" placeholder="Filter menu" aria-label="Filter menu" autocomplete="off">
         </div>
         <div class="menulijst" id="menulijst">${menu}</div>
         <p class="menuleeg" id="menuleeg" hidden>Niets gevonden.</p>
+        ${navpanelenHtml()}
       </nav>
       <div class="werkvlak">
         <div class="kruimel" id="kruimel"></div>
@@ -165,9 +168,12 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
     filter.dispatchEvent(new Event("input"));
   });
 
+  const navtabs = navtabsAansluiten(wortel);
+
   gebouwd = {
     wortel,
     persoon,
+    navtabs,
     kruimel: wortel.querySelector("#kruimel"),
     inhoud: wortel.querySelector("#inhoud"),
   };
