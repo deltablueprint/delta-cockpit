@@ -170,6 +170,7 @@ export async function record(env, tabelnaam, id, ik) {
       naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv,
       titel_veld: tabel.titel_veld, related_weergave: tabel.related_weergave,
       proces_veld: tabel.proces_veld,
+      formulier_kolommen: tabel.formulier_kolommen,
     },
     secties: secties.results,
     velden: velden.results,

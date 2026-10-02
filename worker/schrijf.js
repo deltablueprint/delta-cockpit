@@ -580,7 +580,8 @@ export async function sjabloon(env, tabelnaam, ouder, ik) {
   return {
     tabel: { naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv,
              titel_veld: tabel.titel_veld, proces_veld: tabel.proces_veld,
-             aanmaakknop: tabel.aanmaakknop, na_aanmaken: tabel.na_aanmaken },
+             aanmaakknop: tabel.aanmaakknop, na_aanmaken: tabel.na_aanmaken,
+             formulier_kolommen: tabel.formulier_kolommen },
     secties, velden, waarden, ouderkolom, ouder: ouderInfo, proces, opties,
     nieuw: true, relaties: [], verwijzingen: {},
   };

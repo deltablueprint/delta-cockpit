@@ -189,7 +189,11 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     // geldt voor de hele tabel en niet per sectie — anders viel een sectie
     // waarin niemand naar rechts wil terug op 'om en om', en stond er alsnog
     // iets rechts dat links hoorde.
-    const kiestZelf = velden.some((v) => v.kolom_rechts);
+    // Een tabel met formulier_kolommen = 1 zet alles onder elkaar, ook als geen
+    // enkel veld rechts wil staan: anders viel zo'n formulier terug op 'om en
+    // om' zodra je het laatste rechtse veld naar links haalde.
+    const kiestZelf = velden.some((v) => v.kolom_rechts) ||
+      Number(data.tabel.formulier_kolommen) === 1;
     let links;
     let rechts;
     if (kiestZelf) {
