@@ -711,7 +711,10 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         if (e.key === "Escape") { klaar = true; herstel(); }
       });
       el.addEventListener("blur", opslaan);
-      if (el.tagName === "SELECT") el.addEventListener("change", opslaan);
+      // Een keuze of een datum aanklikken ís de wijziging: daar hoort geen
+      // tweede handeling meer achteraan. Bij vrije tekst blijft het bij
+      // wegklikken of Enter, anders zou hij bij elke letter opslaan.
+      el.addEventListener("change", opslaan);
     });
   });
 
