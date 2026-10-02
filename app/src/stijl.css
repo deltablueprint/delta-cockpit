@@ -594,6 +594,7 @@ body.sleept .lijsttabel { pointer-events: none; }
    dan verspringt de hele tabel zodra je een vinkje zet. */
 .rlweg.onzichtbaar { visibility: hidden; }
 .rlselectie { font-size: 11.5px; color: var(--mut); }
+.lijstselectie { font-size: 11.5px; color: var(--mut); }
 .lijstmelding.vraag {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   background: #FDF6E6; color: var(--ink2);

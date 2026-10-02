@@ -217,6 +217,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       <span class="lijsttitel">${ontsnap(data.tabel.label_mv)}</span>
       ${data.tabel.nieuw_vanuit_lijst ? `<a class="knop klein" href="#/t/${tabelnaam}/nieuw">Nieuw</a>` : ""}
       ${data.tabel.import_toegestaan ? `<a class="knop klein tweede" href="#/import/${tabelnaam}">Inlezen uit document</a>` : ""}
+      <span class="lijstselectie" id="rlselectie"></span>
       <span class="zoeklabel">Zoeken</span>
       <select class="zoekveld" aria-label="Zoekveld"><option>Alle velden</option>${
         kolommen.map((k) => `<option value="${k.kolom}"${toestand.zoekkolom === k.kolom ? " selected" : ""}>${ontsnap(k.label)}</option>`).join("")
@@ -270,14 +271,13 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   const breedtes = kolommen.map(
     (k, i) => `${eigen[k.kolom] || gemetenBreedte(k, i, data.rijen, meta, data.verwijzingen || {})}px`
   );
-  const minBreedte = breedtes.reduce((n, b) => n + (parseInt(b, 10) || 180), 0)
-    + (toestand.ingebed ? 34 : 0);
+  const minBreedte = breedtes.reduce((n, b) => n + (parseInt(b, 10) || 180), 0) + 34;
 
-  // In een gerelateerde lijst kun je regels aanvinken en archiveren: daar maak
-  // je ze aan, dus daar ruim je een vergissing ook op. Verwijderen bestaat
-  // niet — een gearchiveerde regel verdwijnt uit beeld maar blijft bestaan,
-  // met wie hem weghaalde in de audit trail (hard uitgangspunt 1).
-  const metVinkjes = Boolean(toestand.ingebed);
+  // In elke lijst kun je regels aanvinken en archiveren — in een gerelateerde
+  // lijst en in het volledige bestand. Verwijderen bestaat niet: een
+  // gearchiveerde regel verdwijnt uit beeld maar blijft bestaan, met wie hem
+  // weghaalde in de audit trail (hard uitgangspunt 1).
+  const metVinkjes = true;
 
   const colgroup = `<colgroup>
       ${metVinkjes ? `<col style="width:34px">` : ""}
