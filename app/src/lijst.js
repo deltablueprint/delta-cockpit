@@ -345,6 +345,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       ${ingebed.magNieuw === false
         ? (ingebed.inPlaatsVan ? `<span class="rluitleg">${ontsnap(ingebed.inPlaatsVan)}</span>` : "")
         : `<a class="knop" href="#/t/${tabelnaam}/nieuw?ouder=${ingebed.ouder.tabel}:${ingebed.ouder.id}">Nieuw</a>`}
+      ${ingebed.overnemen ? `<button class="knop tweede klein" id="rlovernemen">Overnemen uit een eerdere cyclus</button>` : ""}
       <span class="rlselectie" id="rlselectie"></span>
     </div>`;
 

@@ -19,6 +19,8 @@ const LOGO = `<svg viewBox="0 0 296.1 251.9" width="15" height="13" aria-hidden=
   <polygon points="76.9 251.9 0 251.9 76.7 121.6 76.9 251.9" fill="currentColor"/></svg>`;
 import { volgLive, stopLive, HARTSLAG } from "./live.js";
 import { avatarMetNaam } from "./avatar.js";
+import { kiezerHtml, kiezerAansluiten } from "./kiezer.js";
+import { voorwaardeSjablonen, voorwaardenOvernemen } from "./api.js";
 
 const ICOON = {
   bijlage: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M21 11l-8.5 8.5a5 5 0 01-7-7L14 4a3.5 3.5 0 015 5l-8.5 8.5a2 2 0 01-3-3L15 6"/></svg>`,
@@ -119,26 +121,13 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     <div class="aanwezigen">
       <div class="stappenkop">Aanwezig bij dit besluit<span class="stappenmeta" id="quorumtekst">${
         ontsnap(quorumtekst(erbij.length))}</span></div>
-      <div class="kolomkiezer">
-        <div class="kiezerkolom">
-          <div class="kiezerkop">Niet aanwezig</div>
-          <ul class="kiezerlijst" id="kiezer-uit">
-            ${iedereen.filter((g) => !erbij.includes(g.id)).map((g) =>
-              `<li data-id="${ontsnap(g.id)}">${avatarMetNaam(g)}</li>`).join("")}
-          </ul>
-        </div>
-        <div class="kiezerknoppen">
-          <button type="button" class="ikoonknop" id="kiezer-erbij" title="Naar de aanwezigen">&rsaquo;</button>
-          <button type="button" class="ikoonknop" id="kiezer-eruit" title="Weg bij de aanwezigen">&lsaquo;</button>
-        </div>
-        <div class="kiezerkolom">
-          <div class="kiezerkop">Aanwezig</div>
-          <ul class="kiezerlijst" id="kiezer-in">
-            ${iedereen.filter((g) => erbij.includes(g.id)).map((g) =>
-              `<li data-id="${ontsnap(g.id)}">${avatarMetNaam(g)}</li>`).join("")}
-          </ul>
-        </div>
-      </div>
+      ${kiezerHtml({
+        id: "aanwezigenkiezer",
+        linkskop: "Niet aanwezig",
+        rechtskop: "Aanwezig",
+        links: iedereen.filter((g) => !erbij.includes(g.id)).map((g) => ({ id: g.id, html: avatarMetNaam(g) })),
+        rechts: iedereen.filter((g) => erbij.includes(g.id)).map((g) => ({ id: g.id, html: avatarMetNaam(g) })),
+      })}
       <div class="veldwaarde verborgen">
         <input type="hidden" data-kolom="aanwezigen_ids" id="aanwezigen_ids" value="${ontsnap(erbij.join(","))}">
       </div>
@@ -275,7 +264,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       filters: {},
       idfilters: { [r.kolom]: String(id) },
       ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label,
-                 toonTelling: !tabbladen, magNieuw: r.magNieuw !== false, inPlaatsVan: r.inPlaatsVan },
+                 toonTelling: !tabbladen, magNieuw: r.magNieuw !== false, inPlaatsVan: r.inPlaatsVan,
+                 overnemen: r.overnemen },
     });
   }
 
@@ -303,7 +293,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         filters: {},
         idfilters: { [r.kolom]: String(id) },
         ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label,
-                 toonTelling: !tabbladen, magNieuw: r.magNieuw !== false, inPlaatsVan: r.inPlaatsVan },
+                 toonTelling: !tabbladen, magNieuw: r.magNieuw !== false, inPlaatsVan: r.inPlaatsVan,
+                 overnemen: r.overnemen },
       });
     }
   }
@@ -312,43 +303,84 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   const euro = (n) => Number(n).toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const punten = (n) => Number(n).toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 3 });
 
+  // ---- voorwaarden overnemen uit een eerdere cyclus ----
+  // De vraag is vaak dezelfde; alleen het antwoord verschilt per cyclus. Die
+  // vragen opnieuw intypen levert niets op en zorgt voor kleine verschillen in
+  // naamgeving, waardoor je ze later niet meer naast elkaar kunt leggen.
+  inhoud.addEventListener("click", async (e) => {
+    const knop = e.target.closest("#rlovernemen");
+    if (!knop) return;
+    const vak = knop.closest(".lijst");
+    if (!vak || vak.querySelector(".overnemen")) return;
+
+    knop.disabled = true;
+    let lijst = [];
+    try {
+      ({ voorwaarden: lijst } = await voorwaardeSjablonen(id));
+    } catch (fout) {
+      knop.disabled = false;
+      alert(fout.message);
+      return;
+    }
+    knop.disabled = false;
+
+    const paneel = document.createElement("div");
+    paneel.className = "overnemen";
+    paneel.innerHTML = !lijst.length
+      ? `<p class="brokerleeg">Er zijn geen voorwaarden uit eerdere cycli die hier nog niet staan.
+         <button class="knop klein tweede" data-sluit>Sluiten</button></p>`
+      : `<div class="stappenkop">Overnemen uit een eerdere cyclus<span class="stappenmeta">
+           de vraag gaat mee, de gemeten waarde niet</span></div>
+         ${kiezerHtml({
+           id: "voorwaardekiezer",
+           linkskop: "Eerder gebruikt",
+           rechtskop: "Overnemen naar deze cyclus",
+           links: lijst.map((v) => ({
+             id: v.sleutel,
+             html: `<span class="koppelnaam">${ontsnap(v.naam)}</span>
+                    <span class="faint">${ontsnap(v.soort)}${v.bron ? ` · ${ontsnap(v.bron)}` : ""}</span>
+                    <span class="stapstand">${v.keer}×</span>`,
+           })),
+           rechts: [],
+         })}
+         <div class="knoprij" style="padding:0 16px 14px">
+           <button class="knop" data-overnemen disabled>Overnemen</button>
+           <button class="knop tweede" data-sluit>Annuleren</button>
+         </div>`;
+
+    vak.insertBefore(paneel, vak.querySelector(".tabelomhulsel"));
+
+    paneel.querySelectorAll("[data-sluit]").forEach((b) => b.addEventListener("click", () => paneel.remove()));
+
+    const kiezer = paneel.querySelector("#voorwaardekiezer");
+    if (!kiezer) return;
+    const nemen = paneel.querySelector("[data-overnemen]");
+    const gekozen = kiezerAansluiten(kiezer, (ids) => { nemen.disabled = ids.length === 0; });
+
+    nemen.addEventListener("click", async () => {
+      nemen.disabled = true;
+      try {
+        await voorwaardenOvernemen(id, gekozen());
+        paneel.remove();
+        recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties);
+      } catch (fout) {
+        nemen.disabled = false;
+        alert(fout.message);
+      }
+    });
+  });
+
   // ---- de aanwezigenkiezer ----
   if (toonAanwezigen) {
-    const uit = inhoud.querySelector("#kiezer-uit");
-    const inn = inhoud.querySelector("#kiezer-in");
+    const vak = inhoud.querySelector("#aanwezigenkiezer");
     const veld = inhoud.querySelector("#aanwezigen_ids");
     const tekst = inhoud.querySelector("#quorumtekst");
-
-    const bijwerken = () => {
-      const ids = [...inn.querySelectorAll("li")].map((li) => li.dataset.id);
-      veld.value = ids.join(",");
-      tekst.textContent = quorumtekst(ids.length);
-    };
-
-    const verhuis = (van, naar) => {
-      van.querySelectorAll("li.gekozen").forEach((li) => {
-        li.classList.remove("gekozen");
-        naar.appendChild(li);
+    if (vak && veld) {
+      kiezerAansluiten(vak, (ids) => {
+        veld.value = ids.join(",");
+        if (tekst) tekst.textContent = quorumtekst(ids.length);
       });
-      bijwerken();
-    };
-
-    [uit, inn].forEach((lijst) => {
-      lijst.addEventListener("click", (e) => {
-        const li = e.target.closest("li");
-        if (li) li.classList.toggle("gekozen");
-      });
-      lijst.addEventListener("dblclick", (e) => {
-        const li = e.target.closest("li");
-        if (!li) return;
-        li.classList.remove("gekozen");
-        (lijst === uit ? inn : uit).appendChild(li);
-        bijwerken();
-      });
-    });
-
-    inhoud.querySelector("#kiezer-erbij").addEventListener("click", () => verhuis(uit, inn));
-    inhoud.querySelector("#kiezer-eruit").addEventListener("click", () => verhuis(inn, uit));
+    }
   }
 
   // ---- wat er bij de broker open staat ----

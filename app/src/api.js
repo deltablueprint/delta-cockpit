@@ -93,3 +93,8 @@ export const gonogoUitkomst = (cyclus, body) =>
 
 // Wat er bij de broker open staat (etappe 11). Lezend.
 export const lynxPosities = () => haal("/api/lynx/posities");
+
+// Voorwaarden overnemen uit eerdere cycli.
+export const voorwaardeSjablonen = (cyclus) => haal(`/api/voorwaarde/sjablonen/${cyclus}`);
+export const voorwaardenOvernemen = (cyclus, sleutels) =>
+  haal(`/api/voorwaarde/overnemen/${cyclus}`, { methode: "POST", body: { sleutels } });

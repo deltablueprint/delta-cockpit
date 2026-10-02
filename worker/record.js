@@ -82,7 +82,10 @@ export async function record(env, tabelnaam, id, ik) {
         inPlaatsVan = "Het exitplan wordt klaargezet zodra de tranche bestaat.";
       }
 
-      return { tabel: k.tabel, kolom: k.kolom, label: k.label_mv, aantal, magNieuw, inPlaatsVan };
+      // Op de cyclus kun je voorwaarden overnemen uit eerdere cycli.
+      const overnemen = k.tabel === "voorwaarde" && tabelnaam === "cyclus";
+
+      return { tabel: k.tabel, kolom: k.kolom, label: k.label_mv, aantal, magNieuw, inPlaatsVan, overnemen };
     });
 
   // Verwijzingen omzetten naar iets leesbaars: niet 'simon' maar 'Simon DeJonghe'.

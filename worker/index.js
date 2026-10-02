@@ -11,6 +11,7 @@ import { record } from "./record.js";
 import { voorbereiden, uitvoeren } from "./import.js";
 import { stand, startMoment, versturen, uitkomst as gonogoUitkomst } from "./gonogo.js";
 import { openPosities, haalRapport, neemRapportAan, laatsteRapport } from "./lynx.js";
+import { sjablonen, importeer as importeerVoorwaarden } from "./voorwaarden.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
@@ -267,6 +268,22 @@ async function behandel(request, env) {
           token_ingesteld: Boolean(env.LYNX_FLEX_TOKEN),
           query_ingesteld: Boolean(env.LYNX_FLEX_QUERY),
         });
+      }
+
+      // Voorwaarden overnemen uit eerdere cycli: de vraag, niet het antwoord.
+      const voorwaardePad = pad.match(/^\/api\/voorwaarde\/(sjablonen|overnemen)\/(\d+)$/);
+      if (voorwaardePad) {
+        const cyclusId = Number(voorwaardePad[2]);
+        if (voorwaardePad[1] === "sjablonen" && request.method === "GET") {
+          return json({ voorwaarden: await sjablonen(env, cyclusId) });
+        }
+        if (voorwaardePad[1] === "overnemen" && request.method === "POST") {
+          const body = await request.json().catch(() => ({}));
+          const uit = await importeerVoorwaarden(env, ik, cyclusId, body.sleutels);
+          if (uit.fout) return json(uit, uit.status || 400);
+          return json(uit);
+        }
+        return json({ fout: "Deze methode bestaat niet." }, 405);
       }
 
       // ---- de go/no-go (etappe 10) ----

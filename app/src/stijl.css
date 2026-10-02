@@ -715,3 +715,10 @@ body.sleept .lijsttabel { pointer-events: none; }
    er meegaat als je opslaat. */
 .lijsttabel tr.regelbewerkt td { background: #F7FAFC; }
 .lijsttabel tr.regelbewerkt { box-shadow: inset 2px 0 0 var(--blue); }
+
+/* Het paneel om voorwaarden over te nemen: het staat in de lijst zelf, niet in
+   een venster eroverheen — dan zie je waar het terechtkomt. */
+.overnemen { background: #F7FAFC; border-bottom: 1px solid var(--b1); }
+.overnemen .kolomkiezer { padding: 14px 16px; }
+.overnemen .kiezerlijst li { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 8px; }
+.overnemen .kiezerlijst .faint { grid-column: 1 / -1; font-size: 11px; }
