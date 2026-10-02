@@ -213,12 +213,6 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
             </div>
           </div>
           ${data.inzendingen.map(schrijfrij).join("")}
-          <div class="tijdlegenda">
-            <span><i class="bol zwaar"></i> zwaar</span>
-            <span><i class="bol middel"></i> middel</span>
-            <span><i class="bol licht"></i> licht</span>
-            <span class="faint">hover over een punt voor de events van die dag</span>
-          </div>
         </div>
       </div>
     </div>`;

@@ -823,7 +823,7 @@ body.sleept .lijsttabel { pointer-events: none; }
 .evnaam { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .evbeh { font-size: 10.5px; color: var(--mut); white-space: nowrap; }
 
-.tijdblok { padding: 10px 24px 4px; }
+.tijdblok { padding: 12px 24px 14px; }
 .tijdrij { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 12px; align-items: center; }
 .tijdnaam { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink2); }
 .tijdspoor { position: relative; height: 24px; }
@@ -894,11 +894,6 @@ body.sleept .lijsttabel { pointer-events: none; }
 .schrijfbalk b { font-size: 11px; font-weight: 600; color: var(--ink); white-space: nowrap; }
 .geenbalk { position: absolute; top: 4px; left: 0; font-size: 11.5px; color: var(--mut); }
 
-.tijdlegenda { display: flex; gap: 14px; padding: 10px 0 10px 152px; font-size: 11px; color: var(--mut); }
-.tijdlegenda .bol { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
-.tijdlegenda .bol.zwaar { background: var(--red, #A1281F); }
-.tijdlegenda .bol.middel { background: #D79A2B; }
-.tijdlegenda .bol.licht { background: #B9B5AD; }
 
 /* De portefeuille als één balk van honderd procent. */
 .kapitaalvak { padding: 16px 20px 6px; }
