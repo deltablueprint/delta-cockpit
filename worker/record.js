@@ -81,21 +81,14 @@ export async function record(env, tabelnaam, id, ik) {
       // Een positie maak je niet: ze ontstaat uit een besluit met een go.
       // Een exitplan maak je ook niet: dat zet het systeem klaar.
       let magNieuw = true;
-      let inPlaatsVan = null;
-      if (k.tabel === "positie") {
-        magNieuw = false;
-        inPlaatsVan = "Een positie ontstaat uit een besluit met een go.";
-      }
-      if (k.tabel === "exitregel") {
-        magNieuw = false;
-        inPlaatsVan = "Het exitplan wordt klaargezet zodra de tranche bestaat.";
-      }
+      if (k.tabel === "positie") magNieuw = false;
+      if (k.tabel === "exitregel") magNieuw = false;
 
       // Op de cyclus kun je voorwaarden overnemen uit eerdere cycli.
       const overnemen = k.tabel === "voorwaarde" && tabelnaam === "cyclus";
 
       return { tabel: k.tabel, kolom: k.kolom, label: k.label_mv, aantal, magNieuw,
-               inPlaatsVan, overnemen, direct: Boolean(k.nieuw_direct) };
+               overnemen, direct: Boolean(k.nieuw_direct) };
     });
 
   // Verwijzingen omzetten naar iets leesbaars: niet 'simon' maar 'Simon DeJonghe'.

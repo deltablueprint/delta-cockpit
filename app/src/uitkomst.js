@@ -322,15 +322,12 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
   // ------------------------------------------------------ gerelateerde lijsten
   const relaties = [
     { sleutel: "instap", label: "Instapvoorwaarden", tabel: "voorwaarde",
-      idfilters: { cyclus: String(cyclus.id) }, filters: { soort: "instap" },
-      uitleg: "alleen lezen — bijwerken gebeurt op de cyclus" },
+      idfilters: { cyclus: String(cyclus.id) }, filters: { soort: "instap" }, },
     { sleutel: "uitstap", label: "Uitstapvoorwaarden", tabel: "voorwaarde",
-      idfilters: { cyclus: String(cyclus.id) }, filters: { soort: "uitstap" },
-      uitleg: "alleen lezen — bijwerken gebeurt op de cyclus" },
+      idfilters: { cyclus: String(cyclus.id) }, filters: { soort: "uitstap" }, },
     { sleutel: "chart", label: "Technische analyse", tabel: null },
     { sleutel: "inzending", label: "Inzendingen", tabel: "inzending",
-      idfilters: { beoordelingsmoment: String(moment.id) }, filters: {},
-      uitleg: "blind ingestuurd, nu open" },
+      idfilters: { beoordelingsmoment: String(moment.id) }, filters: {}, },
   ];
 
   const relatieHtml = `
@@ -441,8 +438,7 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
     const vak = inhoud.querySelector("#relatievak");
     if (!vak) return;
     if (!r.tabel) {
-      vak.innerHTML = `<div class="lijst"><div class="rlkop"><span class="rltitel">Technische analyse</span>
-        <span class="rluitleg">chartlezing met niveaus</span></div>
+      vak.innerHTML = `<div class="lijst"><div class="rlkop"><span class="rltitel">Technische analyse</span></div>
         <p class="paneelleeg">De chartanalyse is nog niet gebouwd (etappe 11b). Tot dan hoort de lezing van de
           charts in de motivering van de inzendingen.</p></div>`;
       return;
@@ -452,7 +448,7 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
       filters: { ...r.filters }, idfilters: { ...r.idfilters },
       ingebed: { ouder: { tabel: "beoordelingsmoment", id: moment.id },
                  kolom: Object.keys(r.idfilters)[0], label: r.label,
-                 toonTelling: true, magNieuw: false, inPlaatsVan: r.uitleg },
+                 magNieuw: false },
     });
   }
   toonRelatie(relaties[0]);

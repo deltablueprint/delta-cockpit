@@ -348,12 +348,13 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
 
   const ingebed = toestand.ingebed;
 
+  // De kop van een gerelateerde lijst draagt de naam en de knop, verder niets.
+  // Een teller ('4 voorwaarden') herhaalt wat je ziet, en een zinnetje waarom
+  // er geen knop staat leest niemand twee keer.
   const relatiekop = !ingebed ? "" : `
     <div class="rlkop">
       <span class="rltitel">${ontsnap(ingebed.label || data.tabel.label_mv)}</span>
-      ${ingebed.toonTelling ? `<span class="rlmeta">${tot} ${tot === 1 ? ontsnap(data.tabel.label.toLowerCase()) : ontsnap(data.tabel.label_mv.toLowerCase())}</span>` : ""}
-      ${ingebed.magNieuw === false
-        ? (ingebed.inPlaatsVan ? `<span class="rluitleg">${ontsnap(ingebed.inPlaatsVan)}</span>` : "")
+      ${ingebed.magNieuw === false ? ""
         : ingebed.direct
           ? `<button class="knop" id="rldirect">Nieuw</button>`
           : `<a class="knop" href="#/t/${tabelnaam}/nieuw?ouder=${ingebed.ouder.tabel}:${ingebed.ouder.id}">Nieuw</a>`}
