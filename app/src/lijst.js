@@ -308,6 +308,14 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
 
   // Meldingen horen in het scherm, niet in een venster van de browser dat je
   // moet wegklikken voor je verder kunt.
+  // Een wijziging hier kan de stand van het proces veranderen; het record
+  // waaronder deze lijst hangt, mag dat weten.
+  const gewijzigd = () => {
+    if (toestand.ingebed && typeof toestand.ingebed.naWijziging === "function") {
+      toestand.ingebed.naWijziging();
+    }
+  };
+
   const meld = (tekst, soort = "waarschuwing") => {
     const vak = inhoud.querySelector("#lijstmelding");
     if (!vak) return;
@@ -477,6 +485,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         wegknop.disabled = true;
         try {
           await archiveer(tabelnaam, ids);
+          gewijzigd();
           lijstscherm(inhoud, kruimel, tabelnaam, meta, { ...toestand, offset: 0 });
         } catch (fout) {
           wegknop.disabled = false;
@@ -679,6 +688,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
               if (doelcel) toonCel(doelcel, r, nieuweWaarde);
             }
             wisKeuze();
+            gewijzigd();
             if (uitkomst.mislukt.length) {
               meld(`${uitkomst.gelukt.length} aangepast, ${uitkomst.mislukt.length} niet: ${uitkomst.mislukt[0].fout}`, "fouttekst");
             } else {
@@ -693,6 +703,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
             rijgegevens.revisie = uitkomst.revisie ?? rijgegevens.revisie;
           }
           toonCel(cel, rijgegevens || { id }, nieuweWaarde);
+          gewijzigd();
           if (uitkomst.waarschuwingen && uitkomst.waarschuwingen.length) {
             meld(uitkomst.waarschuwingen[0].melding, "waarschuwing");
           }

@@ -20,7 +20,7 @@ const LOGO = `<svg viewBox="0 0 296.1 251.9" width="15" height="13" aria-hidden=
 import { volgLive, stopLive, HARTSLAG } from "./live.js";
 import { avatarMetNaam } from "./avatar.js";
 import { kiezerHtml, kiezerAansluiten } from "./kiezer.js";
-import { voorwaardeSjablonen, voorwaardenOvernemen } from "./api.js";
+import { voorwaardeSjablonen, voorwaardenOvernemen, stappenVan } from "./api.js";
 
 const ICOON = {
   bijlage: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M21 11l-8.5 8.5a5 5 0 01-7-7L14 4a3.5 3.5 0 015 5l-8.5 8.5a2 2 0 01-3-3L15 6"/></svg>`,
@@ -90,6 +90,15 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     ? (data.waarden[data.proces.veld] ?? data.proces.nu)
     : null;
 
+  const stapHtml = (st) => `
+    <li class="stap ${st.gedaan ? "gedaan" : "open"}">
+      <span class="stapvink">${st.gedaan ? ICOON.vink : ""}</span>
+      <span class="stapnaam">${ontsnap(st.naam)}${
+        st.verplicht ? "" : ` <span class="faint">(mag later)</span>`}</span>
+      ${st.stand ? `<span class="stapstand">${ontsnap(st.stand)}</span>` : ""}
+      ${st.uitleg ? `<span class="stapuitleg">${ontsnap(st.uitleg)}</span>` : ""}
+    </li>`;
+
   // ---- wat er in deze fase gedaan moet worden ----
   // Onder de chevronbalk staat de checklist van de fase waarin het record nu
   // staat: wat er gebeurd is, wat er nog moet, en wie aan zet is. Niets om aan
@@ -99,16 +108,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     <div class="stappen">
       <div class="stappenkop">In deze fase<span class="stappenmeta">${
         stappenNu.filter((st) => st.gedaan).length} van ${stappenNu.length} gedaan</span></div>
-      <ul class="stappenlijst">
-        ${stappenNu.map((st) => `
-          <li class="stap ${st.gedaan ? "gedaan" : "open"}">
-            <span class="stapvink">${st.gedaan ? ICOON.vink : ""}</span>
-            <span class="stapnaam">${ontsnap(st.naam)}${
-              st.verplicht ? "" : ` <span class="faint">(mag later)</span>`}</span>
-            ${st.stand ? `<span class="stapstand">${ontsnap(st.stand)}</span>` : ""}
-            ${st.uitleg ? `<span class="stapuitleg">${ontsnap(st.uitleg)}</span>` : ""}
-          </li>`).join("")}
-      </ul>
+      <ul class="stappenlijst">${stappenNu.map(stapHtml).join("")}</ul>
     </div>`;
 
   // ---- wie er bij dit besluit was ----
@@ -260,6 +260,33 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     </div>` : ""}
     ${relatieHtml}`;
 
+  // De checklist leest de stand van het proces. Verandert er iets in een
+  // gerelateerde lijst — een event behandeld, een voorwaarde ingevuld — dan
+  // klopt die stand niet meer. Hem opnieuw ophalen is één vraag; het hele
+  // scherm hertekenen zou je uit je werk halen.
+  const stappenHertekenen = async () => {
+    if (isNieuw) return;
+    try {
+      const verse = await stappenVan(tabelnaam, id);
+      data.stappen = verse.stappen;
+      const nu = verse.stand || standNu;
+      const vak = inhoud.querySelector(".stappen");
+      const bij = (verse.stappen || []).filter((st) => st.fase === nu);
+      if (vak) {
+        if (!bij.length) vak.remove();
+        else {
+          vak.querySelector(".stappenmeta").textContent =
+            `${bij.filter((st) => st.gedaan).length} van ${bij.length} gedaan`;
+          vak.querySelector(".stappenlijst").innerHTML = bij.map(stapHtml).join("");
+        }
+      }
+      // Is de fase opgeschoven, dan klopt de balk erboven ook niet meer.
+      if (verse.stand && verse.stand !== standNu) {
+        recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties);
+      }
+    } catch { /* de checklist bijwerken mag nooit het scherm breken */ }
+  };
+
   // ---- gerelateerde lijsten vullen ----
   function toonRelatie(r) {
     const vak = inhoud.querySelector("#relatievak");
@@ -270,7 +297,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       idfilters: { [r.kolom]: String(id) },
       ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label,
                  toonTelling: !tabbladen, magNieuw: r.magNieuw !== false, inPlaatsVan: r.inPlaatsVan,
-                 overnemen: r.overnemen },
+                 overnemen: r.overnemen, naWijziging: stappenHertekenen },
     });
   }
 
@@ -299,7 +326,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         idfilters: { [r.kolom]: String(id) },
         ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label,
                  toonTelling: !tabbladen, magNieuw: r.magNieuw !== false, inPlaatsVan: r.inPlaatsVan,
-                 overnemen: r.overnemen },
+                 overnemen: r.overnemen, naWijziging: stappenHertekenen },
       });
     }
   }

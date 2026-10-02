@@ -11,6 +11,7 @@ import { record } from "./record.js";
 import { voorbereiden, uitvoeren } from "./import.js";
 import { stand, startMoment, versturen, uitkomst as gonogoUitkomst } from "./gonogo.js";
 import { openPosities, haalRapport, neemRapportAan, laatsteRapport } from "./lynx.js";
+import { stappenVoor } from "./proces.js";
 import { sjablonen, importeer as importeerVoorwaarden } from "./voorwaarden.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
@@ -340,6 +341,21 @@ async function behandel(request, env) {
         const uitkomst = await archiveer(env, ik, archiefPad[1], ids, body.reden);
         if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
         return json(uitkomst);
+      }
+
+      // /api/t/<tabel>/<id>/stappen — de stand van het proces, los op te halen
+      // zodat de checklist kan bijwerken zonder het hele scherm te hertekenen.
+      const stappenPad = pad.match(/^\/api\/t\/([a-z_]+)\/(\d+)\/stappen$/);
+      if (stappenPad && request.method === "GET") {
+        const tabelnaam = stappenPad[1];
+        const rij = await env.DB.prepare(`select * from "${tabelnaam}" where id = ?`)
+          .bind(Number(stappenPad[2])).first().catch(() => null);
+        if (!rij) return json({ fout: "Niet gevonden." }, 404);
+        const t = await env.DB.prepare("select proces_veld from db_table where naam = ?").bind(tabelnaam).first();
+        return json({
+          stappen: await stappenVoor(env, tabelnaam, rij),
+          stand: t && t.proces_veld ? rij[t.proces_veld] : null,
+        });
       }
 
       // /api/t/<tabel>/<id>/dupliceer

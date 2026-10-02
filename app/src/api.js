@@ -60,6 +60,8 @@ export const record = (tabel, id) => haal(`/api/t/${tabel}/${id}`);
 export const bewaar = (tabel, id, velden, revisie, reden) =>
   haal(`/api/t/${tabel}/${id}`, { methode: "PATCH", body: { velden, revisie, reden } });
 
+export const stappenVan = (tabel, id) => haal(`/api/t/${tabel}/${id}/stappen`);
+
 export const bewaarSamen = (tabel, ids, velden, revisies) =>
   haal(`/api/t/${tabel}/samen`, { methode: "POST", body: { ids, velden, revisies } });
 
