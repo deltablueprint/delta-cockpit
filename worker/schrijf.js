@@ -408,13 +408,21 @@ export async function maakAan(env, ik, tabelnaam, body) {
     if (nieuw[veld.kolom] !== undefined && nieuw[veld.kolom] !== null && nieuw[veld.kolom] !== "") continue;
     for (const ander of velden.filter((v) => v.type === "verwijzing" && v.kolom !== veld.kolom)) {
       const w = nieuw[ander.kolom];
-      if (w === undefined || w === null || w === "") continue;
+      if (w === undefined || w === null || w === "" || !ander.verwijst_naar) continue;
+
+      // Eerst kijken of die tabel de kolom überhaupt heeft. Vraag je in SQLite
+      // naar een kolom die niet bestaat, dan geeft hij de naam terug als
+      // tekst in plaats van een fout — en dan verwijst het veld naar de
+      // letterlijke tekst 'deelnemer'.
+      const kolommenDaar = await kolominfo(env, ander.verwijst_naar);
+      if (!kolommenDaar[veld.kolom]) continue;
+
       try {
         const r = await env.DB.prepare(
           `select "${veld.kolom}" as w from "${ander.verwijst_naar}" where id = ?`
         ).bind(w).first();
         if (r && r.w !== null && r.w !== undefined) { nieuw[veld.kolom] = r.w; break; }
-      } catch { /* die tabel heeft die kolom niet: dan is dit niet de weg */ }
+      } catch { /* niet te lezen: dan is dit niet de weg */ }
     }
   }
 
