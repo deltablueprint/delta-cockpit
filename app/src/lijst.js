@@ -560,11 +560,6 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       const gekozen = keuze.kolom === cel.dataset.kolom && keuze.ids.has(Number(rij.dataset.id));
       cel.classList.toggle("celgekozen", gekozen);
     });
-    const n = keuze.ids.size;
-    if (n > 1) {
-      const veld = kolommen.find((k) => k.kolom === keuze.kolom);
-      meld(`${n} cellen gekozen in ${veld ? veld.label.toLowerCase() : keuze.kolom}. Dubbelklik er één om ze samen te zetten.`, "keuze");
-    }
   };
 
   const wisKeuze = () => {
@@ -609,6 +604,10 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         return;
       }
 
+      // Een gewone klik op een cel die al gekozen is, laat de keuze staan:
+      // dubbelklikken is twee klikken, en anders was de keuze weg vóór het
+      // bewerken begon. Klik je ergens anders, dan vervalt ze.
+      if (keuze.kolom === kolom && keuze.ids.has(id)) return;
       if (keuze.ids.size) wisKeuze();
     });
   });
