@@ -794,58 +794,112 @@ body.sleept .lijsttabel { pointer-events: none; }
 .paneelleeg { margin: 0; padding: 14px; font-size: 12.5px; color: var(--mut); line-height: 1.5; }
 .paneelnoot { margin: 0; padding: 10px 14px 14px; font-size: 11.5px; color: var(--mut); line-height: 1.5; }
 
-/* De tijdlijn: de looptijd als één as, met de events erop. */
-.tijdlijn { position: relative; height: 56px; margin: 26px 20px 6px; }
-.tijdas { position: absolute; top: 26px; left: 0; right: 0; height: 2px; background: #DAD7D0; }
+/* Het gesprek leest als een document, niet als een spreadsheet: op een breed
+   scherm blijft de kolom leesbaar in plaats van zich over twee meter uit te
+   rekken. */
+.gesprek { max-width: 1180px; }
+
+/* De tijdas en de voorstellen delen één raster, zodat het einde van een balk
+   precies boven de datum op de as valt. */
+.tijdblok { padding: 8px 20px 4px; }
+.tijdrij { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: center; }
+.tijdnaam { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink2); }
+.tijdspoor { position: relative; height: 26px; }
+
+.tijdrij.asrij .tijdspoor { height: 84px; }
+.tijdas { position: absolute; top: 52px; left: 0; right: 0; height: 2px; background: #DAD7D0; }
+
+/* De maandstreepjes geven de as schaal. */
+.tijdijk {
+  position: absolute; top: 56px; transform: translateX(-50%);
+  font-size: 10px; color: var(--mut); white-space: nowrap; text-align: center;
+}
+.tijdijk i { display: block; width: 1px; height: 5px; margin: -5px auto 2px; background: #CFCBC3; }
+
+.vandaag { position: absolute; top: 34px; width: 1px; height: 36px; background: var(--blue); }
+.vandaag::after {
+  content: "vandaag"; position: absolute; top: 36px; left: 50%; transform: translateX(-50%);
+  font-size: 9.5px; color: var(--blue); white-space: nowrap;
+}
+.vandaag.randlinks::after { left: 0; transform: none; }
+.vandaag.randrechts::after { left: auto; right: 0; transform: none; }
+
 .tijdpunt {
-  position: absolute; top: 21px; width: 12px; height: 12px; margin-left: -6px;
+  position: absolute; top: 47px; width: 12px; height: 12px; margin-left: -6px;
   border-radius: 50%; border: 2px solid #fff; cursor: default;
 }
+.tijdpunt:focus { outline: none; }
 .tijdpunt.zwaar { background: var(--red, #A1281F); }
 .tijdpunt.middel { background: #D79A2B; }
 .tijdpunt.licht { background: #B9B5AD; }
-.vandaag { position: absolute; top: 14px; width: 1px; height: 26px; background: var(--blue); }
-.vandaag::after {
-  content: "vandaag"; position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
-  font-size: 9.5px; color: var(--blue); white-space: nowrap;
+
+/* De datum staat boven het bolletje; liggen twee events dicht bij elkaar, dan
+   gaat de tweede een regel hoger. */
+.tijdlabel {
+  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+  font-size: 10.5px; color: var(--ink2); white-space: nowrap;
 }
-.tijdexpiratie { position: absolute; top: 2px; width: 2px; height: 46px; background: var(--ink2); }
-.tijdvlag {
-  position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
-  font-size: 9.5px; color: var(--ink2); white-space: nowrap;
+.tijdpunt.hoog .tijdlabel { bottom: 28px; }
+.tijdpunt.hoog::before {
+  content: ""; position: absolute; left: 50%; bottom: 10px; width: 1px; height: 18px;
+  background: #DAD7D0;
 }
-.tijdlegenda { display: flex; gap: 14px; padding: 0 20px 12px; font-size: 11px; color: var(--mut); }
+
+/* De hoverkaart met de weging en de behandeling. */
+.tijdkaart {
+  display: none; position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  z-index: 40; width: 250px; padding: 9px 11px; background: #fff; color: var(--ink);
+  border: 1px solid var(--b1); border-radius: 3px; box-shadow: 0 4px 14px rgba(0,0,0,.16);
+  font-size: 11.5px; line-height: 1.5; text-align: left; white-space: normal;
+}
+.tijdkaart.randlinks { left: -6px; transform: none; }
+.tijdkaart.randrechts { left: auto; right: -6px; transform: none; }
+.tijdpunt:hover .tijdkaart, .tijdpunt:focus .tijdkaart { display: block; }
+.tijdkaart b { display: block; font-size: 12.5px; margin-bottom: 4px; }
+.tijdkaartregel { display: flex; align-items: center; gap: 6px; color: var(--ink2); }
+.tijdkaartnoot { display: block; margin-top: 5px; color: var(--mut); }
+
+/* Wat ieder zou schrijven: een balk tot de expiratie die hij voorstelt. */
+.tijdkopje {
+  margin: 10px 0 2px; padding-top: 10px; border-top: 1px solid var(--b1);
+  font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--mut);
+}
+.tijdrij:not(.asrij) .tijdspoor { height: 24px; }
+.schrijfbalk {
+  position: absolute; top: 3px; height: 18px; box-sizing: border-box;
+  display: flex; align-items: center; padding: 0 7px; border-radius: 3px; overflow: hidden;
+  background: color-mix(in srgb, var(--k) 20%, #fff);
+  border: 1px solid color-mix(in srgb, var(--k) 45%, #fff);
+  border-right: 2px solid var(--k);
+}
+.schrijfbalk b { font-size: 11px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.balkeind {
+  position: absolute; top: 4px; margin-left: 6px;
+  font-size: 10.5px; color: var(--mut); white-space: nowrap;
+}
+.balkeind.randrechts {
+  margin-left: 0; transform: translateX(-100%);
+  padding: 0 4px; background: rgba(255,255,255,.82); border-radius: 2px;
+}
+.geenbalk { position: absolute; top: 4px; left: 0; font-size: 11.5px; color: var(--mut); }
+
+.tijdlegenda { display: flex; gap: 14px; padding: 6px 20px 12px; font-size: 11px; color: var(--mut); }
 .tijdlegenda .bol { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
 .tijdlegenda .bol.zwaar { background: var(--red, #A1281F); }
 .tijdlegenda .bol.middel { background: #D79A2B; }
 .tijdlegenda .bol.licht { background: #B9B5AD; }
-.tijdlegenda .streep { display: inline-block; width: 2px; height: 10px; background: var(--ink2); margin-right: 4px; vertical-align: -1px; }
-
-/* Wie wat zou schrijven: de strikes op één as. */
-.inzendbalken { padding: 12px 16px 4px; }
-.inzendbalk {
-  display: grid; grid-template-columns: 190px minmax(0, 1fr) 210px;
-  gap: 12px; align-items: center; padding: 7px 0;
-}
-.inzendwie { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
-.inzendas { position: relative; height: 26px; border-bottom: 1px solid var(--b1); }
-.inzendmerk { position: absolute; bottom: -1px; width: 2px; height: 16px; background: var(--blue); }
-.inzendstrike {
-  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
-  font-size: 11.5px; font-weight: 600; color: var(--ink); white-space: nowrap;
-}
-.inzendgeen { font-size: 11.5px; color: var(--mut); }
-.inzendcijfers { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--ink2); }
-.inzetbalk { display: inline-flex; align-items: center; gap: 6px; min-width: 96px; }
-.inzetbalk i { display: block; height: 6px; background: var(--blue); border-radius: 3px; min-width: 2px; }
-.inzetbalk b { font-weight: 600; }
 
 .motiveringen {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1px; background: var(--b1); border-top: 1px solid var(--b1);
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1px; background: var(--b1);
 }
 .motivering { background: #fff; padding: 12px 14px; }
-.motkop { font-size: 12.5px; font-weight: 700; margin-bottom: 6px; }
+.motkop { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; margin-bottom: 7px; }
+.motcijfers {
+  display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 9px; padding-bottom: 9px;
+  border-bottom: 1px solid var(--b2); font-size: 11.5px; color: var(--mut);
+}
+.motcijfers b { display: block; font-size: 13.5px; font-weight: 700; color: var(--ink); }
 .motivering p { margin: 0 0 7px; font-size: 12.5px; line-height: 1.5; color: var(--ink2); }
 .motintuitie { color: var(--mut); }
 
@@ -853,5 +907,12 @@ body.sleept .lijsttabel { pointer-events: none; }
 .strookregel { display: flex; flex-wrap: wrap; gap: 28px; padding: 12px 14px; }
 .strookdeel { display: flex; flex-direction: column; font-size: 12px; color: var(--ink2); }
 .strookdeel b { font-size: 18px; font-weight: 700; color: var(--ink); }
+.strook .feittabel { border-top: 1px solid var(--b1); }
+
+/* Een formulier in een paneel zit vast tegen de kopregel; het krijgt dezelfde
+   lucht als een formulier op een recordscherm. */
+.paneel .formsectie { padding-top: 16px; }
+.paneel .knoprij { padding-left: 20px; padding-right: 20px; }
+
 .uitkomstvast { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; font-size: 12.5px; }
 .uitkomstvast p { width: 100%; margin: 4px 0 0; color: var(--ink2); line-height: 1.5; }
