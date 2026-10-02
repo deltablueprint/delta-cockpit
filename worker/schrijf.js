@@ -462,10 +462,32 @@ export async function maakAan(env, ik, tabelnaam, body) {
   const kolommen = Object.keys(nieuw);
   if (!kolommen.length) return { fout: "Niets om op te slaan.", status: 400 };
 
-  const rij = await env.DB.prepare(
-    `insert into "${tabelnaam}" (${kolommen.map((k) => `"${k}"`).join(", ")})
-     values (${kolommen.map(() => "?").join(", ")}) returning id`
-  ).bind(...kolommen.map((k) => nieuw[k])).first();
+  let rij;
+  try {
+    rij = await env.DB.prepare(
+      `insert into "${tabelnaam}" (${kolommen.map((k) => `"${k}"`).join(", ")})
+       values (${kolommen.map(() => "?").join(", ")}) returning id`
+    ).bind(...kolommen.map((k) => nieuw[k])).first();
+  } catch (fout) {
+    // Een verwijzingsfout van de database zegt alleen dát er iets niet klopt.
+    // Welke verwijzing het is, kunnen we zelf opzoeken — en dan staat er een
+    // melding waar iemand iets mee kan.
+    if (/FOREIGN KEY/i.test(fout.message)) {
+      for (const veld of velden.filter((v) => v.type === "verwijzing" && v.verwijst_naar)) {
+        const w = nieuw[veld.kolom];
+        if (w === undefined || w === null || w === "") continue;
+        try {
+          const bestaat = await env.DB.prepare(
+            `select 1 as n from "${veld.verwijst_naar}" where id = ?`
+          ).bind(w).first();
+          if (!bestaat) {
+            return { fout: `${veld.label} verwijst naar iets dat niet bestaat (${w}).`, veld: veld.kolom, status: 422 };
+          }
+        } catch { /* die tabel bestaat niet; dan is dit niet de oorzaak */ }
+      }
+    }
+    throw fout;
+  }
 
   await auditregel(env, ik, tabelnaam, rij.id, "gebeurtenis", { gebeurtenis: "aangemaakt" }).run();
   if (tabelnaam === "positie") await zetExitplanKlaar(env, ik, rij.id, nieuw);

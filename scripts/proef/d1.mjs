@@ -4,6 +4,9 @@ import { DatabaseSync } from "node:sqlite";
 
 export function maakDB(pad) {
   const db = new DatabaseSync(pad);
+  // D1 dwingt verwijzingen af; dan moet de proefdatabase dat ook doen, anders
+  // test je iets anders dan wat er in productie gebeurt.
+  db.exec("pragma foreign_keys = on");
   const maakStatement = (sql) => ({
     bind(...b) {
       return {
