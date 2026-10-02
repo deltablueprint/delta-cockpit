@@ -902,35 +902,33 @@ body.sleept .lijsttabel { pointer-events: none; }
 .geenbalk { position: absolute; top: 4px; left: 0; font-size: 11.5px; color: var(--mut); }
 
 
-/* De portefeuille als één balk van honderd procent. */
-/* Het plafondlabel staat bóven de balk en heeft daar zijn eigen regel nodig;
-   anders stak het door de kopregel van het paneel heen. */
-.kapitaalvak { padding: 34px 20px 8px; }
-.kapitaalbalk {
-  position: relative; display: flex; height: 30px; border-radius: 3px; overflow: visible;
-  border: 1px solid var(--b1); background: #fff;
+/* De portefeuille als twee balken met wit ertussen. Links de ruimte die het
+   plafond toelaat — lichtgroen wat vrij is, donkergroen wat er al uitstaat en
+   een tint ertussen voor wat dit besluit erbij zou leggen. Rechts de reserve
+   die er altijd moet blijven. De scheiding tussen beide ís het plafond. */
+.kapitaalvak { padding: 18px 20px 8px; }
+.kapitaalbalk { display: flex; gap: 6px; height: 30px; }
+.kbalk {
+  position: relative; display: flex; overflow: hidden;
+  border: 1px solid var(--b1); border-radius: 3px;
 }
-.kdeel:first-child { border-radius: 2px 0 0 2px; }
-.kdeel:last-child { border-radius: 0 2px 2px 0; }
-.kdeel.marge { background: #DEDAD2; }
-/* Wat dit besluit erbij zou leggen, terwijl je het intikt. */
+.kbalk.ruimte { background: #DFF0E2; }
+.kbalk.reserve { background: #DEDAD2; }
+.kdeel.ingezet { background: #3F7A58; }
 .kdeel.voorstel { background: #8FBF9D; transition: width .12s linear; }
-.kdeel.voorstel.over { background: #D08A80; }
-.kdeel.vrij { flex: 1 1 auto; background: #DFF0E2; }
-.kplafond { position: absolute; top: -7px; bottom: -7px; }
-.kplafond i { display: block; width: 2px; height: 100%; background: var(--ink2); }
-.kplafond span {
-  position: absolute; bottom: 100%; left: 1px; transform: translateX(-50%);
-  margin-bottom: 3px; font-size: 10.5px; color: var(--ink2); white-space: nowrap;
-}
-.kapitaallegenda { display: flex; flex-wrap: wrap; gap: 28px; padding: 12px 0 0; }
+.kdeel.voorstel.over { background: #C8766B; }
+
+.kapitaalonder { display: flex; gap: 6px; padding-top: 5px; }
+.konderschrift { font-size: 10.5px; color: var(--mut); white-space: nowrap; overflow: hidden; }
+
+.kapitaallegenda { display: flex; flex-wrap: wrap; gap: 28px; padding: 14px 0 0; }
 .klegend { display: flex; align-items: baseline; gap: 7px; font-size: 12.5px; color: var(--ink2); }
 .klegend b { font-size: 16px; font-weight: 700; color: var(--ink); }
 .klegend .vlak { width: 11px; height: 11px; border-radius: 2px; border: 1px solid var(--b1); }
-.klegend .vlak.marge { background: #DEDAD2; }
+.klegend .vlak.ingezet { background: #3F7A58; }
 .klegend .vlak.vrij { background: #DFF0E2; }
 .klegend .vlak.voorstel { background: #8FBF9D; }
-.klegend .vlak.voorstel.over { background: #D08A80; }
+.klegend .vlak.voorstel.over { background: #C8766B; }
 .klegend[hidden] { display: none; }
 
 /* Het uitkomstblok: links de velden, rechts wie erbij was. De kiezer is geen

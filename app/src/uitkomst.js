@@ -231,6 +231,16 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
   const kapitaal = Number(p.kapitaal || 0);
   const margePct = kapitaal ? Math.min(100, (marge / kapitaal) * 100) : 0;
 
+  // Twee balken naast elkaar, met wit ertussen. Links de ruimte die het plafond
+  // toelaat — lichtgroen wat vrij is, donkergroen wat er al uitstaat. Rechts de
+  // reserve die er altijd moet blijven. De scheiding tussen de twee ís het
+  // plafond; daar hoeft geen streepje bij.
+  const plafondPct = p.max_inzet_pct ? Math.min(100, Number(p.max_inzet_pct)) : 100;
+  const reservePct = Math.max(100 - plafondPct, 0);
+  // Binnen de linkerbalk rekenen we in procenten van die balk, niet van het
+  // kapitaal: anders klopt de vulling niet.
+  const binnen = (pct) => (plafondPct ? Math.min(100, (pct / plafondPct) * 100) : 0);
+
   const portefeuilleHtml = !kapitaal ? "" : `
     <div class="paneel">
       <div class="paneelkop">Portefeuille
@@ -241,22 +251,29 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
         } · multiplier ${euro(p.multiplier)} per punt</span></div>
       <div class="kapitaalvak">
         <div class="kapitaalbalk">
-          <span class="kdeel marge" style="width:${margePct}%"></span>
-          <span class="kdeel voorstel" id="kvoorstel" style="width:0"></span>
-          <span class="kdeel vrij"></span>
-          ${p.max_inzet_pct ? `<span class="kplafond" style="left:${Math.min(100, Number(p.max_inzet_pct))}%">
-            <i></i><span>plafond ${getal(p.max_inzet_pct, 0)} %</span></span>` : ""}
+          <div class="kbalk ruimte" style="flex-basis:${plafondPct}%">
+            <span class="kdeel ingezet" style="width:${binnen(margePct)}%"></span>
+            <span class="kdeel voorstel" id="kvoorstel" style="width:0"></span>
+          </div>
+          ${reservePct ? `<div class="kbalk reserve" style="flex-basis:${reservePct}%"></div>` : ""}
+        </div>
+        <div class="kapitaalonder">
+          <span class="konderschrift" style="flex-basis:${plafondPct}%">ruimte &middot; ${
+            getal(plafondPct, 0)} % van het kapitaal</span>
+          ${reservePct ? `<span class="konderschrift" style="flex-basis:${reservePct}%">reserve &middot; ${
+            getal(reservePct, 0)} %</span>` : ""}
         </div>
         <div class="kapitaallegenda">
-          <span class="klegend"><i class="vlak marge"></i>
-            <b>${euro(marge)}</b> marge <span class="faint">${getal(margePct, 1)} % · ${
-              p.open_tranches.length} open ${p.open_tranches.length === 1 ? "tranche" : "tranches"}</span></span>
+          <span class="klegend"><i class="vlak ingezet"></i>
+            <b>${euro(marge)}</b> staat uit
+            <span class="faint">${getal(margePct, 1)} % &middot; ${p.open_tranches.length} open ${
+              p.open_tranches.length === 1 ? "tranche" : "tranches"}</span></span>
           <span class="klegend" id="kvoorstelregel" hidden><i class="vlak voorstel"></i>
             <b id="kvoorstelbedrag"></b> dit besluit
             <span class="faint" id="kvoorstelnoot"></span></span>
           <span class="klegend"><i class="vlak vrij"></i>
-            <b id="kvrijbedrag">${euro(Math.max(kapitaal - marge, 0))}</b> beschikbaar
-            <span class="faint" id="kvrijnoot">${getal(Math.max(100 - margePct, 0), 1)} % van het kapitaal</span></span>
+            <b id="kvrijbedrag">${euro(Math.max((kapitaal * plafondPct) / 100 - marge, 0))}</b> vrij binnen het plafond
+            <span class="faint" id="kvrijnoot">${getal(Math.max(plafondPct - margePct, 0), 1)} % van het kapitaal</span></span>
         </div>
         ${p.open_tranches.length ? `<p class="paneelnoot">Open: ${p.open_tranches.map((t) =>
           `${ontsnap(t.cyclusnaam)} — ${ontsnap(contractnaam(t.expiratiedatum, t.strike))} × ${t.aantal}`
@@ -322,9 +339,6 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
           })}
         </div>
       </div>
-      <div class="knoprij">
-          <button class="knop" id="vastleggen">Uitkomst vastleggen</button>
-      </div>
     </div>`;
 
   // ------------------------------------------------------ gerelateerde lijsten
@@ -355,6 +369,9 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
     <div class="recordbalk">
       <span class="recordnaam">${ontsnap(cyclus.label)} — gesprek van ${toonDatum(moment.datum)}</span>
       <span class="recordmelding" id="umelding"></span>
+      ${vastgelegd ? "" : `<span class="recordacties">
+        <button class="knop" id="vastleggen">Uitkomst vastleggen</button>
+      </span>`}
     </div>
     ${tijdlijnHtml}
     ${portefeuilleHtml}
@@ -410,15 +427,15 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
     const vlak = regel ? regel.querySelector(".vlak") : null;
     const vrijB = inhoud.querySelector("#kvrijbedrag");
     const vrijN = inhoud.querySelector("#kvrijnoot");
-    const plafond = p.max_inzet_pct ? Number(p.max_inzet_pct) : null;
+    const plafond = plafondPct;
 
     const teken = () => {
       const pct = Number(inzetveld.value);
       const erbij = Number.isFinite(pct) && pct > 0 ? pct : 0;
       const samen = margePct + erbij;
       // De balk kan niet meer dan vol; het getal eronder zegt wél wat je typte.
-      const breedte = Math.min(erbij, Math.max(100 - margePct, 0));
-      const over = plafond !== null && samen > plafond;
+      const breedte = binnen(Math.min(erbij, Math.max(plafond - margePct, 0)));
+      const over = samen > plafond;
       if (balk) {
         balk.style.width = `${breedte}%`;
         balk.classList.toggle("over", over);
@@ -427,14 +444,14 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
       if (vlak) vlak.classList.toggle("over", over);
       if (erbij && bedrag) bedrag.textContent = euro((kapitaal * erbij) / 100);
       if (erbij && noot) {
-        noot.textContent = plafond === null
-          ? `${getal(erbij, 1)} % — samen ${getal(samen, 1)} %`
-          : over
-            ? `${getal(erbij, 1)} % — samen ${getal(samen, 1)} %, dat is ${getal(samen - plafond, 1)} % boven het plafond`
-            : `${getal(erbij, 1)} % — samen ${getal(samen, 1)} %, ${getal(plafond - samen, 1)} % onder het plafond`;
+        noot.textContent = over
+          ? `${getal(erbij, 1)} % — samen ${getal(samen, 1)} %, dat is ${getal(samen - plafond, 1)} % boven het plafond`
+          : `${getal(erbij, 1)} % — samen ${getal(samen, 1)} %, ${getal(plafond - samen, 1)} % onder het plafond`;
       }
-      if (vrijB) vrijB.textContent = euro(Math.max(kapitaal - marge - (kapitaal * erbij) / 100, 0));
-      if (vrijN) vrijN.textContent = `${getal(Math.max(100 - samen, 0), 1)} % van het kapitaal`;
+      if (vrijB) {
+        vrijB.textContent = euro(Math.max((kapitaal * plafond) / 100 - marge - (kapitaal * erbij) / 100, 0));
+      }
+      if (vrijN) vrijN.textContent = `${getal(Math.max(plafond - samen, 0), 1)} % van het kapitaal`;
     };
     inzetveld.addEventListener("input", teken);
     if (keuze) keuze.addEventListener("change", () => { if (keuze.value !== "go") { inzetveld.value = ""; } teken(); });
