@@ -780,3 +780,78 @@ body.sleept .lijsttabel { pointer-events: none; }
 .persoonveld:focus-within { border-color: var(--blue); outline: 2px solid var(--bluebg); }
 .persoonveld .persoon { gap: 7px; }
 .persoonavatar { display: inline-flex; align-items: center; }
+
+/* ============================================================================
+   Het gesprek: tijdlijn, inzendingen naast elkaar, portefeuille
+   ========================================================================== */
+.paneel { background: #fff; border: 1px solid var(--b1); border-radius: 3px; margin-bottom: 10px; }
+.paneelkop {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px; border-bottom: 1px solid var(--b1);
+  font-size: 13.5px; font-weight: 700; color: var(--ink);
+}
+.paneelmeta { font-size: 11.5px; font-weight: 400; color: var(--mut); }
+.paneelleeg { margin: 0; padding: 14px; font-size: 12.5px; color: var(--mut); line-height: 1.5; }
+.paneelnoot { margin: 0; padding: 10px 14px 14px; font-size: 11.5px; color: var(--mut); line-height: 1.5; }
+
+/* De tijdlijn: de looptijd als één as, met de events erop. */
+.tijdlijn { position: relative; height: 56px; margin: 26px 20px 6px; }
+.tijdas { position: absolute; top: 26px; left: 0; right: 0; height: 2px; background: #DAD7D0; }
+.tijdpunt {
+  position: absolute; top: 21px; width: 12px; height: 12px; margin-left: -6px;
+  border-radius: 50%; border: 2px solid #fff; cursor: default;
+}
+.tijdpunt.zwaar { background: var(--red, #A1281F); }
+.tijdpunt.middel { background: #D79A2B; }
+.tijdpunt.licht { background: #B9B5AD; }
+.vandaag { position: absolute; top: 14px; width: 1px; height: 26px; background: var(--blue); }
+.vandaag::after {
+  content: "vandaag"; position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+  font-size: 9.5px; color: var(--blue); white-space: nowrap;
+}
+.tijdexpiratie { position: absolute; top: 2px; width: 2px; height: 46px; background: var(--ink2); }
+.tijdvlag {
+  position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+  font-size: 9.5px; color: var(--ink2); white-space: nowrap;
+}
+.tijdlegenda { display: flex; gap: 14px; padding: 0 20px 12px; font-size: 11px; color: var(--mut); }
+.tijdlegenda .bol { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
+.tijdlegenda .bol.zwaar { background: var(--red, #A1281F); }
+.tijdlegenda .bol.middel { background: #D79A2B; }
+.tijdlegenda .bol.licht { background: #B9B5AD; }
+.tijdlegenda .streep { display: inline-block; width: 2px; height: 10px; background: var(--ink2); margin-right: 4px; vertical-align: -1px; }
+
+/* Wie wat zou schrijven: de strikes op één as. */
+.inzendbalken { padding: 12px 16px 4px; }
+.inzendbalk {
+  display: grid; grid-template-columns: 190px minmax(0, 1fr) 210px;
+  gap: 12px; align-items: center; padding: 7px 0;
+}
+.inzendwie { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.inzendas { position: relative; height: 26px; border-bottom: 1px solid var(--b1); }
+.inzendmerk { position: absolute; bottom: -1px; width: 2px; height: 16px; background: var(--blue); }
+.inzendstrike {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  font-size: 11.5px; font-weight: 600; color: var(--ink); white-space: nowrap;
+}
+.inzendgeen { font-size: 11.5px; color: var(--mut); }
+.inzendcijfers { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--ink2); }
+.inzetbalk { display: inline-flex; align-items: center; gap: 6px; min-width: 96px; }
+.inzetbalk i { display: block; height: 6px; background: var(--blue); border-radius: 3px; min-width: 2px; }
+.inzetbalk b { font-weight: 600; }
+
+.motiveringen {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1px; background: var(--b1); border-top: 1px solid var(--b1);
+}
+.motivering { background: #fff; padding: 12px 14px; }
+.motkop { font-size: 12.5px; font-weight: 700; margin-bottom: 6px; }
+.motivering p { margin: 0 0 7px; font-size: 12.5px; line-height: 1.5; color: var(--ink2); }
+.motintuitie { color: var(--mut); }
+
+/* De portefeuillestrook. */
+.strookregel { display: flex; flex-wrap: wrap; gap: 28px; padding: 12px 14px; }
+.strookdeel { display: flex; flex-direction: column; font-size: 12px; color: var(--ink2); }
+.strookdeel b { font-size: 18px; font-weight: 700; color: var(--ink); }
+.uitkomstvast { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; font-size: 12.5px; }
+.uitkomstvast p { width: 100%; margin: 4px 0 0; color: var(--ink2); line-height: 1.5; }

@@ -103,3 +103,8 @@ export const lynxPosities = () => haal("/api/lynx/posities");
 export const voorwaardeSjablonen = (cyclus) => haal(`/api/voorwaarde/sjablonen/${cyclus}`);
 export const voorwaardenOvernemen = (cyclus, sleutels) =>
   haal(`/api/voorwaarde/overnemen/${cyclus}`, { methode: "POST", body: { sleutels } });
+
+// Het gesprek: het materiaal en de uitkomst.
+export const besluitOverzicht = (moment) => haal(`/api/besluit/${moment}`);
+export const besluitUitkomst = (moment, body) =>
+  haal(`/api/besluit/${moment}/uitkomst`, { methode: "POST", body });

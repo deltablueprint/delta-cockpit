@@ -5,6 +5,7 @@ import { lijstscherm, toestandUitUrl, huidigeLijst } from "./lijst.js";
 import { recordscherm } from "./record.js";
 import { importscherm } from "./importeren.js";
 import { gonogoscherm } from "./gonogo.js";
+import { uitkomstscherm } from "./uitkomst.js";
 import { stopLive } from "./live.js";
 
 let persoon = null;
@@ -35,6 +36,15 @@ function teken() {
     huidigeLijst.tabelnaam = null;
     huidigeLijst.url = null;
     importscherm(inhoud, kruimel, meta);
+    return;
+  }
+
+  // Het gesprek: één scherm met alles wat op dat moment bekend is.
+  const uitkomstRoute = pad.match(/^\/uitkomst\/(\d+)$/);
+  if (uitkomstRoute) {
+    huidigeLijst.tabelnaam = null;
+    huidigeLijst.url = null;
+    uitkomstscherm(inhoud, kruimel, Number(uitkomstRoute[1]), meta);
     return;
   }
 

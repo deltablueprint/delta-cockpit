@@ -64,6 +64,8 @@ export async function actieVoor(env, tabelnaam, rij, tabel, ik) {
   // Horen er meerdere stappen bij dezelfde status, dan bepaalt het quorum waar
   // je staat: zolang het niet gehaald is stuur je blind in, daarna is het
   // gesprek aan de beurt. Er staat nooit meer dan één knop.
+  // Horen er meerdere knoppen bij één stand, dan telt de eerste die nog niet
+  // gedaan is; voor nu is dat eenvoudig de eerste.
   let stap = stappen[0];
   let label = stap.actieknop;
 

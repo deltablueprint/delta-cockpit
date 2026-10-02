@@ -13,6 +13,7 @@ import { stand, startMoment, versturen, uitkomst as gonogoUitkomst } from "./gon
 import { openPosities, haalRapport, neemRapportAan, laatsteRapport } from "./lynx.js";
 import { stappenVoor } from "./proces.js";
 import { sjablonen, importeer as importeerVoorwaarden } from "./voorwaarden.js";
+import { overzicht } from "./besluit.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
@@ -281,6 +282,27 @@ async function behandel(request, env) {
         if (voorwaardePad[1] === "overnemen" && request.method === "POST") {
           const body = await request.json().catch(() => ({}));
           const uit = await importeerVoorwaarden(env, ik, cyclusId, body.sleutels);
+          if (uit.fout) return json(uit, uit.status || 400);
+          return json(uit);
+        }
+        return json({ fout: "Deze methode bestaat niet." }, 405);
+      }
+
+      // Het materiaal voor het gesprek, en de uitkomst die eruit volgt.
+      const besluitPad = pad.match(/^\/api\/besluit\/(\d+)(?:\/(uitkomst))?$/);
+      if (besluitPad) {
+        const momentId = Number(besluitPad[1]);
+        if (!besluitPad[2] && request.method === "GET") {
+          const uit = await overzicht(env, ik, momentId);
+          if (uit.fout) return json({ fout: uit.fout }, uit.status || 400);
+          return json(uit);
+        }
+        if (besluitPad[2] === "uitkomst" && request.method === "POST") {
+          const body = await request.json().catch(() => ({}));
+          const m = await env.DB.prepare("select cyclus from beoordelingsmoment where id = ?")
+            .bind(momentId).first();
+          if (!m) return json({ fout: "Geen besluit met dat nummer." }, 404);
+          const uit = await gonogoUitkomst(env, ik, m.cyclus, body);
           if (uit.fout) return json(uit, uit.status || 400);
           return json(uit);
         }
