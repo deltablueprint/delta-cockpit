@@ -929,11 +929,11 @@ body.sleept .lijsttabel { pointer-events: none; }
    veld tussen de velden maar een eigen kolom, over de volle hoogte van het
    formulier en tegen de rechterkant aan. */
 .uitkomstvorm {
-  display: grid; grid-template-columns: minmax(0, 1fr) 440px;
-  gap: 48px; align-items: stretch; padding-right: 24px;
+  display: grid; grid-template-columns: auto 440px;
+  gap: 40px; align-items: stretch; justify-content: start; padding-right: 20px;
 }
 .uitkomstvelden { min-width: 0; }
-.formkolommen.een { grid-template-columns: minmax(0, 1fr); max-width: 640px; }
+.formkolommen.een { grid-template-columns: minmax(0, 1fr); width: 660px; max-width: 100%; }
 .uitkomstwie { display: grid; grid-template-rows: auto minmax(0, 1fr); padding-top: 2px; }
 .wiekop {
   font-size: 12.5px; font-weight: 700; color: var(--ink); margin-bottom: 8px;

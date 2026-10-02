@@ -298,8 +298,8 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
             </div>
           </div>
           <div class="formbreed">
-            <label class="veldlabel" for="u_veranderde"><span class="ster">*</span> Wat het gesprek veranderde</label>
-            <div class="veldwaarde"><textarea id="u_veranderde" placeholder="Wat is er gezegd dat iemands oordeel heeft verschoven? Niets is ook een antwoord."></textarea></div>
+            <label class="veldlabel" for="u_veranderde"><span class="ster">*</span> Commentaar</label>
+            <div class="veldwaarde"><textarea id="u_veranderde"></textarea></div>
           </div>
         </div>
         <div class="uitkomstwie">
@@ -417,7 +417,7 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
         : body.uitkomst === "go" && !body.inzet_pct ? "Bij een go hoort de inzet in % van het kapitaal."
         : body.uitkomst === "no-go" && !body.volgend_moment ? "Elke no-go eindigt met een nieuw analysemoment."
         : !erbij.length ? "Zet rechts wie er bij het gesprek waren."
-        : !body.wat_veranderde ? "Schrijf op wat het gesprek veranderde; ook 'niets' is een antwoord."
+        : !body.wat_veranderde ? "Vul het commentaar in; ook 'niets veranderd' is een antwoord."
         : null;
       if (mist) {
         melding.textContent = mist;
