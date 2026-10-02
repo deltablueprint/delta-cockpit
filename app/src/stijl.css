@@ -7,6 +7,10 @@
   --head: #F2F0EC;   --soft: #FAF9F6;
   --ink: #0F0E0D;    --ink2: #3A3835;   --ink3: #4A4845;
   --mut: #6E6C68;    --dim: #8A8884;    --faint: #A5A29C;
+  /* Eén breedte voor alles wat je invult op een formulier. Verschillende
+     breedtes per veldtype lezen als rommel: de rechterranden lopen dan niet
+     meer in een lijn. Lange tekst mag breder, want daar schrijf je in. */
+  --veldbreedte: 280px;  --veldbreedte-lang: 560px;
   --blue: #136289;   --bluebg: #E6EEF3;
   --grn: #1F5E45;    --grnbg: #DCEBE2;
   --amb: #8A5A12;    --ambbg: #F7E7C6;
@@ -329,16 +333,17 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
 }
 .veldwaarde textarea { height: auto; min-height: 60px; padding: 6px 9px; line-height: 1.45; resize: vertical; }
 
-/* Een invoerveld is zo breed als wat erin komt, niet zo breed als het scherm.
-   Een datum van tien tekens in een vak van duizend pixels leest als een fout
-   in de opmaak — en het oog moet onnodig ver reizen tussen label en waarde. */
-.veldwaarde input[type="text"] { max-width: 360px; }
-.veldwaarde input[type="date"] { max-width: 180px; }
-.veldwaarde input[type="time"] { max-width: 140px; }
-.veldwaarde input[type="number"] { max-width: 160px; }
-.veldwaarde input[readonly] { max-width: 360px; }
-.veldwaarde select { max-width: 320px; }
-.veldwaarde textarea { max-width: 560px; }
+/* Eén breedte voor alles wat je invult: dan lopen de linker- én de
+   rechterranden van een kolom in een rechte lijn. Een invoerveld hoeft ook
+   niet zo breed als het scherm — een datum van tien tekens in een vak van
+   duizend pixels leest als een fout in de opmaak. */
+.veldwaarde input, .veldwaarde select { max-width: var(--veldbreedte); }
+.veldwaarde textarea { max-width: var(--veldbreedte-lang); }
+.veldwaarde .persoonveld { max-width: var(--veldbreedte); width: 100%; }
+/* Een getal met een teken erachter: het vak houdt dezelfde breedte, het teken
+   staat erbuiten. */
+.metteken { width: 100%; max-width: var(--veldbreedte); }
+.metteken input { max-width: none; flex: 1 1 auto; }
 .veldwaarde input:focus, .veldwaarde select:focus, .veldwaarde textarea:focus {
   outline: 2px solid var(--bluebg); border-color: var(--blue);
 }
