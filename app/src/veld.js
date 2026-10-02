@@ -1,7 +1,7 @@
 // De veldrenderer: één plek waar een veldtype bepaalt hoe het eruitziet en
 // wat je ermee kunt. Elk nieuw type is hier één regel, niet een scherm.
 
-import { avatarMetNaam } from "./avatar.js";
+import { avatar, avatarMetNaam } from "./avatar.js";
 import { inBrussel } from "./tijdzone.js";
 
 const MAANDEN = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
@@ -47,7 +47,10 @@ export function lees(veld, waarde, meta, verwijzingen = {}, rij = {}) {
     }
     case "verwijzing": {
       if (veld.verwijst_naar === "gebruiker" && meta.gebruikers && meta.gebruikers[waarde]) {
-        return avatarMetNaam(meta.gebruikers[waarde]);
+        // Een persoon krijgt dezelfde omlijsting als elk ander veld: anders
+        // zweeft er een naam tussen de invoervelden en lijkt het of er iets
+        // mist.
+        return `<span class="persoonveld vast">${avatarMetNaam(meta.gebruikers[waarde])}</span>`;
       }
       return ontsnap(verwijzingen[veld.kolom] ?? waarde);
     }
@@ -97,10 +100,13 @@ export function invoer(veld, waarde, meta, extra = "", naam = null, keuzelijst =
     }
     if (veld.verwijst_naar === "gebruiker" && meta.gebruikers) {
       const mensen = Object.values(meta.gebruikers);
-      return `<select id="${id}" data-kolom="${veld.kolom}" ${extra}>
-        ${veld.verplicht ? "" : `<option value=""${w === "" ? " selected" : ""}>&mdash;</option>`}
-        ${mensen.map((g) => `<option value="${ontsnap(g.id)}"${g.id === w ? " selected" : ""}>${ontsnap(g.naam)}</option>`).join("")}
-      </select>`;
+      const gekozen = meta.gebruikers[w];
+      return `<span class="persoonveld" data-persoonveld="${veld.kolom}">
+        <span class="persoonavatar">${gekozen ? avatar(gekozen, 20) : ""}</span>
+        <select id="${id}" data-kolom="${veld.kolom}" ${extra}>
+          ${veld.verplicht ? "" : `<option value=""${w === "" ? " selected" : ""}>&mdash;</option>`}
+          ${mensen.map((g) => `<option value="${ontsnap(g.id)}"${g.id === w ? " selected" : ""}>${ontsnap(g.naam)}</option>`).join("")}
+        </select></span>`;
     }
     return `<input id="${id}" type="text" readonly value="${ontsnap(naam ?? w)}"
                    title="Deze verwijzing ligt vast zodra het record bestaat." ${extra}>`;

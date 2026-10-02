@@ -18,7 +18,7 @@ const LOGO = `<svg viewBox="0 0 296.1 251.9" width="15" height="13" aria-hidden=
   <polygon points="296.1 251.9 139.2 251.9 256.9 185.1 296.1 251.9" fill="currentColor"/>
   <polygon points="76.9 251.9 0 251.9 76.7 121.6 76.9 251.9" fill="currentColor"/></svg>`;
 import { volgLive, stopLive, HARTSLAG } from "./live.js";
-import { avatarMetNaam } from "./avatar.js";
+import { avatar, avatarMetNaam } from "./avatar.js";
 import { kiezerHtml, kiezerAansluiten } from "./kiezer.js";
 import { voorwaardeSjablonen, voorwaardenOvernemen, stappenVan } from "./api.js";
 
@@ -411,6 +411,16 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   };
   inhoud.addEventListener("click", overnemenKlik);
   overnemenLuisteraar = { el: inhoud, fn: overnemenKlik };
+
+  // Kies je een andere persoon, dan hoort het gezicht ernaast mee te
+  // veranderen — anders staat er een naam bij het verkeerde rondje.
+  inhoud.querySelectorAll("[data-persoonveld] select").forEach((el) => {
+    el.addEventListener("change", () => {
+      const vak = el.closest("[data-persoonveld]").querySelector(".persoonavatar");
+      const persoon = meta.gebruikers ? meta.gebruikers[el.value] : null;
+      if (vak) vak.innerHTML = persoon ? avatar(persoon, 20) : "";
+    });
+  });
 
   // ---- velden die de keuze volgen ----
   // Bij een go vraag je om de positie, bij een no-go om de reden. Allebei
