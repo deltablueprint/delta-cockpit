@@ -852,6 +852,12 @@ body.sleept .lijsttabel { pointer-events: none; }
   position: absolute; top: 31px; width: 12px; height: 12px; margin-left: -6px;
   border-radius: 50%; border: 2px solid #fff; cursor: default;
 }
+/* Een dag met meer dan één event draagt een telling, en die moet je kunnen
+   lezen: zo'n punt is groter en gaat boven de andere liggen. */
+.tijdpunt.meer {
+  top: 26px; width: 22px; height: 22px; margin-left: -11px; z-index: 3;
+  box-shadow: 0 1px 2px rgba(0,0,0,.25);
+}
 .tijdpunt:focus { outline: none; }
 .tijdpunt.zwaar { background: var(--red, #A1281F); }
 .tijdpunt.middel { background: #D79A2B; }
@@ -859,12 +865,13 @@ body.sleept .lijsttabel { pointer-events: none; }
 .tijdpunt.wijs { box-shadow: 0 0 0 3px var(--bluebg), 0 0 0 4px var(--blue); }
 .tijdaantal {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-size: 8px; font-style: normal; font-weight: 700; color: #fff;
+  font-size: 11px; line-height: 1; font-style: normal; font-weight: 700; color: #fff;
 }
+.tijdpunt.licht .tijdaantal { color: var(--ink); }
 
 /* Alles wat je van een event wilt weten zit in de hoverkaart. */
 .tijdkaart {
-  display: none; position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+  display: none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
   z-index: 40; width: 280px; max-height: 320px; overflow-y: auto;
   padding: 9px 11px; background: #fff; color: var(--ink);
   border: 1px solid var(--b1); border-radius: 3px; box-shadow: 0 4px 14px rgba(0,0,0,.18);
@@ -896,7 +903,9 @@ body.sleept .lijsttabel { pointer-events: none; }
 
 
 /* De portefeuille als één balk van honderd procent. */
-.kapitaalvak { padding: 16px 20px 6px; }
+/* Het plafondlabel staat bóven de balk en heeft daar zijn eigen regel nodig;
+   anders stak het door de kopregel van het paneel heen. */
+.kapitaalvak { padding: 34px 20px 8px; }
 .kapitaalbalk {
   position: relative; display: flex; height: 30px; border-radius: 3px; overflow: visible;
   border: 1px solid var(--b1); background: #fff;
@@ -905,11 +914,11 @@ body.sleept .lijsttabel { pointer-events: none; }
 .kdeel:last-child { border-radius: 0 2px 2px 0; }
 .kdeel.marge { background: #DEDAD2; }
 .kdeel.vrij { flex: 1 1 auto; background: #DFF0E2; }
-.kplafond { position: absolute; top: -6px; bottom: -6px; }
+.kplafond { position: absolute; top: -7px; bottom: -7px; }
 .kplafond i { display: block; width: 2px; height: 100%; background: var(--ink2); }
 .kplafond span {
-  position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
-  font-size: 10px; color: var(--ink2); white-space: nowrap;
+  position: absolute; bottom: 100%; left: 1px; transform: translateX(-50%);
+  margin-bottom: 3px; font-size: 10.5px; color: var(--ink2); white-space: nowrap;
 }
 .kapitaallegenda { display: flex; flex-wrap: wrap; gap: 28px; padding: 12px 0 0; }
 .klegend { display: flex; align-items: baseline; gap: 7px; font-size: 12.5px; color: var(--ink2); }

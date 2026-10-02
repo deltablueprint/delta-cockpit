@@ -144,7 +144,8 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
 
   const puntenHtml = [...perDag.entries()].map(([datum, lijst]) => {
     const p = plek(datum);
-    return `<span class="tijdpunt ${zwaarste(lijst)}" style="left:${p}%" data-datum="${ontsnap(datum)}" tabindex="0">
+    return `<span class="tijdpunt ${zwaarste(lijst)}${lijst.length > 1 ? " meer" : ""}"
+      style="left:${p}%" data-datum="${ontsnap(datum)}" tabindex="0">
       ${lijst.length > 1 ? `<i class="tijdaantal">${lijst.length}</i>` : ""}
       <span class="tijdkaart${rand(p)}">
         <span class="tijdkaartkop">${ontsnap(toonDatum(datum))}${
