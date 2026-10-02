@@ -180,10 +180,11 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     const breed = eigen.filter((v) => v.type === "lang");
     let smal = eigen.filter((v) => v.type !== "lang");
 
-    // Waar een veld staat, zegt de definitielaag: db_field.kolom_rechts. Zegt
-    // geen enkel veld van deze tabel er iets over, dan blijft het om en om —
-    // zo veranderen formulieren die niets ingesteld hebben niet.
-    const kiestZelf = smal.some((v) => v.kolom_rechts);
+    // Waar een veld staat, zegt de definitielaag: db_field.kolom_rechts. Dat
+    // geldt voor de hele tabel en niet per sectie — anders viel een sectie
+    // waarin niemand naar rechts wil terug op 'om en om', en stond er alsnog
+    // iets rechts dat links hoorde.
+    const kiestZelf = velden.some((v) => v.kolom_rechts);
     let links;
     let rechts;
     if (kiestZelf) {
