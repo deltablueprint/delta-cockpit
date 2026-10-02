@@ -325,6 +325,17 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
   background: #fff; border: 1px solid #D8D5CE; border-radius: 2px;
 }
 .veldwaarde textarea { height: auto; min-height: 60px; padding: 6px 9px; line-height: 1.45; resize: vertical; }
+
+/* Een invoerveld is zo breed als wat erin komt, niet zo breed als het scherm.
+   Een datum van tien tekens in een vak van duizend pixels leest als een fout
+   in de opmaak — en het oog moet onnodig ver reizen tussen label en waarde. */
+.veldwaarde input[type="text"] { max-width: 360px; }
+.veldwaarde input[type="date"] { max-width: 180px; }
+.veldwaarde input[type="time"] { max-width: 140px; }
+.veldwaarde input[type="number"] { max-width: 160px; }
+.veldwaarde input[readonly] { max-width: 360px; }
+.veldwaarde select { max-width: 320px; }
+.veldwaarde textarea { max-width: 560px; }
 .veldwaarde input:focus, .veldwaarde select:focus, .veldwaarde textarea:focus {
   outline: 2px solid var(--bluebg); border-color: var(--blue);
 }
