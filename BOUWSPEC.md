@@ -232,7 +232,7 @@ Exitregels:
 | Snelle winst | daling van 30% in de eerste één tot twee sessies |
 | Eventblok | verplichte herbeoordeling vóór een zwaar eventblok |
 
-**OPEN** — na een rol: rekent de stoploss en het winstanker tegen de premie van de nieuwe tranche, tegen de cumulatieve netto premie van de keten, of gesplitst (exitregels per tranche, de keten als geheel alleen in de post-analyse)? Voorstel is de gesplitste variant. Moet vastliggen vóór etappe 12. Een rol loopt niet meer via een besluit (6), dus de keten wordt achteraf getoetst en niet vooraf.
+**Beslist (2 okt 2026)** — na een rol rekenen de stoploss en het winstanker tegen de premie van **die ene tranche**. Of het doorrollen als geheel iets opleverde, wordt over de hele keten beoordeeld in de **post-analyse**. Een rol loopt niet via een besluit (6), dus de keten wordt achteraf getoetst en niet vooraf.
 
 ---
 
@@ -557,7 +557,7 @@ Dit is de zwaarste regel van hoofdstuk 10. Wie een scherm ontwerpt begint hier, 
 1. **Een go laat de eerste tranche ontstaan.** Bij het vastleggen van een go-uitkomst maakt het systeem de tranche aan en kopieert het besluit erin — strike, expiratiedatum en inzet — én bewaart apart *wat het besluit zei*. Overtypen is precies hoe een uitvoering ongemerkt van een besluit gaat afwijken.
 2. **De uitvoering wordt tegen het besluit gelegd.** Verschilt de strike of de expiratie, of ligt de inzet meer dan de tolerantie onder het besluit, dan zet het systeem *afwijking* op ja en stelt het soort voor. De tolerantie staat op `portefeuille_instelling`, niet in de code. Tijdens het invullen is dat een waarschuwing; **de tranche kan pas gaan lopen als de afwijking geduid is.**
 3. **Het exitplan gaat vóór de order.** Zolang stoploss, eventregel en wie dagelijks volgt niet gevuld zijn, komt de tranche niet voorbij *besluit goedgekeurd*. Volgorde, geen waarschuwing.
-4. **De stoploss wordt niet verruimd.** Aanscherpen mag; een hogere ask wordt geweigerd en in de audit trail genoteerd.
+4. **De stoploss wordt niet verruimd.** Aanscherpen mag; een hogere ask wordt geweigerd en in de audit trail genoteerd. Dit is beslist en kent geen uitzondering, ook niet met een toelichting: een stoploss die je kunt oprekken is geen stoploss.
 
 **Het formulier toont alleen de stand waarin de tranche staat.** Boven staat *Het besluit*, daaronder het kader **Open posities bij Lynx**, en daaronder *De tranche*. *De uitvoering* verschijnt pas vanaf de stand *order bij Lynx*, *Uitkomst* pas vanaf *bewaken* — leeg staan wachten op iets wat nog niet gebeurd is, is geen informatie (`db_sectie.standen`). De sectie *Systeem* staat er niet: wanneer en door wie een record ontstond, staat in de audit trail.
 
@@ -983,8 +983,8 @@ Na etappe 4 is een echte cyclus volledig vast te leggen. Werken op desktop, iPad
 
 *Opgelost in versie 1.0: versiebeheer van de rekenlaag (3.4), blootstelling en sizing op portefeuilleniveau (6.1), de handelskalender als tabel (3.2), het splitsen van voorgenomen en uitgevoerde posities (3.3), registratie van afwijking tussen besluit en uitvoering (6), plus de vier standen met "niet gemeten" (4.4), de chartanalyse volgens de metadata-lijn (4.3b) en aanmelden per persoon (1, 11).*
 
-1. **Premie-referentie na een rol** — per tranche, cumulatief, of gesplitst. Voorstel: gesplitst. Blokkeert etappe 12. *Blijft staan nu de rol buiten het besluitproces valt: de nieuwe tranche krijgt nog steeds een stoploss en een winstanker, en die rekenen ergens tegen.*
-1a. **Mag de stoploss verruimd worden, en waardoor is dat dan gedekt?** Aanscherpen mag altijd; verruimen wordt nu hard geweigerd. Het besluit *afwijken van het exitplan* zou dat dekken, maar dat besluit komt er niet (6). Twee wegen: verruimen blijft onmogelijk, of het mag met een verplichte toelichting in de audit trail. Blokkeert niets, maar het hoort beslist te zijn voordat een echte tranche loopt.
+1. ~~**Premie-referentie na een rol**~~ — **beslist (2 okt 2026): per tranche, de keten in de post-analyse.** De stoploss en het winstanker van een tranche rekenen tegen de premie van díé tranche; of het doorrollen als geheel iets opleverde, wordt over de hele keten beoordeeld in de post-analyse. Een exitregel moet te lezen zijn zonder de geschiedenis van twee maanden erbij.
+1a. ~~**Mag de stoploss verruimd worden?**~~ — **beslist (2 okt 2026): nooit.** Aanscherpen mag altijd; een hogere ask wordt geweigerd en in de audit trail genoteerd. Er komt geen uitzondering, ook niet met een toelichting: een stoploss die je kunt oprekken is geen stoploss. Gebeurt het in een uitzonderlijke situatie tóch buiten de applicatie om, dan komt het binnen als een afwijking bij het vastleggen van de uitkomst — met de verplichte toelichting die daarbij hoort (6).
 2. **Inzet van de tweede tranche** — vast te leggen regel of oordeel per situatie? Blokkeert niets, maar bepaalt of het een voorwaarde wordt.
 3. **Staartrisico-tegel** — wel of niet opnemen, en bij welke percentages.
 4. **Standaardzwaarte per eventsoort** — beginlijst wordt bij het bouwen ingevuld en daarna bijgesteld.
