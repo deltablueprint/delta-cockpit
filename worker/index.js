@@ -302,7 +302,7 @@ async function behandel(request, env) {
           const m = await env.DB.prepare("select cyclus from beoordelingsmoment where id = ?")
             .bind(momentId).first();
           if (!m) return json({ fout: "Geen besluit met dat nummer." }, 404);
-          const uit = await gonogoUitkomst(env, ik, m.cyclus, body);
+          const uit = await gonogoUitkomst(env, ik, m.cyclus, body, momentId);
           if (uit.fout) return json(uit, uit.status || 400);
           return json(uit);
         }

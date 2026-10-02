@@ -4,7 +4,7 @@
 // tabel verwijst (BOUWSPEC 10.0). Geen aparte relatietabel om bij te houden.
 
 import { schermAfEen } from "./blind.js";
-import { actieVoor } from "./gonogo.js";
+import { actieVoor, tilQuorum } from "./gonogo.js";
 import { magTrancheAanmaken, besluitOpties } from "./positie.js";
 import { stappenVoor, beweegFase } from "./proces.js";
 
@@ -18,6 +18,9 @@ export async function record(env, tabelnaam, id, ik) {
   // zijn door iets wat elders gebeurde — een inzending die binnenkwam, een
   // tranche die sloot. Dan hoort de balk dat te weten zodra je kijkt, en niet
   // pas als je toevallig iets opslaat.
+  // Het quorum hangt aan de aanwezigen; wie die later invult, moet het veld
+  // zien bijspringen in plaats van voor altijd leeg te zien blijven.
+  if (tabelnaam === "beoordelingsmoment") await tilQuorum(env, ik, id).catch(() => null);
   if (tabel.proces_veld) await beweegFase(env, tabelnaam, id, ik);
 
   const [velden, secties, rij] = await Promise.all([

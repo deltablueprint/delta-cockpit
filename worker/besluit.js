@@ -9,8 +9,15 @@
 import { schermAf } from "./blind.js";
 import { instelling } from "./positie.js";
 import { kapitaalUitLynx } from "./lynx.js";
+import { tilQuorum } from "./gonogo.js";
 
 export async function overzicht(env, ik, momentId) {
+  // Het quorum hangt aan wie er aanwezig is, en dat kies je soms pas nadat de
+  // inzendingen al binnen zijn. Opnieuw tellen bij het openen van het scherm
+  // houdt de twee bij elkaar — anders bleef 'quorum gehaald op' voor altijd
+  // leeg en kwam je de uitkomst niet vastgelegd.
+  await tilQuorum(env, ik, momentId).catch(() => null);
+
   const moment = await env.DB.prepare(
     "select * from beoordelingsmoment where id = ? and archief = 0"
   ).bind(momentId).first();

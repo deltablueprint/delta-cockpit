@@ -315,7 +315,6 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
       </div>
       <div class="knoprij">
           <button class="knop" id="vastleggen">Uitkomst vastleggen</button>
-        <span class="paneelmeta">Bij een go ontstaat het positierecord vanzelf, met dit besluit eronder.</span>
       </div>
     </div>`;
 

@@ -278,11 +278,31 @@ export async function tilQuorum(env, ik, momentId) {
 }
 
 // ------------------------------------------------- de uitkomst van het gesprek
-export async function uitkomst(env, ik, cyclusId, body = {}) {
-  const moment = await openMoment(env, cyclusId);
+export async function uitkomst(env, ik, cyclusId, body = {}, momentId = null) {
+  // Het scherm zegt welk besluit het is. Alleen terugvallen op 'het laatste
+  // open moment van deze cyclus' zou een tweede besluit kunnen raken.
+  let moment = momentId
+    ? await env.DB.prepare(
+        "select * from beoordelingsmoment where id = ? and archief = 0"
+      ).bind(momentId).first()
+    : await openMoment(env, cyclusId);
   if (!moment) return { fout: "Er loopt geen beoordelingsmoment op deze cyclus.", status: 409 };
+  if (moment.status === "uitkomst vastgelegd") {
+    return { fout: "De uitkomst van dit besluit is al vastgelegd.", status: 409 };
+  }
+
+  // Wie aanwezig is bepaalt het quorum, en dat kies je soms pas nadat de
+  // inzendingen binnen zijn. Opnieuw tellen voordat we weigeren.
   if (!moment.quorum_gehaald_op) {
-    return { fout: "De inzendingen zijn nog niet open; het quorum is nog niet gehaald.", status: 409 };
+    await tilQuorum(env, ik, moment.id).catch(() => null);
+    moment = await env.DB.prepare("select * from beoordelingsmoment where id = ?")
+      .bind(moment.id).first();
+  }
+  if (!moment.quorum_gehaald_op) {
+    return {
+      fout: "De inzendingen zijn nog niet open: er is nog niet van iedereen die aanwezig is een inzending. Staat er niemand bij Aanwezigen, zet die er dan eerst bij.",
+      status: 409,
+    };
   }
 
   const keuze = body.uitkomst === "go" || body.uitkomst === "no-go" ? body.uitkomst : null;

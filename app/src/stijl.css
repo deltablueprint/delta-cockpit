@@ -364,7 +364,7 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
    streep bovenaan, en herhaalt de paneelkop de naam niet nog eens klein. */
 .relatieblok { margin-top: 18px; }
 .tabbalk {
-  display: flex; gap: 2px; padding: 0 6px;
+  display: flex; gap: 2px; padding: 0;
   background: var(--soft); border: 1px solid var(--b1); border-bottom: none;
   border-radius: 3px 3px 0 0; overflow-x: auto;
 }
@@ -389,7 +389,7 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
 /* De kop van het paneel is de handelingsregel: hier staat wat je met deze
    lijst kunt doen. De naam staat er één keer, de knop ernaast. */
 .rlkop {
-  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
   background: #fff; border-bottom: 1px solid var(--b1);
 }
 .rltitel { font-size: 13.5px; font-weight: 700; color: var(--ink); }
@@ -949,7 +949,7 @@ body.sleept .lijsttabel { pointer-events: none; }
    lucht als een formulier op een recordscherm. */
 .paneel .formsectie { padding-top: 16px; }
 .paneel .formkolommen { max-width: 1120px; }
-.paneel .knoprij { padding-left: 20px; padding-right: 20px; }
+.paneel .knoprij { padding-left: 14px; padding-right: 14px; }
 
 .uitkomstvast { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; font-size: 12.5px; }
 .uitkomstvast p { width: 100%; margin: 4px 0 0; color: var(--ink2); line-height: 1.5; }
