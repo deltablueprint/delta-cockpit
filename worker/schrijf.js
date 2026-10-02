@@ -6,7 +6,7 @@
 
 import { toets } from "./regels.js";
 import { vulEventsBij, vulCyclitBij } from "./events.js";
-import { startMoment } from "./gonogo.js";
+import { startMoment, tilQuorum } from "./gonogo.js";
 import { beweegFase } from "./proces.js";
 import { instelling, wijktAf, stoplossVerruimd, noteerGeweigerdeStoploss,
          volgendeTranche, contractnaam, zetExitplanKlaar, exitplanCompleet,
@@ -499,6 +499,20 @@ export async function maakAan(env, ik, tabelnaam, body) {
 
   await auditregel(env, ik, tabelnaam, rij.id, "gebeurtenis", { gebeurtenis: "aangemaakt" }).run();
   if (tabelnaam === "positie") await zetExitplanKlaar(env, ik, rij.id, nieuw);
+
+  // Een inzending invullen ís hem versturen: er is geen tussenstand waarin je
+  // hem bewaart en later nog aanpast. Daarna telt het systeem of iedereen die
+  // aanwezig is er inmiddels is, en gaan de inzendingen open zodra dat zo is.
+  if (tabelnaam === "inzending") {
+    await env.DB.prepare(
+      "update inzending set status = 'verstuurd', verstuurd_op = datetime('now') where id = ?"
+    ).bind(rij.id).run();
+    await auditregel(env, ik, "inzending", rij.id, "gebeurtenis", { gebeurtenis: "verstuurd" }).run();
+    if (nieuw.beoordelingsmoment) {
+      await tilQuorum(env, ik, Number(nieuw.beoordelingsmoment));
+      await beweegFase(env, "beoordelingsmoment", Number(nieuw.beoordelingsmoment), ik);
+    }
+  }
   if (tabelnaam === "cyclus") await vulEventsBij(env, rij.id);
   if (tabelnaam === "event") await vulCyclitBij(env, rij.id);
   return { id: rij.id, waarschuwingen: uitslag.waarschuwingen };
@@ -564,7 +578,9 @@ export async function sjabloon(env, tabelnaam, ouder, ik) {
   }
 
   return {
-    tabel: { naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv, titel_veld: tabel.titel_veld, proces_veld: tabel.proces_veld },
+    tabel: { naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv,
+             titel_veld: tabel.titel_veld, proces_veld: tabel.proces_veld,
+             aanmaakknop: tabel.aanmaakknop, na_aanmaken: tabel.na_aanmaken },
     secties, velden, waarden, ouderkolom, ouder: ouderInfo, proces, opties,
     nieuw: true, relaties: [], verwijzingen: {},
   };

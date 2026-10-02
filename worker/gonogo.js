@@ -252,7 +252,7 @@ export async function versturen(env, ik, cyclusId, body = {}) {
 
 // Het quorum tellen. Wordt het gehaald, dan gaan de inzendingen open —
 // tegelijk voor iedereen, ook voor degene die als eerste verstuurde.
-async function tilQuorum(env, ik, momentId) {
+export async function tilQuorum(env, ik, momentId) {
   const moment = await env.DB.prepare("select * from beoordelingsmoment where id = ?").bind(momentId).first();
   const nodig = aanwezigen(moment).length;
   if (!nodig) return { verstuurd: 0, nodig: 0, open: false };

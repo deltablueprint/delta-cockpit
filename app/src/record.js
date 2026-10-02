@@ -250,7 +250,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         ${data.actie && !isNieuw
           ? `<a class="knop" href="#${data.actie.route}" title="${ontsnap(data.actie.stap || "")}">${ontsnap(data.actie.label)}</a>`
           : ""}
-        <button class="knop${data.actie && !isNieuw ? " tweede" : ""}" id="opslaan">${isNieuw ? "Aanmaken" : "Opslaan"}</button>
+        <button class="knop${data.actie && !isNieuw ? " tweede" : ""}" id="opslaan">${
+          isNieuw ? ontsnap(data.tabel.aanmaakknop || "Aanmaken") : "Opslaan"}</button>
       </span>
     </div>
     ${procesHtml}
@@ -654,7 +655,12 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         const velden = verzamel();
         if (data.ouderkolom) velden[data.ouderkolom] = data.waarden[data.ouderkolom];
         const gemaakt = await maakAan(tabelnaam, velden, data.ouderkolom);
-        location.hash = `/t/${tabelnaam}/${gemaakt.id}`;
+        // Waar je na het aanmaken heen gaat, hangt af van wat je deed: een
+        // inzending verstuur je en dan ga je terug naar het besluit, want daar
+        // gaat het verder.
+        location.hash = data.tabel.na_aanmaken === "ouder" && data.ouder
+          ? `/t/${data.ouder.tabel}/${data.ouder.id}`
+          : `/t/${tabelnaam}/${gemaakt.id}`;
       } else {
         const uitkomst = await bewaar(tabelnaam, id, verzamel(), data.waarden.revisie);
         data.waarden.revisie = uitkomst.revisie ?? data.waarden.revisie;
