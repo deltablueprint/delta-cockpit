@@ -244,10 +244,10 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
   // De fase volgt uit wat er gebeurd is: elk record schuift op zodra de
   // verplichte stappen van zijn fase gedaan zijn, en een cyclus volgt zijn
   // besluiten en tranches.
-  await beweegFase(env, tabelnaam, id);
+  await beweegFase(env, tabelnaam, id, ik);
   if (["beoordelingsmoment", "positie"].includes(tabelnaam)) {
     const ouder = await env.DB.prepare(`select cyclus from "${tabelnaam}" where id = ?`).bind(id).first();
-    if (ouder && ouder.cyclus) await beweegFase(env, "cyclus", ouder.cyclus);
+    if (ouder && ouder.cyclus) await beweegFase(env, "cyclus", ouder.cyclus, ik);
   }
 
   // Het tijdstip bij de twee handelingen die een mens bevestigt.

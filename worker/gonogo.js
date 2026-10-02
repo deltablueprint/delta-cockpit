@@ -184,7 +184,7 @@ export async function startMoment(env, ik, cyclusId, body = {}) {
     audit(env, ik, "beoordelingsmoment", rij.id, "gebeurtenis", { gebeurtenis: "beoordelingsmoment geopend" }),
   ]);
   // De cyclus schuift op omdat er een besluit ligt, niet omdat we hem zetten.
-  await beweegFase(env, "cyclus", cyclusId);
+  await beweegFase(env, "cyclus", cyclusId, ik);
 
   return { id: rij.id, bestond: false };
 }
@@ -334,8 +334,8 @@ export async function uitkomst(env, ik, cyclusId, body = {}) {
   }
 
   // De standen volgen uit wat er gebeurd is.
-  await beweegFase(env, "beoordelingsmoment", moment.id);
-  await beweegFase(env, "cyclus", cyclusId);
+  await beweegFase(env, "beoordelingsmoment", moment.id, ik);
+  await beweegFase(env, "cyclus", cyclusId, ik);
 
   return { id: moment.id, uitkomst: keuze, positie };
 }

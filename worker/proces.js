@@ -178,7 +178,7 @@ export async function stappenVoor(env, tabelnaam, rij) {
 // zijn huidige fase gedaan zijn. Altijd vooruit en nooit terug: een cyclus die
 // in positie staat, gaat niet terug naar besluitvorming omdat er een tweede
 // besluit opent — er staat immers geld in de markt.
-export async function beweegFase(env, tabelnaam, id) {
+export async function beweegFase(env, tabelnaam, id, ik) {
   let tabel;
   try {
     tabel = await env.DB.prepare("select naam, proces_veld from db_table where naam = ?").bind(tabelnaam).first();
@@ -209,10 +209,13 @@ export async function beweegFase(env, tabelnaam, id) {
 
   await env.DB.batch([
     env.DB.prepare(`update "${tabelnaam}" set "${tabel.proces_veld}" = ? where id = ?`).bind(fasen[nu], id),
+    // In de audit trail staat wie de handeling deed die de fase liet
+    // opschuiven. 'systeem' zou een gebruiker zijn die niet bestaat — en de
+    // audit trail verwijst naar echte mensen.
     env.DB.prepare(
       `insert into audit (wie, tabel, record, soort, veld, oude_waarde, nieuwe_waarde, gebeurtenis)
-       values ('systeem', ?, ?, 'veld', ?, ?, ?, 'fase opgeschoven')`
-    ).bind(tabelnaam, id, tabel.proces_veld, fasen[begon], fasen[nu]),
+       values (?, ?, ?, 'veld', ?, ?, ?, 'fase opgeschoven')`
+    ).bind(ik ? ik.id : null, tabelnaam, id, tabel.proces_veld, fasen[begon], fasen[nu]),
   ]);
 
   return { van: fasen[begon], naar: fasen[nu] };
