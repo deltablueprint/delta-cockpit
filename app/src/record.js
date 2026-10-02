@@ -168,7 +168,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       v.verplicht ? '<span class="ster">*</span> ' : ""}${ontsnap(v.label)}</label>
     <div class="veldwaarde" data-veld="${v.kolom}"${v.live ? ` data-live="${tabelnaam}.${id}.${v.kolom}"` : ""}>${
       v.alleen_lezen
-        ? `<span class="alleenlezen livewaarde" data-toon="${v.kolom}">${lees(v, data.waarden[v.kolom], meta, data.verwijzingen, data.waarden)}</span>`
+        ? `<span class="alleenlezen livewaarde" data-toon="${v.kolom}">${
+            lees(v, data.waarden[v.kolom], meta, data.verwijzingen, data.waarden, "formulier")}</span>`
         : invoer(v, data.waarden[v.kolom], meta, "",
                  data.verwijzingen ? data.verwijzingen[v.kolom] : null,
                  data.opties ? data.opties[v.kolom] : null)
@@ -411,16 +412,6 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   };
   inhoud.addEventListener("click", overnemenKlik);
   overnemenLuisteraar = { el: inhoud, fn: overnemenKlik };
-
-  // Kies je een andere persoon, dan hoort het gezicht ernaast mee te
-  // veranderen — anders staat er een naam bij het verkeerde rondje.
-  inhoud.querySelectorAll("[data-persoonveld] select").forEach((el) => {
-    el.addEventListener("change", () => {
-      const vak = el.closest("[data-persoonveld]").querySelector(".persoonavatar");
-      const persoon = meta.gebruikers ? meta.gebruikers[el.value] : null;
-      if (vak) vak.innerHTML = persoon ? avatar(persoon, 20) : "";
-    });
-  });
 
   // ---- velden die de keuze volgen ----
   // Bij een go vraag je om de positie, bij een no-go om de reden. Allebei

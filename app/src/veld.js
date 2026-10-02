@@ -27,7 +27,7 @@ export function keuzesVoor(meta, veld) {
 }
 
 // Lezen: wat er op het scherm staat als je niet aan het bewerken bent.
-export function lees(veld, waarde, meta, verwijzingen = {}, rij = {}) {
+export function lees(veld, waarde, meta, verwijzingen = {}, rij = {}, vorm = "lijst") {
   if (waarde === null || waarde === undefined || waarde === "") {
     return `<span class="faint">&mdash;</span>`;
   }
@@ -47,10 +47,13 @@ export function lees(veld, waarde, meta, verwijzingen = {}, rij = {}) {
     }
     case "verwijzing": {
       if (veld.verwijst_naar === "gebruiker" && meta.gebruikers && meta.gebruikers[waarde]) {
-        // Een persoon krijgt dezelfde omlijsting als elk ander veld: anders
-        // zweeft er een naam tussen de invoervelden en lijkt het of er iets
-        // mist.
-        return `<span class="persoonveld vast">${avatarMetNaam(meta.gebruikers[waarde])}</span>`;
+        const g = meta.gebruikers[waarde];
+        // Op een formulier staat de volledige naam in een vakje van dezelfde
+        // breedte als elk ander veld; in een lijst is er weinig plaats en zegt
+        // een gezicht met een voornaam meer dan een lange naam die afbreekt.
+        return vorm === "formulier"
+          ? `<span class="persoonveld vast">${ontsnap(g.naam)}</span>`
+          : avatarMetNaam(g);
       }
       return ontsnap(verwijzingen[veld.kolom] ?? waarde);
     }
@@ -100,9 +103,7 @@ export function invoer(veld, waarde, meta, extra = "", naam = null, keuzelijst =
     }
     if (veld.verwijst_naar === "gebruiker" && meta.gebruikers) {
       const mensen = Object.values(meta.gebruikers);
-      const gekozen = meta.gebruikers[w];
-      return `<span class="persoonveld" data-persoonveld="${veld.kolom}">
-        <span class="persoonavatar">${gekozen ? avatar(gekozen, 20) : ""}</span>
+      return `<span class="persoonveld">
         <select id="${id}" data-kolom="${veld.kolom}" ${extra}>
           ${veld.verplicht ? "" : `<option value=""${w === "" ? " selected" : ""}>&mdash;</option>`}
           ${mensen.map((g) => `<option value="${ontsnap(g.id)}"${g.id === w ? " selected" : ""}>${ontsnap(g.naam)}</option>`).join("")}
