@@ -400,6 +400,24 @@ export async function maakAan(env, ik, tabelnaam, body) {
   // niets is om op terug te vallen. Een veld dat niet op het aanmaakformulier
   // staat en in de database een standaardwaarde heeft, laten we gewoon aan de
   // database over: anders vraagt het systeem om iets wat het zelf al weet.
+  // De ouder van mijn ouder. Een inzending hoort bij een beoordelingsmoment én
+  // bij een cyclus; maak je hem vanaf het moment, dan weet het systeem de
+  // cyclus al — die staat op dat moment. Dat uitvragen zou betekenen dat je
+  // iets moet opzoeken wat er al is, met de kans dat het de verkeerde wordt.
+  for (const veld of velden.filter((v) => v.type === "verwijzing" && v.verplicht)) {
+    if (nieuw[veld.kolom] !== undefined && nieuw[veld.kolom] !== null && nieuw[veld.kolom] !== "") continue;
+    for (const ander of velden.filter((v) => v.type === "verwijzing" && v.kolom !== veld.kolom)) {
+      const w = nieuw[ander.kolom];
+      if (w === undefined || w === null || w === "") continue;
+      try {
+        const r = await env.DB.prepare(
+          `select "${veld.kolom}" as w from "${ander.verwijst_naar}" where id = ?`
+        ).bind(w).first();
+        if (r && r.w !== null && r.w !== undefined) { nieuw[veld.kolom] = r.w; break; }
+      } catch { /* die tabel heeft die kolom niet: dan is dit niet de weg */ }
+    }
+  }
+
   const info = await kolominfo(env, tabelnaam);
 
   // Een veld dat je leeg laat terwijl de database er een waarde voor heeft,
