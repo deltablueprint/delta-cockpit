@@ -822,8 +822,10 @@ body.sleept .lijsttabel { pointer-events: none; }
 .evbeh { font-size: 10.5px; color: var(--mut); white-space: nowrap; }
 
 .tijdblok { padding: 12px 24px 14px; }
-.tijdrij { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 12px; align-items: center; }
+.tijdrij { display: grid; grid-template-columns: 175px minmax(0, 1fr); gap: 12px; align-items: center; }
 .tijdnaam { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink2); }
+.tijdwie { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tijdinzet { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--ink); white-space: nowrap; }
 .tijdspoor { position: relative; height: 24px; }
 .tijdrij.asrij .tijdspoor { height: 44px; }
 .tijdas { position: absolute; top: 36px; left: 0; right: 0; height: 2px; background: #DAD7D0; }

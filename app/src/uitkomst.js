@@ -161,7 +161,12 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
     const g = wie(i.deelnemer);
     const kleur = (g && g.kleur) || "#136289";
     const tot = plek(i.expiratiedatum);
-    const naam = `<div class="tijdnaam">${g ? avatar(g, 20) : ""}<span>${ontsnap(kortVan(i.deelnemer))}</span></div>`;
+    // De inzet hoort bij het voorstel: zonder dat getal zegt de balk wel wélk
+    // contract iemand wil schrijven, maar niet voor hoeveel.
+    const inzet = i.inzet_pct === null || i.inzet_pct === undefined || i.inzet_pct === ""
+      ? "" : `<b class="tijdinzet" title="van het kapitaal">${getal(i.inzet_pct, 1)} %</b>`;
+    const naam = `<div class="tijdnaam">${g ? avatar(g, 20) : ""}<span class="tijdwie">${
+      ontsnap(kortVan(i.deelnemer))}</span>${inzet}</div>`;
     if (i.positie === "no-go" || tot === null) {
       return `<div class="tijdrij">${naam}
         <div class="tijdspoor"><span class="geenbalk">${
