@@ -10,6 +10,7 @@
 
 import { schermAf } from "./blind.js";
 import { uitBesluit } from "./positie.js";
+import { beweegFase } from "./proces.js";
 
 const DEELVELDEN = [
   "positie", "strike", "expiratiedatum", "inzet_pct",
@@ -181,8 +182,9 @@ export async function startMoment(env, ik, cyclusId, body = {}) {
 
   await env.DB.batch([
     audit(env, ik, "beoordelingsmoment", rij.id, "gebeurtenis", { gebeurtenis: "beoordelingsmoment geopend" }),
-    env.DB.prepare("update cyclus set status = 'go-nogo' where id = ? and status = 'pre-analyse'").bind(cyclusId),
   ]);
+  // De cyclus schuift op omdat er een besluit ligt, niet omdat we hem zetten.
+  await beweegFase(env, "cyclus", cyclusId);
 
   return { id: rij.id, bestond: false };
 }
@@ -310,13 +312,13 @@ export async function uitkomst(env, ik, cyclusId, body = {}) {
   // tot de order bij Lynx verschijnt. Het systeem plaatst nooit zelf een
   // order (hard uitgangspunt 1). Een no-go blijft staan waar hij staat, met
   // een nieuw analysemoment op de cyclus.
+  // Een no-go houdt de cyclus in besluitvorming, met een nieuw analysemoment:
+  // wachten is een toestand, geen vertraging.
   const vervolg = [audit(env, ik, "beoordelingsmoment", moment.id, "gebeurtenis",
                          { gebeurtenis: `uitkomst vastgelegd: ${keuze}` })];
-  if (keuze === "go") {
-    vervolg.push(env.DB.prepare("update cyclus set status = 'uitvoering ophalen' where id = ?").bind(cyclusId));
-  } else {
+  if (keuze === "no-go") {
     vervolg.push(env.DB.prepare(
-      "update cyclus set status = 'pre-analyse', volgend_analysemoment = ? where id = ?"
+      "update cyclus set volgend_analysemoment = ? where id = ?"
     ).bind(w("volgend_moment"), cyclusId));
   }
   await env.DB.batch(vervolg);
@@ -330,6 +332,10 @@ export async function uitkomst(env, ik, cyclusId, body = {}) {
       .bind(moment.id).first();
     positie = await uitBesluit(env, ik, bijgewerkt);
   }
+
+  // De standen volgen uit wat er gebeurd is.
+  await beweegFase(env, "beoordelingsmoment", moment.id);
+  await beweegFase(env, "cyclus", cyclusId);
 
   return { id: moment.id, uitkomst: keuze, positie };
 }

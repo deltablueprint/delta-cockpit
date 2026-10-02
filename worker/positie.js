@@ -60,7 +60,7 @@ export async function uitBesluit(env, ik, moment) {
                           strike, expiratiedatum, inzet_pct,
                           besluit_strike, besluit_expiratiedatum, besluit_inzet_pct,
                           aangemaakt_door)
-     values (?, ?, ?, 'besluit goedgekeurd', ?, ?, ?, ?, ?, ?, ?) returning id`
+     values (?, ?, ?, 'exitplan en order', ?, ?, ?, ?, ?, ?, ?) returning id`
   ).bind(
     moment.cyclus, moment.id, volgende ? volgende.n : 1,
     moment.strike, moment.expiratiedatum, moment.inzet_pct,
@@ -305,7 +305,7 @@ export async function neemBesluitOver(env, momentId, stand) {
     // Zolang er niets is uitgevoerd, is de tranche nog het besluit. Daarna
     // staat er een werkelijkheid in die velden die een voornemen niet mag
     // overschrijven.
-    if (!stand || stand === "besluit goedgekeurd") {
+    if (!stand || stand === "exitplan en order") {
       uit.strike = m.strike;
       uit.expiratiedatum = m.expiratiedatum;
       uit.inzet_pct = m.inzet_pct;
