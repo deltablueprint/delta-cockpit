@@ -177,7 +177,7 @@ export async function startMoment(env, ik, cyclusId, body = {}) {
 
   const rij = await env.DB.prepare(
     `insert into beoordelingsmoment (cyclus, datum, aanleiding, status, aangemaakt_door)
-     values (?, coalesce(?, date('now')), ?, 'blind versturen', ?) returning id`
+     values (?, coalesce(?, date('now')), ?, 'aanwezigen bepalen', ?) returning id`
   ).bind(cyclusId, body.datum || null, body.aanleiding || null, ik.id).first();
 
   await env.DB.batch([

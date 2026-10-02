@@ -29,7 +29,7 @@ export async function record(env, tabelnaam, id, ik) {
   // nooit de ouder van een record: 'aangemaakt door' hoort op het record, niet
   // als lijst onder de persoon.
   const kinderen = (await env.DB.prepare(
-    `select f.tabel, f.kolom, t.label, t.label_mv, t.volgorde
+    `select f.tabel, f.kolom, t.label, t.label_mv, t.volgorde, t.nieuw_direct
        from db_field f
        join db_table t on t.naam = f.tabel
       where f.verwijst_naar = ? and f.actief = 1 and t.actief = 1
@@ -85,7 +85,8 @@ export async function record(env, tabelnaam, id, ik) {
       // Op de cyclus kun je voorwaarden overnemen uit eerdere cycli.
       const overnemen = k.tabel === "voorwaarde" && tabelnaam === "cyclus";
 
-      return { tabel: k.tabel, kolom: k.kolom, label: k.label_mv, aantal, magNieuw, inPlaatsVan, overnemen };
+      return { tabel: k.tabel, kolom: k.kolom, label: k.label_mv, aantal, magNieuw,
+               inPlaatsVan, overnemen, direct: Boolean(k.nieuw_direct) };
     });
 
   // Verwijzingen omzetten naar iets leesbaars: niet 'simon' maar 'Simon DeJonghe'.

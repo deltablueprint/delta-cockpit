@@ -16,7 +16,7 @@
 // Rijen die elk hun eigen raster zijn vallen per rij anders uit — dat was fout.
 // ============================================================================
 
-import { lijst as haalLijst, bewaar, bewaarSamen, archiveer, leesVoorkeur, zetVoorkeur } from "./api.js";
+import { lijst as haalLijst, bewaar, bewaarSamen, maakAan, archiveer, leesVoorkeur, zetVoorkeur } from "./api.js";
 import { lees, invoer, keuzesVoor } from "./veld.js";
 
 const KLEUR = {
@@ -352,7 +352,9 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       ${ingebed.toonTelling ? `<span class="rlmeta">${tot} ${tot === 1 ? ontsnap(data.tabel.label.toLowerCase()) : ontsnap(data.tabel.label_mv.toLowerCase())}</span>` : ""}
       ${ingebed.magNieuw === false
         ? (ingebed.inPlaatsVan ? `<span class="rluitleg">${ontsnap(ingebed.inPlaatsVan)}</span>` : "")
-        : `<a class="knop" href="#/t/${tabelnaam}/nieuw?ouder=${ingebed.ouder.tabel}:${ingebed.ouder.id}">Nieuw</a>`}
+        : ingebed.direct
+          ? `<button class="knop" id="rldirect">Nieuw</button>`
+          : `<a class="knop" href="#/t/${tabelnaam}/nieuw?ouder=${ingebed.ouder.tabel}:${ingebed.ouder.id}">Nieuw</a>`}
       ${ingebed.overnemen ? `<button class="knop tweede klein" id="rlovernemen">Overnemen uit een eerdere cyclus</button>` : ""}
       <span class="rlselectie" id="rlselectie"></span>
     </div>`;
@@ -554,6 +556,23 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       document.addEventListener("mouseup", los);
     });
   });
+
+  // Een tabel die niets vooraf nodig heeft, maakt het record meteen aan en
+  // opent het: een leeg formulier met een knop *Aanmaken* is dan een extra
+  // handeling zonder inhoud.
+  const direct = inhoud.querySelector("#rldirect");
+  if (direct && ingebed) {
+    direct.addEventListener("click", async () => {
+      direct.disabled = true;
+      try {
+        const gemaakt = await maakAan(tabelnaam, { [ingebed.kolom]: String(ingebed.ouder.id) }, ingebed.kolom);
+        location.hash = `/t/${tabelnaam}/${gemaakt.id}`;
+      } catch (fout) {
+        direct.disabled = false;
+        meld(fout.message, "fouttekst");
+      }
+    });
+  }
 
   // ---- cellen kiezen en in één keer zetten ----
   // Cmd- of ctrl-klik kiest losse cellen, shift-klik een reeks — altijd binnen

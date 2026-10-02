@@ -297,7 +297,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       idfilters: { [r.kolom]: String(id) },
       ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label,
                  toonTelling: !tabbladen, magNieuw: r.magNieuw !== false, inPlaatsVan: r.inPlaatsVan,
-                 overnemen: r.overnemen, naWijziging: stappenHertekenen },
+                 overnemen: r.overnemen, direct: r.direct, naWijziging: stappenHertekenen },
     });
   }
 
@@ -326,7 +326,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         idfilters: { [r.kolom]: String(id) },
         ingebed: { ouder: { tabel: tabelnaam, id }, kolom: r.kolom, label: r.label,
                  toonTelling: !tabbladen, magNieuw: r.magNieuw !== false, inPlaatsVan: r.inPlaatsVan,
-                 overnemen: r.overnemen, naWijziging: stappenHertekenen },
+                 overnemen: r.overnemen, direct: r.direct, naWijziging: stappenHertekenen },
       });
     }
   }
