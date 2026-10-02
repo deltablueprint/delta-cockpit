@@ -69,11 +69,20 @@ export async function record(env, tabelnaam, id, ik) {
 
       // Of je in deze lijst iets mag aanmaken, hangt soms van het record af.
       // Een tranche bestaat niet zonder goedgekeurd besluit.
+      // Een positie maak je niet: ze ontstaat uit een besluit met een go.
+      // Een exitplan maak je ook niet: dat zet het systeem klaar.
       let magNieuw = true;
-      if (k.tabel === "positie" && tabelnaam === "cyclus") magNieuw = await magTrancheAanmaken(env, id);
-      if (k.tabel === "exitregel") magNieuw = false;   // die zet het systeem klaar
+      let inPlaatsVan = null;
+      if (k.tabel === "positie") {
+        magNieuw = false;
+        inPlaatsVan = "Een positie ontstaat uit een besluit met een go.";
+      }
+      if (k.tabel === "exitregel") {
+        magNieuw = false;
+        inPlaatsVan = "Het exitplan wordt klaargezet zodra de tranche bestaat.";
+      }
 
-      return { tabel: k.tabel, kolom: k.kolom, label: k.label_mv, aantal, magNieuw };
+      return { tabel: k.tabel, kolom: k.kolom, label: k.label_mv, aantal, magNieuw, inPlaatsVan };
     });
 
   // Verwijzingen omzetten naar iets leesbaars: niet 'simon' maar 'Simon DeJonghe'.
