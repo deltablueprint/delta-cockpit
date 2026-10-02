@@ -301,6 +301,9 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
   border-radius: 0 0 3px 3px; margin-bottom: 10px;
 }
 .formsectie { padding: 0 0 14px; }
+/* Heeft een formulier maar één sectie, dan staat er geen kop boven — en dan
+   plakt het eerste veld tegen de chevronbalk. */
+.formsectie:first-child:not(:has(.formsectiekop)) { padding-top: 16px; }
 .formsectiekop {
   padding: 7px 16px; margin-bottom: 12px;
   background: var(--soft); border-top: 1px solid var(--b1); border-bottom: 1px solid var(--b1);

@@ -503,7 +503,12 @@ export async function sjabloon(env, tabelnaam, ouder) {
     const stappen = (await env.DB.prepare(
       "select waarde, label from db_choice where tabel = ? and kolom = ? and actief = 1 order by volgorde"
     ).bind(tabelnaam, tabel.proces_veld).all()).results;
-    if (stappen.length) proces = { veld: tabel.proces_veld, nu: waarden[tabel.proces_veld] ?? stappen[0].waarde, stappen };
+    if (stappen.length) {
+      // Een nieuw record staat al in zijn eerste stand; die hoort dus ook in
+      // het formulier te staan en niet als streepje.
+      if (!waarden[tabel.proces_veld]) waarden[tabel.proces_veld] = stappen[0].waarde;
+      proces = { veld: tabel.proces_veld, nu: waarden[tabel.proces_veld], stappen };
+    }
   }
 
   return {
