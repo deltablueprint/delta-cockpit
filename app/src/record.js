@@ -398,7 +398,9 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       try {
         await voorwaardenOvernemen(id, gekozen());
         paneel.remove();
-        recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties);
+        // Blijf staan waar je was: je hebt net voorwaarden overgenomen, dus je
+        // wilt ze zien — niet het eerste tabblad.
+        recordscherm(inhoud, kruimel, tabelnaam, id, meta, { ...opties, tab: "voorwaarde" });
       } catch (fout) {
         nemen.disabled = false;
         alert(fout.message);
