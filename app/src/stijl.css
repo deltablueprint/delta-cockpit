@@ -283,8 +283,14 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
 .ikoonknop:hover { color: var(--blue); border-color: var(--blue); }
 .ikoonknop svg { display: block; }
 
-/* --- chevrons: lichtblauw gedaan, donkerblauw waar je staat --- */
-.chevrons { display: flex; gap: 2px; background: #fff; border: 1px solid var(--b1); border-top: none; padding: 8px 12px; }
+/* --- de procesbalk: de fasen, met onder elke fase haar eigen stappen ---
+   Zo zie je wat er in een eerdere fase gebeurd is en wat er straks nog komt.
+   De fase waarin het record staat draagt de kleur; de rest staat gedoofd. */
+.proces { background: #fff; border: 1px solid var(--b1); border-top: none; }
+.chevrons { display: flex; gap: 2px; padding: 8px 12px; }
+.fasestappen { display: flex; gap: 2px; padding: 0 12px 10px; align-items: start; }
+.fasekolom { flex: 1 1 0; min-width: 0; padding: 2px 10px 0 22px; }
+.fasekolom:first-child { padding-left: 14px; }
 .chevron {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   flex: 1 1 0; min-width: 0; height: 28px; padding: 0 16px 0 22px;
@@ -682,29 +688,40 @@ body.sleept .lijsttabel { pointer-events: none; }
 /* --- de checklist van de fase ---
    Onder de chevronbalk: wat er in deze fase gedaan moet worden. Niets om aan
    te vinken — elke stap vinkt zichzelf af zodra het gebeurd is. */
-.stappen { background: #fff; border: 1px solid var(--b1); border-top: none; }
 .stappenkop {
   display: flex; align-items: baseline; gap: 10px;
   padding: 9px 16px; background: var(--soft); border-bottom: 1px solid var(--b1);
   font-size: 10px; font-weight: 700; letter-spacing: 1.4px; color: var(--dim); text-transform: uppercase;
 }
 .stappenmeta { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--mut); }
-.stappenlijst { margin: 0; padding: 6px 0; list-style: none; }
+.stappenlijst { margin: 0; padding: 0; list-style: none; }
 .stap {
-  display: grid; grid-template-columns: 24px minmax(0, 1fr) auto;
-  align-items: baseline; gap: 2px 8px; padding: 6px 16px;
+  display: grid; grid-template-columns: 18px minmax(0, 1fr);
+  align-items: baseline; gap: 3px 7px; padding: 4px 0;
 }
 .stapvink {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 16px; height: 16px; border-radius: 50%;
+  width: 14px; height: 14px; border-radius: 50%; align-self: center;
   border: 1px solid #D8D5CE; color: #fff; background: #fff;
 }
-.stap.gedaan .stapvink { background: var(--grn, #1B6B3A); border-color: var(--grn, #1B6B3A); }
-.stapnaam { font-size: 12.5px; color: var(--ink2); }
-.stap.gedaan .stapnaam { color: var(--mut); }
-.stapstand { font-size: 11.5px; color: var(--mut); white-space: nowrap; }
-.stapuitleg { grid-column: 2 / -1; font-size: 11.5px; color: var(--faint); line-height: 1.45; }
-.stap.open .stapnaam { font-weight: 600; color: var(--ink); }
+/* Een stap die mag wachten draagt een gestippelde rand: hij houdt de fase niet
+   tegen, en dat hoef je niet met vier woorden erachter te zeggen. */
+.stap.mag-later .stapvink { border-style: dashed; }
+.stapnaam { font-size: 12px; line-height: 1.35; color: var(--ink2); }
+.stapstand { font-size: 11px; font-style: normal; font-weight: 400; color: var(--mut); white-space: nowrap; }
+.stapstand::before { content: "·"; margin-right: 4px; }
+
+/* De fase waar het record staat: leesbaar. De fasen ervoor en erna: aanwezig,
+   maar ze vragen geen aandacht. */
+.fasekolom.nu .stap.open .stapnaam { font-weight: 600; color: var(--ink); }
+.fasekolom.nu .stap.gedaan .stapnaam { color: var(--mut); }
+.fasekolom.nu .stap.gedaan .stapvink { background: var(--grn, #1B6B3A); border-color: var(--grn, #1B6B3A); }
+.fasekolom.gedaan .stap .stapnaam,
+.fasekolom.straks .stap .stapnaam { color: var(--faint); }
+.fasekolom.gedaan .stap .stapstand,
+.fasekolom.straks .stap .stapstand { color: var(--faint); }
+.fasekolom.gedaan .stap.gedaan .stapvink { background: #BBD6E5; border-color: #BBD6E5; }
+.fasekolom.straks .stapvink { border-color: #E2DFD8; }
 
 /* --- wie er bij een besluit was: twee kolommen ---
    Links wie er niet bij is, rechts wie meebeslist. Het aantal rechts is het

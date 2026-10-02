@@ -78,42 +78,49 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   kruimels.push(`<span>${ontsnap(titel)}</span>`);
   kruimel.innerHTML = kruimels.join(` <span class="pijlje">&rsaquo;</span> `);
 
-  // ---- procesbalk ----
-  let procesHtml = "";
-  if (data.proces && data.proces.stappen.length) {
-    const nu = data.proces.stappen.findIndex((s) => s.waarde === data.proces.nu);
-    procesHtml = `<div class="chevrons">${data.proces.stappen.map((s, i) => {
-      const stand = i < nu ? "gedaan" : i === nu ? "nu" : "straks";
-      return `<span class="chevron ${stand}">${ontsnap(s.label)}${i < nu ? ICOON.vink : ""}</span>`;
-    }).join("")}</div>`;
-  }
-
   // Op een nieuw record staat de stand nog niet in de waarden; die komt dan
   // uit de procesbalk, die hem al kent.
   const standNu = data.proces
     ? (data.waarden[data.proces.veld] ?? data.proces.nu)
     : null;
 
+  // ---- procesbalk: de fasen, met onder elke fase haar eigen stappen ----
+  // Zo zie je in één blik wat er in een eerdere fase gebeurd is en wat er
+  // straks nog komt, in plaats van alleen de fase waar je nu in staat. De fase
+  // waarin het record staat draagt de kleur; de rest staat gedoofd. Niets om
+  // aan te vinken: elke stap vinkt zichzelf af zodra het gedaan is.
   const stapHtml = (st) => `
-    <li class="stap ${st.gedaan ? "gedaan" : "open"}">
+    <li class="stap ${st.gedaan ? "gedaan" : "open"}${st.verplicht ? "" : " mag-later"}">
       <span class="stapvink">${st.gedaan ? ICOON.vink : ""}</span>
       <span class="stapnaam">${ontsnap(st.naam)}${
-        st.verplicht ? "" : ` <span class="faint">(mag later)</span>`}</span>
-      ${st.stand ? `<span class="stapstand">${ontsnap(st.stand)}</span>` : ""}
-      ${st.uitleg ? `<span class="stapuitleg">${ontsnap(st.uitleg)}</span>` : ""}
+        st.stand ? ` <i class="stapstand">${ontsnap(st.stand)}</i>` : ""}</span>
     </li>`;
 
-  // ---- wat er in deze fase gedaan moet worden ----
-  // Onder de chevronbalk staat de checklist van de fase waarin het record nu
-  // staat: wat er gebeurd is, wat er nog moet, en wie aan zet is. Niets om aan
-  // te vinken — elke stap vinkt zichzelf af zodra het gedaan is.
-  const stappenNu = (data.stappen || []).filter((st) => st.fase === standNu);
-  const stappenHtml = !stappenNu.length ? "" : `
-    <div class="stappen">
-      <div class="stappenkop">In deze fase<span class="stappenmeta">${
-        stappenNu.filter((st) => st.gedaan).length} van ${stappenNu.length} gedaan</span></div>
-      <ul class="stappenlijst">${stappenNu.map(stapHtml).join("")}</ul>
+  const fasekolommen = () => {
+    const fasen = (data.proces && data.proces.stappen) || [];
+    const nu = fasen.findIndex((f) => f.waarde === standNu);
+    return fasen.map((f, i) => {
+      const bij = (data.stappen || []).filter((st) => st.fase === f.waarde);
+      const stand = i < nu ? "gedaan" : i === nu ? "nu" : "straks";
+      return `<div class="fasekolom ${stand}">${
+        bij.length ? `<ul class="stappenlijst">${bij.map(stapHtml).join("")}</ul>` : ""
+      }</div>`;
+    }).join("");
+  };
+
+  let procesHtml = "";
+  if (data.proces && data.proces.stappen.length) {
+    const fasen = data.proces.stappen;
+    const nu = fasen.findIndex((f) => f.waarde === standNu);
+    const heeftStappen = (data.stappen || []).length > 0;
+    procesHtml = `<div class="proces">
+      <div class="chevrons">${fasen.map((f, i) => {
+        const stand = i < nu ? "gedaan" : i === nu ? "nu" : "straks";
+        return `<span class="chevron ${stand}">${ontsnap(f.label)}${i < nu ? ICOON.vink : ""}</span>`;
+      }).join("")}</div>
+      ${heeftStappen && !isNieuw ? `<div class="fasestappen">${fasekolommen()}</div>` : ""}
     </div>`;
+  }
 
   // ---- wie er bij dit besluit was ----
   // Twee kolommen: links wie er niet bij is, rechts wie meebeslist. Het aantal
@@ -264,7 +271,6 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       </span>
     </div>
     ${procesHtml}
-    ${isNieuw ? "" : stappenHtml}
     ${aanwezigenHtml}
     <div class="formulier">${sectieHtml}</div>
     ${toonBroker ? `<div class="brokervak" id="brokervak">
@@ -273,7 +279,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     </div>` : ""}
     ${relatieHtml}`;
 
-  // De checklist leest de stand van het proces. Verandert er iets in een
+  // De stappen lezen de stand van het proces. Verandert er iets in een
   // gerelateerde lijst — een event behandeld, een voorwaarde ingevuld — dan
   // klopt die stand niet meer. Hem opnieuw ophalen is één vraag; het hele
   // scherm hertekenen zou je uit je werk halen.
@@ -282,17 +288,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     try {
       const verse = await stappenVan(tabelnaam, id);
       data.stappen = verse.stappen;
-      const nu = verse.stand || standNu;
-      const vak = inhoud.querySelector(".stappen");
-      const bij = (verse.stappen || []).filter((st) => st.fase === nu);
-      if (vak) {
-        if (!bij.length) vak.remove();
-        else {
-          vak.querySelector(".stappenmeta").textContent =
-            `${bij.filter((st) => st.gedaan).length} van ${bij.length} gedaan`;
-          vak.querySelector(".stappenlijst").innerHTML = bij.map(stapHtml).join("");
-        }
-      }
+      const vak = inhoud.querySelector(".fasestappen");
+      if (vak) vak.innerHTML = fasekolommen();
       // Is de fase opgeschoven, dan klopt de balk erboven ook niet meer.
       if (verse.stand && verse.stand !== standNu) {
         recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties);
