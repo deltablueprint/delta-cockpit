@@ -77,6 +77,12 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     }).join("")}</div>`;
   }
 
+  // Op een nieuw record staat de stand nog niet in de waarden; die komt dan
+  // uit de procesbalk, die hem al kent.
+  const standNu = data.proces
+    ? (data.waarden[data.proces.veld] ?? data.proces.nu)
+    : null;
+
   // ---- wat er in deze fase gedaan moet worden ----
   // Onder de chevronbalk staat de checklist van de fase waarin het record nu
   // staat: wat er gebeurd is, wat er nog moet, en wie aan zet is. Niets om aan
@@ -98,6 +104,46 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       </ul>
     </div>`;
 
+  // ---- wie er bij dit besluit was ----
+  // Twee kolommen: links wie er niet bij is, rechts wie meebeslist. Het aantal
+  // rechts is het quorum — wie meedoet moet inzenden, wie er niet is telt niet
+  // mee. Daarmee is het quorum per besluit anders en altijd uitlegbaar.
+  const toonAanwezigen = tabelnaam === "beoordelingsmoment" && !isNieuw;
+  const erbij = String(data.waarden.aanwezigen_ids || "").split(",").map((w) => w.trim()).filter(Boolean);
+  const iedereen = Object.values(meta.gebruikers || {});
+  const quorumtekst = (n) => n === 0 ? "nog niemand gekozen"
+    : n === 1 ? "één persoon — dit besluit draagt een vlag en vraagt een toelichting"
+    : `${n} aanwezigen, dus ${n} inzendingen nodig`;
+
+  const aanwezigenHtml = !toonAanwezigen ? "" : `
+    <div class="aanwezigen">
+      <div class="stappenkop">Aanwezig bij dit besluit<span class="stappenmeta" id="quorumtekst">${
+        ontsnap(quorumtekst(erbij.length))}</span></div>
+      <div class="kolomkiezer">
+        <div class="kiezerkolom">
+          <div class="kiezerkop">Niet aanwezig</div>
+          <ul class="kiezerlijst" id="kiezer-uit">
+            ${iedereen.filter((g) => !erbij.includes(g.id)).map((g) =>
+              `<li data-id="${ontsnap(g.id)}">${avatarMetNaam(g)}</li>`).join("")}
+          </ul>
+        </div>
+        <div class="kiezerknoppen">
+          <button type="button" class="ikoonknop" id="kiezer-erbij" title="Naar de aanwezigen">&rsaquo;</button>
+          <button type="button" class="ikoonknop" id="kiezer-eruit" title="Weg bij de aanwezigen">&lsaquo;</button>
+        </div>
+        <div class="kiezerkolom">
+          <div class="kiezerkop">Aanwezig</div>
+          <ul class="kiezerlijst" id="kiezer-in">
+            ${iedereen.filter((g) => erbij.includes(g.id)).map((g) =>
+              `<li data-id="${ontsnap(g.id)}">${avatarMetNaam(g)}</li>`).join("")}
+          </ul>
+        </div>
+      </div>
+      <div class="veldwaarde verborgen">
+        <input type="hidden" data-kolom="aanwezigen_ids" id="aanwezigen_ids" value="${ontsnap(erbij.join(","))}">
+      </div>
+    </div>`;
+
   // ---- formulier: twee kolommen, velden om en om verdeeld ----
   const velden = data.velden.filter(
     (v) => v.toon_op_formulier !== 0 && (v.sectie !== "systeem" || !isNieuw)
@@ -107,11 +153,6 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   // én leeg is, vertelt niets: die laten we weg in plaats van een rij
   // streepjes te tonen.
   const alleSecties = data.secties.length ? data.secties : [{ naam: "algemeen", label: data.tabel.label }];
-  // Op een nieuw record staat de stand nog niet in de waarden; die komt dan
-  // uit de procesbalk, die hem al kent.
-  const standNu = data.proces
-    ? (data.waarden[data.proces.veld] ?? data.proces.nu)
-    : null;
   const secties = alleSecties.filter((sectie) => {
     if (isNieuw && sectie.verbergen_bij_nieuw) return false;
     // Een sectie kan bij bepaalde standen horen (db_sectie.standen). Leeg
@@ -217,6 +258,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     </div>
     ${procesHtml}
     ${isNieuw ? "" : stappenHtml}
+    ${aanwezigenHtml}
     <div class="formulier">${sectieHtml}</div>
     ${toonBroker ? `<div class="brokervak" id="brokervak">
       <div class="brokerkop">Open posities bij Lynx<span class="feitmeta">lezend — het systeem plaatst nooit zelf een order</span></div>
@@ -269,6 +311,45 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   // Bedragen schrijven we zoals ze hier gelezen worden: komma, twee cijfers.
   const euro = (n) => Number(n).toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const punten = (n) => Number(n).toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+
+  // ---- de aanwezigenkiezer ----
+  if (toonAanwezigen) {
+    const uit = inhoud.querySelector("#kiezer-uit");
+    const inn = inhoud.querySelector("#kiezer-in");
+    const veld = inhoud.querySelector("#aanwezigen_ids");
+    const tekst = inhoud.querySelector("#quorumtekst");
+
+    const bijwerken = () => {
+      const ids = [...inn.querySelectorAll("li")].map((li) => li.dataset.id);
+      veld.value = ids.join(",");
+      tekst.textContent = quorumtekst(ids.length);
+    };
+
+    const verhuis = (van, naar) => {
+      van.querySelectorAll("li.gekozen").forEach((li) => {
+        li.classList.remove("gekozen");
+        naar.appendChild(li);
+      });
+      bijwerken();
+    };
+
+    [uit, inn].forEach((lijst) => {
+      lijst.addEventListener("click", (e) => {
+        const li = e.target.closest("li");
+        if (li) li.classList.toggle("gekozen");
+      });
+      lijst.addEventListener("dblclick", (e) => {
+        const li = e.target.closest("li");
+        if (!li) return;
+        li.classList.remove("gekozen");
+        (lijst === uit ? inn : uit).appendChild(li);
+        bijwerken();
+      });
+    });
+
+    inhoud.querySelector("#kiezer-erbij").addEventListener("click", () => verhuis(uit, inn));
+    inhoud.querySelector("#kiezer-eruit").addEventListener("click", () => verhuis(inn, uit));
+  }
 
   // ---- wat er bij de broker open staat ----
   // Het kader hoort onder het besluit: eerst waarom, dan wat er in de markt
