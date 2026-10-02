@@ -748,3 +748,11 @@ body.sleept .lijsttabel { pointer-events: none; }
 /* Cellen die je in één kolom hebt aangewezen om samen te zetten. */
 .lijsttabel td.celgekozen { background: var(--bluebg); box-shadow: inset 0 0 0 1px var(--blue); }
 .lijstmelding.keuze { background: var(--bluebg); color: var(--ink2); }
+
+/* Een getal met zijn eenheid ernaast: dan hoeft het label niet te zeggen
+   waarin je rekent. */
+.metteken { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.metteken input { max-width: 120px; }
+.metteken .teken { font-size: 12.5px; color: var(--mut); }
+.metteken.voor { flex-direction: row-reverse; justify-content: flex-end; }
+.veldlabel[hidden], .veldwaarde[hidden] { display: none; }

@@ -55,6 +55,16 @@ export function lees(veld, waarde, meta, verwijzingen = {}, rij = {}) {
       return toonDatum(waarde);
     case "tijdstip":
       return `${toonDatum(waarde)} ${String(waarde).slice(11, 16)}`;
+    case "procent": {
+      const n = Number(waarde);
+      return Number.isFinite(n) ? `${n.toLocaleString("nl-BE", { maximumFractionDigits: 2 })} %` : ontsnap(waarde);
+    }
+    case "bedrag": {
+      const n = Number(waarde);
+      return Number.isFinite(n)
+        ? `€ ${n.toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : ontsnap(waarde);
+    }
     case "ja_nee":
       return Number(waarde) ? "ja" : "nee";
     default:
@@ -110,6 +120,13 @@ export function invoer(veld, waarde, meta, extra = "", naam = null, keuzelijst =
       <option value="0"${!Number(w) ? " selected" : ""}>nee</option>
       <option value="1"${Number(w) ? " selected" : ""}>ja</option></select>`;
   }
+  if (veld.type === "procent" || veld.type === "bedrag") {
+    const teken = veld.type === "procent" ? "%" : "€";
+    return `<span class="metteken${veld.type === "bedrag" ? " voor" : ""}">
+      <input id="${id}" data-kolom="${veld.kolom}" type="number" step="any" value="${ontsnap(w)}" ${extra}>
+      <span class="teken">${teken}</span></span>`;
+  }
+
   const soort = veld.type === "datum" ? "date" : veld.type === "tijd" ? "time" : veld.type === "getal" ? "number" : "text";
   const stap = veld.type === "getal" ? ' step="any"' : "";
   return `<input id="${id}" data-kolom="${veld.kolom}" type="${soort}"${stap} value="${ontsnap(w)}" ${extra}>`;

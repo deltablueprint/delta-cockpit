@@ -164,8 +164,9 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   });
 
   const veldHtml = (v) => `
-    <label class="veldlabel" for="veld-${v.kolom}">${v.verplicht ? '<span class="ster">*</span> ' : ""}${ontsnap(v.label)}</label>
-    <div class="veldwaarde"${v.live ? ` data-live="${tabelnaam}.${id}.${v.kolom}"` : ""}>${
+    <label class="veldlabel" data-veld="${v.kolom}" for="veld-${v.kolom}">${
+      v.verplicht ? '<span class="ster">*</span> ' : ""}${ontsnap(v.label)}</label>
+    <div class="veldwaarde" data-veld="${v.kolom}"${v.live ? ` data-live="${tabelnaam}.${id}.${v.kolom}"` : ""}>${
       v.alleen_lezen
         ? `<span class="alleenlezen livewaarde" data-toon="${v.kolom}">${lees(v, data.waarden[v.kolom], meta, data.verwijzingen, data.waarden)}</span>`
         : invoer(v, data.waarden[v.kolom], meta, "",
@@ -409,6 +410,48 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   };
   inhoud.addEventListener("click", overnemenKlik);
   overnemenLuisteraar = { el: inhoud, fn: overnemenKlik };
+
+  // ---- velden die de keuze volgen ----
+  // Bij een go vraag je om de positie, bij een no-go om de reden. Allebei
+  // tonen betekent dat de helft van het formulier altijd niet van toepassing
+  // is — en dan vult iemand vroeg of laat het verkeerde in. Welke voorwaarde
+  // erbij hoort staat in de definitielaag (db_field.toon_als).
+  const voorwaardelijk = data.velden.filter((v) => v.toon_als);
+  if (voorwaardelijk.length) {
+    const huidigeWaarde = (kolom) => {
+      const el = inhoud.querySelector(`.veldwaarde [data-kolom="${kolom}"]`);
+      if (el) return el.value;
+      const w = data.waarden[kolom];
+      return w === null || w === undefined ? "" : String(w);
+    };
+
+    const voldoet = (uitdrukking) => {
+      const m = /^\s*(\S+)\s*(=|!=)\s*(.+?)\s*$/.exec(String(uitdrukking));
+      if (!m) return true;
+      const [, kolom, op, verwacht] = m;
+      const nu = String(huidigeWaarde(kolom));
+      return op === "=" ? nu === verwacht : nu !== verwacht;
+    };
+
+    const bijwerken = () => {
+      for (const veld of voorwaardelijk) {
+        const zichtbaar = voldoet(veld.toon_als);
+        inhoud.querySelectorAll(`[data-veld="${veld.kolom}"]`).forEach((el) => { el.hidden = !zichtbaar; });
+      }
+      // Een sectie waarvan alles verborgen is, hoeft er ook niet te staan.
+      inhoud.querySelectorAll(".formsectie").forEach((sectie) => {
+        const velden = [...sectie.querySelectorAll(".veldwaarde")];
+        sectie.hidden = velden.length > 0 && velden.every((el) => el.hidden);
+      });
+    };
+
+    const sturend = [...new Set(voorwaardelijk.map((v) => /^\s*(\S+)/.exec(v.toon_als)[1]))];
+    for (const kolom of sturend) {
+      const el = inhoud.querySelector(`.veldwaarde [data-kolom="${kolom}"]`);
+      if (el) el.addEventListener("change", bijwerken);
+    }
+    bijwerken();
+  }
 
   // ---- de aanwezigenkiezer ----
   if (toonAanwezigen) {

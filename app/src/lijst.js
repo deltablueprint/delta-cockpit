@@ -70,13 +70,15 @@ function waarde(veld, w, meta, rij = {}, namen = {}) {
     const kleur = n > 0 ? "var(--grn)" : n < 0 ? "var(--red)" : "var(--ink2)";
     return `<span style="color:${kleur};font-weight:600">${n > 0 ? "+" : n < 0 ? "−" : ""} ${Math.abs(n).toFixed(1).replace(".", ",")} pt</span>`;
   }
+  if (veld.type === "procent") return `${Number(w).toLocaleString("nl-BE", { maximumFractionDigits: 2 })} %`;
+  if (veld.type === "bedrag") return `€ ${Number(w).toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   if (veld.type === "datum") return datum(w);
   if (veld.type === "tijdstip") return `${datum(w)} ${String(w).slice(11, 16)}`;
   return ontsnap(w);
 }
 
 const rechtsUit = (veld) =>
-  ["getal", "datum", "tijdstip"].includes(veld.type) || veld.kolom.endsWith("_pt");
+  ["getal", "datum", "tijdstip", "procent", "bedrag"].includes(veld.type) || veld.kolom.endsWith("_pt");
 
 // ----------------------------------------------------------- kolombreedte
 // Tekst meten doe je niet op gevoel. Het werkblad hieronder rekent dezelfde
