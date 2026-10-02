@@ -17,6 +17,7 @@
 // ============================================================================
 
 import { lijst as haalLijst, bewaar, bewaarSamen, maakAan, archiveer, leesVoorkeur, zetVoorkeur } from "./api.js";
+import { favorietenKaart, wisselFavoriet, STERTJE } from "./navtabs.js";
 import { lees, invoer, keuzesVoor } from "./veld.js";
 
 const KLEUR = {
@@ -271,16 +272,19 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   const breedtes = kolommen.map(
     (k, i) => `${eigen[k.kolom] || gemetenBreedte(k, i, data.rijen, meta, data.verwijzingen || {})}px`
   );
-  const minBreedte = breedtes.reduce((n, b) => n + (parseInt(b, 10) || 180), 0) + 34;
+  const minBreedte = breedtes.reduce((n, b) => n + (parseInt(b, 10) || 180), 0) + 34 + 30;
 
   // In elke lijst kun je regels aanvinken en archiveren — in een gerelateerde
   // lijst en in het volledige bestand. Verwijderen bestaat niet: een
   // gearchiveerde regel verdwijnt uit beeld maar blijft bestaan, met wie hem
   // weghaalde in de audit trail (hard uitgangspunt 1).
   const metVinkjes = true;
+  // Twee kolommen staan vooraan in de tabel maar niet in de kolomlijst: het
+  // vinkje en het sterretje. Alles wat met kolomnummers rekent, rekent daarmee.
+  const VOORAAN = 2;
 
   const colgroup = `<colgroup>
-      ${metVinkjes ? `<col style="width:34px">` : ""}
+      ${metVinkjes ? `<col style="width:34px"><col style="width:30px">` : ""}
       ${breedtes.map((b) => `<col style="width:${ontsnap(b)}">`).join("")}
       <col>
     </colgroup>`;
@@ -288,7 +292,8 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   const thead = `
     <thead>
       <tr class="kopregel">
-        ${metVinkjes ? `<th class="vink"><input type="checkbox" class="vinkalles" aria-label="Alles aanvinken"></th>` : ""}
+        ${metVinkjes ? `<th class="vink"><input type="checkbox" class="vinkalles" aria-label="Alles aanvinken"></th>
+        <th class="sterkol"></th>` : ""}
         ${kolommen.map((k) => `
           <th class="${rechtsUit(k) ? "rechts " : ""}${toestand.sorteer === k.kolom ? "gesorteerd" : ""}" data-kolom="${k.kolom}"
               aria-sort="${toestand.sorteer === k.kolom ? (toestand.richting === "desc" ? "descending" : "ascending") : "none"}">
@@ -300,7 +305,8 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       </tr>
       <tr class="zoekregel">
         ${metVinkjes ? `<td class="vink"><button class="ikoonknop rlweg onzichtbaar" id="rlweg"
-            title="Aangevinkte regels archiveren" aria-label="Aangevinkte regels archiveren">${ICOON.prullenbak}</button></td>` : ""}
+            title="Aangevinkte regels archiveren" aria-label="Aangevinkte regels archiveren">${ICOON.prullenbak}</button></td>
+        <td class="sterkol"></td>` : ""}
         ${kolommen.map((k) => `<td><input type="text" data-kolom="${k.kolom}"
             aria-label="Zoeken in ${ontsnap(k.label)}" value="${ontsnap(toestand.filters[k.kolom] || "")}"
             placeholder="Zoeken"${k.type === "datum" || k.type === "tijdstip" ? ' title="Bijvoorbeeld: 2026 · jul · jul 2026 · 6 jul 2026 · 202607 · 6/7/2026"' : ""}></td>`).join("")}
@@ -328,13 +334,23 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     meld.klok = setTimeout(() => { vak.hidden = true; }, 6000);
   };
 
+  // Waar een favoriet van dit record naar heet: wat er in de eerste kolom staat.
+  const rijnaam = (r) => {
+    const eerste = kolommen[0];
+    const w = eerste ? platteTekst(eerste, r[eerste.kolom], meta, data.verwijzingen || {}) : "";
+    return `${data.tabel.label}: ${w || `#${r.id}`}`;
+  };
+
   const tbody = tot === 0
-    ? `<tbody><tr><td colspan="${kolommen.length + (metVinkjes ? 2 : 1)}" class="geenregels">
+    ? `<tbody><tr><td colspan="${kolommen.length + (metVinkjes ? 3 : 1)}" class="geenregels">
          ${(toestand.ingebed ? toestand.q : toestand.q || chips) ? "Geen regels die hieraan voldoen." : `Nog geen ${ontsnap(data.tabel.label_mv.toLowerCase())}.`}
        </td></tr></tbody>`
     : `<tbody>${data.rijen.map((r) => `
         <tr data-id="${r.id}">
-          ${metVinkjes ? `<td class="vink"><input type="checkbox" class="vinkrij" data-id="${r.id}" aria-label="Deze regel aanvinken"></td>` : ""}
+          ${metVinkjes ? `<td class="vink"><input type="checkbox" class="vinkrij" data-id="${r.id}" aria-label="Deze regel aanvinken"></td>
+          <td class="sterkol"><button class="rijster" type="button" data-id="${r.id}"
+            data-naam="${ontsnap(rijnaam(r))}"
+            title="Toevoegen aan favorieten" aria-label="Toevoegen aan favorieten">${STERTJE}</button></td>` : ""}
           ${kolommen.map((k, i) => {
             const tip = platteTekst(k, r[k.kolom], meta, data.verwijzingen || {});
             return `<td data-kolom="${k.kolom}" class="${rechtsUit(k) ? "rechts " : ""}${toestand.sorteer === k.kolom ? "gesorteerd" : ""}"${tip ? ` title="${ontsnap(tip)}"` : ""}>${
@@ -455,6 +471,33 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     });
   });
 
+  // ---- het sterretje per regel ----
+  // Een record dat je vaker nodig hebt, zet je hier bij je favorieten. De route
+  // is die van het record zelf, dus de favoriet brengt je er rechtstreeks heen.
+  const sterren = [...inhoud.querySelectorAll(".rijster")];
+  if (sterren.length) {
+    const route = (id) => `/t/${tabelnaam}/${id}`;
+    favorietenKaart().then((kaart) => {
+      sterren.forEach((s) => s.classList.toggle("vast", kaart.has(route(s.dataset.id))));
+    }).catch(() => {});
+
+    sterren.forEach((ster) => {
+      ster.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ster.disabled = true;
+        try {
+          const nu = await wisselFavoriet(route(ster.dataset.id), ster.dataset.naam);
+          ster.classList.toggle("vast", nu);
+          ster.title = nu ? "Weghalen uit favorieten" : "Toevoegen aan favorieten";
+        } catch (fout) {
+          meld(fout.message, "fouttekst");
+        }
+        ster.disabled = false;
+      });
+    });
+  }
+
   // ---- aanvinken en archiveren in een gerelateerde lijst ----
   if (metVinkjes) {
     const alles = inhoud.querySelector(".vinkalles");
@@ -538,7 +581,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       const kolom = greep.dataset.sleep;
       // De kolom met de vinkjes staat vooraan in de colgroup maar niet in de
       // kolomlijst. Zonder die verschuiving versleep je de buurman.
-      const index = kolommen.findIndex((k) => k.kolom === kolom) + (metVinkjes ? 1 : 0);
+      const index = kolommen.findIndex((k) => k.kolom === kolom) + (metVinkjes ? VOORAAN : 0);
       const col = tabel.querySelectorAll("col")[index];
       const beginX = e.clientX;
       const beginBreedte = col.getBoundingClientRect().width;
@@ -679,7 +722,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       const toonCel = (doelcel, doelrij, nieuweWaarde) => {
         doelcel.classList.remove("bewerkt", "bezigcel", "celgekozen");
         const getoond = waarde(veld, nieuweWaarde, meta, doelrij, data.verwijzingen || {});
-        doelcel.innerHTML = doelcel.cellIndex === (metVinkjes ? 1 : 0)
+        doelcel.innerHTML = doelcel.cellIndex === (metVinkjes ? VOORAAN : 0)
           ? `<a href="#/t/${tabelnaam}/${doelrij.id}" class="recordlink">${getoond}</a>`
           : getoond;
         doelcel.classList.add("zojuist");

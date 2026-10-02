@@ -115,6 +115,24 @@ a { color: var(--blue); }
 .menugroep.dicht .groepitems { display: none; }
 .menugroep.zoekt .groepitems { display: block; }   /* tijdens filteren staat alles open */
 
+/* Een menuregel draagt de link en een sterretje. Het sterretje verschijnt pas
+   als je over de regel zweeft — tenzij deze lijst al favoriet is, dan staat het
+   er altijd: dat is informatie en geen knop. */
+.menuregel { display: flex; align-items: center; }
+.menuregel[hidden] { display: none; }
+.menuregel:hover { background: rgba(255,255,255,.06); }
+.menu .menuregel a { flex: 1 1 auto; min-width: 0; }
+.menu .menuregel a:hover { background: none; }
+.menuster {
+  flex-shrink: 0; display: none; align-items: center; justify-content: center;
+  width: 26px; height: 26px; margin-right: 6px; padding: 0;
+  border: 0; border-radius: 2px; background: none; color: var(--navdim); cursor: pointer;
+}
+.menuregel:hover .menuster, .menuster.vast { display: inline-flex; }
+.menuster:hover { color: #fff; background: rgba(255,255,255,.14); }
+.menuster.vast { color: #F2B705; }
+.menuster.vast svg { fill: currentColor; }
+
 .menu a {
   display: flex; align-items: center; padding: 6px 10px 6px 24px;
   color: var(--navtxt); text-decoration: none; font-size: 12.5px;
@@ -627,6 +645,21 @@ body.sleept .lijsttabel { pointer-events: none; }
 }
 .lijsttabel th.vink input, .lijsttabel td.vink input { display: inline-block; vertical-align: middle; }
 .lijsttabel tr.gekozen td { background: var(--bluebg); }
+
+/* Het sterretje per regel: onzichtbaar tot je over de regel zweeft, en altijd
+   zichtbaar als dit record al bij je favorieten staat. */
+.lijsttabel th.sterkol, .lijsttabel td.sterkol {
+  padding: 2px 0; text-align: center; cursor: default; overflow: visible;
+}
+.rijster {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; padding: 0; border: 0; border-radius: 2px;
+  background: none; color: var(--faint); cursor: pointer; opacity: 0;
+}
+.lijsttabel tbody tr:hover .rijster, .rijster.vast, .rijster:focus { opacity: 1; }
+.rijster:hover { color: var(--ink2); background: var(--soft); }
+.rijster.vast { color: #F2B705; }
+.rijster.vast svg { fill: currentColor; }
 /* De prullenbak is een icoon naast 'Nieuw', geen knop met een kader eromheen:
    hij hoort pas op te vallen als er iets aangevinkt staat. */
 .rlweg {

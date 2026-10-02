@@ -6,7 +6,7 @@
 
 import { ontsnap } from "./veld.js";
 import { ikoon, KLEUREN } from "./ikonen.js";
-import { haalFavorieten, maakFavoriet, haalBezoeken, wisBezoeken } from "./api.js";
+import { haalFavorieten, maakFavoriet, weghaalFavoriet, haalBezoeken, wisBezoeken } from "./api.js";
 
 export const ICOON = {
   menu: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"
@@ -32,6 +32,38 @@ function geleden(stempel) {
   if (s < 86400) return `${Math.round(s / 3600)} uur`;
   return `${Math.round(s / 86400)} d`;
 }
+
+// Eén gedeelde kaart van wat er al favoriet is: route → nummer. Het sterretje
+// in het menu en het sterretje in een lijst kijken allebei hierin, zodat ze
+// niet ieder apart de lijst hoeven op te halen en nooit uit elkaar lopen.
+let kaart = null;
+let hertekenen = null;
+
+export async function favorietenKaart(vers = false) {
+  if (!kaart || vers) {
+    try {
+      const { favorieten } = await haalFavorieten();
+      kaart = new Map(favorieten.map((f) => [f.route, f.id]));
+    } catch {
+      kaart = kaart || new Map();
+    }
+  }
+  return kaart;
+}
+
+// Toevoegen of weghalen, afhankelijk van wat het al was. Geeft terug of het nu
+// een favoriet is.
+export async function wisselFavoriet(route, label) {
+  const k = await favorietenKaart();
+  if (k.has(route)) await weghaalFavoriet(k.get(route));
+  else await maakFavoriet({ route, label });
+  await favorietenKaart(true);
+  if (hertekenen) hertekenen();
+  return (await favorietenKaart()).has(route);
+}
+
+export const STERTJE = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+  stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg>`;
 
 export function navtabsHtml() {
   return `
@@ -81,6 +113,7 @@ export function navtabsAansluiten(wortel) {
   const tekenFavorieten = async () => {
     try {
       const { favorieten } = await haalFavorieten();
+      kaart = new Map(favorieten.map((f) => [f.route, f.id]));
       favlijst.innerHTML = favorieten.length
         ? favorieten.map((f) => `
             <a href="#${ontsnap(f.route)}" class="navregel" data-route="${ontsnap(f.route)}">
@@ -122,6 +155,7 @@ export function navtabsAansluiten(wortel) {
   };
 
   tabs.forEach((t) => t.addEventListener("click", () => kies(t.dataset.tab)));
+  hertekenen = tekenFavorieten;
 
   // Deze pagina bewaren. De route komt uit de adresbalk, dus het filter en de
   // sortering waar je nu naar kijkt gaan mee.
@@ -130,8 +164,7 @@ export function navtabsAansluiten(wortel) {
     plus.addEventListener("click", async () => {
       plus.disabled = true;
       try {
-        await maakFavoriet({ route: location.hash.slice(1) || "/dashboard", label: voorstelNaam() });
-        await tekenFavorieten();
+        await wisselFavoriet(location.hash.slice(1) || "/dashboard", voorstelNaam());
       } catch { /* stil: een favoriet die niet lukt mag het scherm niet breken */ }
       plus.disabled = false;
     });

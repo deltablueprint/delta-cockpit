@@ -9,7 +9,8 @@ const LOGO = `<svg viewBox="0 0 296.1 251.9" width="15" height="13" aria-hidden=
 
 import { avatar, verklein } from "./avatar.js";
 import { zetAvatar, leesVoorkeur, zetVoorkeur } from "./api.js";
-import { navtabsHtml, navpanelenHtml, navtabsAansluiten } from "./navtabs.js";
+import { navtabsHtml, navpanelenHtml, navtabsAansluiten,
+         favorietenKaart, wisselFavoriet, STERTJE } from "./navtabs.js";
 
 const TRECHTER = `<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
   <path d="M1.5 2.5h13L9.5 8.4v4.3l-3 1.8V8.4z" fill="none" stroke="currentColor" stroke-width="1.3"
@@ -49,8 +50,11 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
       </button>
       <div class="groepitems">
         ${groep.items.map((item) => `
-          <a href="#${item.route}" class="${item.route === actieveRoute ? "actief" : ""}"
-             data-zoek="${(item.label + " " + groep.groep).toLowerCase()}">${item.label}</a>
+          <span class="menuregel" data-zoek="${(item.label + " " + groep.groep).toLowerCase()}">
+            <a href="#${item.route}" class="${item.route === actieveRoute ? "actief" : ""}">${item.label}</a>
+            <button class="menuster" type="button" data-route="${item.route}" data-label="${item.label}"
+              title="Toevoegen aan favorieten" aria-label="Toevoegen aan favorieten">${STERTJE}</button>
+          </span>
         `).join("")}
       </div>
     </div>`).join("");
@@ -150,9 +154,9 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
     let gevonden = 0;
     groepen.forEach((g) => {
       let raak = 0;
-      g.querySelectorAll("a").forEach((a) => {
-        const past = !woord || a.dataset.zoek.includes(woord);
-        a.hidden = !past;
+      g.querySelectorAll(".menuregel").forEach((r) => {
+        const past = !woord || r.dataset.zoek.includes(woord);
+        r.hidden = !past;
         if (past) raak++;
       });
       g.hidden = raak === 0;
@@ -169,6 +173,28 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
   });
 
   const navtabs = navtabsAansluiten(wortel);
+
+  // Het sterretje naast een menu-item: zichtbaar zodra je erover zweeft, gevuld
+  // als deze lijst al in je favorieten staat. Eén klik zet hem erbij of haalt
+  // hem eruit — het hele menu is daarmee ook de plek waar je favorieten maakt.
+  const sterren = [...wortel.querySelectorAll(".menuster")];
+  const sterrenBijwerken = async () => {
+    const kaart = await favorietenKaart();
+    sterren.forEach((s) => s.classList.toggle("vast", kaart.has(s.dataset.route)));
+  };
+  sterrenBijwerken();
+  sterren.forEach((ster) => {
+    ster.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      ster.disabled = true;
+      try {
+        const nu = await wisselFavoriet(ster.dataset.route, ster.dataset.label);
+        ster.classList.toggle("vast", nu);
+      } catch { /* een favoriet die niet lukt mag het menu niet breken */ }
+      ster.disabled = false;
+    });
+  });
 
   gebouwd = {
     wortel,
