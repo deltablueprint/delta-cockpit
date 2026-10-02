@@ -686,3 +686,26 @@ body.sleept .lijsttabel { pointer-events: none; }
 .stapstand { font-size: 11.5px; color: var(--mut); white-space: nowrap; }
 .stapuitleg { grid-column: 2 / -1; font-size: 11.5px; color: var(--faint); line-height: 1.45; }
 .stap.open .stapnaam { font-weight: 600; color: var(--ink); }
+
+/* --- wie er bij een besluit was: twee kolommen ---
+   Links wie er niet bij is, rechts wie meebeslist. Het aantal rechts is het
+   quorum: wie meedoet moet inzenden, wie er niet is telt niet mee. */
+.aanwezigen { background: #fff; border: 1px solid var(--b1); border-top: none; }
+.kolomkiezer {
+  display: grid; grid-template-columns: minmax(0, 1fr) 46px minmax(0, 1fr);
+  gap: 10px; align-items: center; padding: 14px 16px;
+}
+.kiezerkop { font-size: 11.5px; color: var(--mut); margin-bottom: 5px; }
+.kiezerlijst {
+  margin: 0; padding: 4px; list-style: none; min-height: 118px;
+  border: 1px solid #D8D5CE; border-radius: 2px; background: #fff;
+}
+.kiezerlijst li {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 7px; border-radius: 2px; font-size: 12.5px; cursor: pointer;
+}
+.kiezerlijst li:hover { background: var(--soft); }
+.kiezerlijst li.gekozen { background: var(--bluebg); color: var(--ink); }
+.kiezerknoppen { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.kiezerknoppen .ikoonknop { font-size: 15px; line-height: 1; }
+.verborgen { display: none; }

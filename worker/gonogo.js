@@ -85,13 +85,10 @@ export async function actieVoor(env, tabelnaam, rij, tabel, ik) {
   return { label, route: `/${stap.doelscherm}/${rij.id}`, stap: stap.naam };
 }
 
-async function quorumstap(env) {
-  return env.DB.prepare(
-    `select s.* from processtap s
-       join proces p on p.id = s.proces
-      where p.toepassing = 'cyclus' and p.archief = 0 and s.archief = 0 and s.quorum is not null
-      order by s.volgorde limit 1`
-  ).first();
+// Het quorum is het aantal aanwezigen van dit besluit. Wie meedoet moet
+// inzenden; wie er niet is, telt niet mee.
+function aanwezigen(moment) {
+  return String((moment && moment.aanwezigen_ids) || "").split(",").map((w) => w.trim()).filter(Boolean);
 }
 
 async function openMoment(env, cyclusId) {
@@ -109,8 +106,7 @@ export async function stand(env, ik, cyclusId) {
   ).bind(cyclusId).first();
   if (!cyclus) return { fout: `Geen cyclus met nummer ${cyclusId}.`, status: 404 };
 
-  const [stap, moment, deelnemers] = await Promise.all([
-    quorumstap(env),
+  const [moment, deelnemers] = await Promise.all([
     openMoment(env, cyclusId),
     env.DB.prepare("select id, naam, korte_naam, avatar, kleur from gebruiker where actief = 1 order by naam").all(),
   ]);
@@ -151,15 +147,17 @@ export async function stand(env, ik, cyclusId) {
   ).bind(cyclusId).all()).results;
 
   const verstuurd = inzendingen.filter((i) => i.status === "verstuurd").length;
-  const nodig = stap && stap.quorum ? stap.quorum : (deelnemers.results.length || 3);
+  const erbij = aanwezigen(hetMoment);
+  const nodig = erbij.length;
 
   return {
     cyclus,
-    stap: stap ? { naam: stap.naam, quorum: stap.quorum, quorum_van: stap.quorum_van, afdwingt: stap.afdwingt } : null,
+    stap: null,
     moment: hetMoment,
     open: Boolean(hetMoment && hetMoment.quorum_gehaald_op),
-    quorum: { nodig, van: stap && stap.quorum_van ? stap.quorum_van : deelnemers.results.length, verstuurd },
-    deelnemers: deelnemers.results,
+    quorum: { nodig, van: nodig, verstuurd },
+    aanwezigen: erbij,
+    deelnemers: deelnemers.results.filter((g) => !erbij.length || erbij.includes(g.id)),
     inzendingen,
     mijn,
     voorwaarden,
@@ -253,13 +251,13 @@ export async function versturen(env, ik, cyclusId, body = {}) {
 // Het quorum tellen. Wordt het gehaald, dan gaan de inzendingen open —
 // tegelijk voor iedereen, ook voor degene die als eerste verstuurde.
 async function tilQuorum(env, ik, momentId) {
-  const stap = await quorumstap(env);
-  const nodig = stap && stap.quorum ? stap.quorum : 3;
+  const moment = await env.DB.prepare("select * from beoordelingsmoment where id = ?").bind(momentId).first();
+  const nodig = aanwezigen(moment).length;
+  if (!nodig) return { verstuurd: 0, nodig: 0, open: false };
+
   const n = (await env.DB.prepare(
     "select count(*) as n from inzending where beoordelingsmoment = ? and status = 'verstuurd' and archief = 0"
   ).bind(momentId).first()).n;
-
-  const moment = await env.DB.prepare("select * from beoordelingsmoment where id = ?").bind(momentId).first();
   if (n >= nodig && moment && !moment.quorum_gehaald_op) {
     await env.DB.batch([
       env.DB.prepare(
