@@ -276,9 +276,10 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
     </div>` : `
     <div class="paneel">
       <div class="paneelkop">Uitkomst van het gesprek<span class="paneelmeta">één uitkomst voor de groep — alle velden verplicht</span></div>
-      <div class="formsectie">
-        <div class="formkolommen">
-          <div class="formkolom">
+      <div class="formsectie uitkomstvorm">
+        <div class="uitkomstvelden">
+          <div class="formkolommen een">
+            <div class="formkolom">
             <label class="veldlabel" for="u_uitkomst"><span class="ster">*</span> Uitkomst</label>
             <div class="veldwaarde"><select id="u_uitkomst">
               <option value="">&mdash;</option><option value="go">Go</option><option value="no-go">No-go</option>
@@ -294,28 +295,27 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
             <div class="veldwaarde" data-alleen="no-go" hidden><input id="u_volgend" type="date"></div>
             <label class="veldlabel" data-alleen="go" hidden>Contract</label>
             <div class="veldwaarde" data-alleen="go" hidden><span class="alleenlezen" id="u_contract">&mdash;</span></div>
-          </div>
-          <div class="formkolom">
-            <label class="veldlabel"><span class="ster">*</span> Aanwezigen</label>
-            <div class="veldwaarde kiezervak">
-              ${kiezerHtml({
-                id: "u_aanwezigen",
-                linkskop: "Niet bij het gesprek",
-                rechtskop: "Was erbij",
-                links: data.deelnemers.filter((g) => !gekozenAanwezig.includes(String(g.id))).map(rij),
-                rechts: data.deelnemers.filter((g) => gekozenAanwezig.includes(String(g.id))).map(rij),
-              })}
             </div>
           </div>
+          <div class="formbreed">
+            <label class="veldlabel" for="u_veranderde"><span class="ster">*</span> Wat het gesprek veranderde</label>
+            <div class="veldwaarde"><textarea id="u_veranderde" placeholder="Wat is er gezegd dat iemands oordeel heeft verschoven? Niets is ook een antwoord."></textarea></div>
+          </div>
         </div>
-        <div class="formbreed">
-          <label class="veldlabel" for="u_veranderde"><span class="ster">*</span> Wat het gesprek veranderde</label>
-          <div class="veldwaarde"><textarea id="u_veranderde" placeholder="Wat is er gezegd dat iemands oordeel heeft verschoven? Niets is ook een antwoord."></textarea></div>
+        <div class="uitkomstwie">
+          <div class="wiekop"><span class="ster">*</span> Aanwezigen</div>
+          ${kiezerHtml({
+            id: "u_aanwezigen",
+            linkskop: "Niet bij het gesprek",
+            rechtskop: "Was erbij",
+            links: data.deelnemers.filter((g) => !gekozenAanwezig.includes(String(g.id))).map(rij),
+            rechts: data.deelnemers.filter((g) => gekozenAanwezig.includes(String(g.id))).map(rij),
+          })}
         </div>
-        <div class="knoprij">
+      </div>
+      <div class="knoprij">
           <button class="knop" id="vastleggen">Uitkomst vastleggen</button>
-          <span class="paneelmeta">Bij een go ontstaat het positierecord vanzelf, met dit besluit eronder.</span>
-        </div>
+        <span class="paneelmeta">Bij een go ontstaat het positierecord vanzelf, met dit besluit eronder.</span>
       </div>
     </div>`;
 
