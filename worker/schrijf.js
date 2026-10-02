@@ -397,6 +397,17 @@ export async function maakAan(env, ik, tabelnaam, body) {
   // staat en in de database een standaardwaarde heeft, laten we gewoon aan de
   // database over: anders vraagt het systeem om iets wat het zelf al weet.
   const info = await kolominfo(env, tabelnaam);
+
+  // Een veld dat je leeg laat terwijl de database er een waarde voor heeft,
+  // laten we aan de database over. Anders schrijft het formulier een lege
+  // waarde over een standaard heen — en dat is precies wat 'volgorde mag niet
+  // leeg zijn' betekende op een veld dat je niet hoeft in te vullen.
+  for (const [kolom, w] of Object.entries(nieuw)) {
+    if (w !== null && w !== "") continue;
+    const k = info[kolom];
+    if (k && k.notnull && k.dflt_value !== null) delete nieuw[kolom];
+  }
+
   for (const veld of velden.filter((v) => v.verplicht)) {
     const leeg = nieuw[veld.kolom] === undefined || nieuw[veld.kolom] === null || nieuw[veld.kolom] === "";
     if (!leeg) continue;

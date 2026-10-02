@@ -545,75 +545,136 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     });
   });
 
-  // ---- bewerken in de lijst (etappe 5) ----
-  // Dubbelklik op een cel maakt er een invoerveld van. Enter of wegklikken
-  // slaat op, Escape maakt ongedaan. Opslaan draagt de revisie mee: heeft
-  // iemand anders intussen opgeslagen, dan zie je dat in plaats van zijn
-  // werk te overschrijven.
-  inhoud.querySelectorAll("tbody td[data-kolom]").forEach((cel) => {
-    cel.addEventListener("dblclick", () => {
-      if (cel.querySelector("input, select, textarea")) return;
-      const kolom = cel.dataset.kolom;
-      const veld = kolommen.find((k) => k.kolom === kolom);
-      if (!veld || veld.alleen_lezen) return;
+  // ---- bewerken in de lijst ----
+  // Dubbelklikken opent de hele regel, niet één cel: je verandert zelden maar
+  // één ding. Tab loopt door de velden, Enter slaat alles in één keer op,
+  // Escape zet de regel terug. Het opslaan draagt de revisie mee — heeft
+  // iemand anders intussen opgeslagen, dan zie je dat in plaats van zijn werk
+  // te overschrijven.
+  const bewerkbaar = kolommen.filter((k) => !k.alleen_lezen);
+  let regelInBewerking = null;
 
-      const rij = cel.closest("tr");
-      const id = Number(rij.dataset.id);
-      const oudeHtml = cel.innerHTML;
-      const rijgegevens = data.rijen.find((r) => r.id === id);
-      const oudeWaarde = rijgegevens ? rijgegevens[kolom] : null;
+  function openRegel(rij, beginKolom) {
+    if (regelInBewerking) return;
+    const id = Number(rij.dataset.id);
+    const rijgegevens = data.rijen.find((r) => r.id === id);
+    if (!rijgegevens) return;
 
+    const cellen = [];
+    for (const cel of rij.querySelectorAll("td[data-kolom]")) {
+      const veld = kolommen.find((k) => k.kolom === cel.dataset.kolom);
+      if (!veld || veld.alleen_lezen) continue;
+      cellen.push({ cel, veld, oudeHtml: cel.innerHTML, oudeWaarde: rijgegevens[veld.kolom] ?? null });
       cel.classList.add("bewerkt");
-      cel.innerHTML = invoer(veld, oudeWaarde, meta, 'class="celinvoer"');
-      const el = cel.querySelector("[data-kolom]");
-      el.focus();
-      if (el.select) el.select();
+      cel.innerHTML = invoer(veld, rijgegevens[veld.kolom] ?? null, meta, 'class="celinvoer"');
+    }
+    if (!cellen.length) return;
 
-      let klaar = false;
-      const herstel = () => { cel.classList.remove("bewerkt"); cel.innerHTML = oudeHtml; };
+    rij.classList.add("regelbewerkt");
+    regelInBewerking = { rij, id, rijgegevens, cellen, klaar: false };
 
-      const opslaan = async () => {
-        if (klaar) return;
-        klaar = true;
-        const nieuweWaarde = el.value === "" ? null : el.value;
-        if (String(nieuweWaarde ?? "") === String(oudeWaarde ?? "")) return herstel();
-        cel.classList.add("bezigcel");
-        try {
-          const uitkomst = await bewaar(tabelnaam, id, { [kolom]: nieuweWaarde }, rijgegevens?.revisie);
-          if (rijgegevens) {
-            rijgegevens[kolom] = nieuweWaarde;
-            rijgegevens.revisie = uitkomst.revisie ?? rijgegevens.revisie;
-          }
-          cel.classList.remove("bewerkt", "bezigcel");
-          const getoond = lees(veld, nieuweWaarde, meta);
-          // De eerste kolom blijft de ingang naar het record; na het bewerken
-          // moet die link er dus weer omheen.
-          cel.innerHTML = cel.cellIndex === 0
-            ? `<a href="#/t/${tabelnaam}/${id}" class="recordlink">${getoond}</a>`
-            : getoond;
-          cel.classList.add("zojuist");
-          setTimeout(() => cel.classList.remove("zojuist"), 1200);
-          if (uitkomst.waarschuwingen && uitkomst.waarschuwingen.length) {
-            meld(uitkomst.waarschuwingen[0].melding, "waarschuwing");
-          }
-        } catch (fout) {
-          cel.classList.remove("bezigcel");
-          herstel();
-          meld(fout.message, "fouttekst");
-          if (String(fout.message).includes("intussen")) {
-            lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand);
-          }
+    const eerste = cellen.find((c) => c.veld.kolom === beginKolom) || cellen[0];
+    const el = eerste.cel.querySelector("[data-kolom]");
+    if (el) { el.focus(); if (el.select) el.select(); }
+
+    rij.addEventListener("keydown", opKeydown);
+    setTimeout(() => document.addEventListener("mousedown", opKlikBuiten), 0);
+  }
+
+  function herstelRegel() {
+    if (!regelInBewerking) return;
+    const { rij, cellen } = regelInBewerking;
+    for (const c of cellen) {
+      c.cel.classList.remove("bewerkt", "bezigcel");
+      c.cel.innerHTML = c.oudeHtml;
+    }
+    rij.classList.remove("regelbewerkt");
+    sluitAf();
+  }
+
+  function sluitAf() {
+    if (!regelInBewerking) return;
+    regelInBewerking.rij.removeEventListener("keydown", opKeydown);
+    document.removeEventListener("mousedown", opKlikBuiten);
+    regelInBewerking = null;
+  }
+
+  function opKlikBuiten(e) {
+    if (!regelInBewerking) return;
+    if (regelInBewerking.rij.contains(e.target)) return;
+    bewaarRegel();
+  }
+
+  function opKeydown(e) {
+    if (!regelInBewerking) return;
+    if (e.key === "Escape") { e.preventDefault(); herstelRegel(); return; }
+    if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") { e.preventDefault(); bewaarRegel(); }
+  }
+
+  async function bewaarRegel() {
+    if (!regelInBewerking || regelInBewerking.klaar) return;
+    regelInBewerking.klaar = true;
+    const { rij, id, rijgegevens, cellen } = regelInBewerking;
+
+    const gewijzigd = {};
+    for (const c of cellen) {
+      const el = c.cel.querySelector("[data-kolom]");
+      if (!el) continue;
+      const nieuweWaarde = el.value === "" ? null : el.value;
+      if (String(nieuweWaarde ?? "") !== String(c.oudeWaarde ?? "")) gewijzigd[c.veld.kolom] = nieuweWaarde;
+      c.nieuweWaarde = nieuweWaarde;
+    }
+
+    if (!Object.keys(gewijzigd).length) return herstelRegel();
+
+    cellen.forEach((c) => c.cel.classList.add("bezigcel"));
+    try {
+      const uitkomst = await bewaar(tabelnaam, id, gewijzigd, rijgegevens.revisie);
+      rijgegevens.revisie = uitkomst.revisie ?? rijgegevens.revisie;
+
+      for (const c of cellen) {
+        rijgegevens[c.veld.kolom] = c.nieuweWaarde;
+        c.cel.classList.remove("bewerkt", "bezigcel");
+        const getoond = waarde(c.veld, c.nieuweWaarde, meta, rijgegevens, data.verwijzingen || {});
+        // De eerste kolom blijft de ingang naar het record; na het bewerken
+        // moet die link er dus weer omheen.
+        c.cel.innerHTML = c.cel.cellIndex === (metVinkjes ? 1 : 0)
+          ? `<a href="#/t/${tabelnaam}/${id}" class="recordlink">${getoond}</a>`
+          : getoond;
+        if (c.veld.kolom in gewijzigd) {
+          c.cel.classList.add("zojuist");
+          setTimeout(() => c.cel.classList.remove("zojuist"), 1200);
         }
-      };
+      }
+      rij.classList.remove("regelbewerkt");
+      sluitAf();
 
-      el.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && veld.type !== "lang") { e.preventDefault(); opslaan(); }
-        if (e.key === "Escape") { klaar = true; herstel(); }
+      if (uitkomst.waarschuwingen && uitkomst.waarschuwingen.length) {
+        meld(uitkomst.waarschuwingen[0].melding, "waarschuwing");
+      }
+      // Een wijziging kan de fase laten opschuiven of een andere regel raken;
+      // dan klopt de lijst alleen nog als hij opnieuw kijkt.
+      if (uitkomst.gewijzigd && uitkomst.gewijzigd.includes("status")) {
+        lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand);
+      }
+    } catch (fout) {
+      cellen.forEach((c) => c.cel.classList.remove("bezigcel"));
+      herstelRegel();
+      meld(fout.message, "fouttekst");
+      if (String(fout.message).includes("intussen")) {
+        lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand);
+      }
+    }
+  }
+
+  if (bewerkbaar.length) {
+    inhoud.querySelectorAll("tbody tr[data-id]").forEach((rij) => {
+      rij.addEventListener("dblclick", (e) => {
+        const cel = e.target.closest("td[data-kolom]");
+        openRegel(rij, cel ? cel.dataset.kolom : null);
       });
-      el.addEventListener("blur", opslaan);
-      if (el.tagName === "SELECT") el.addEventListener("change", opslaan);
     });
-  });
+  }
 
   // De cursor terug in het veld waar hij stond, anders is typen onmogelijk.
   if (laatsteFocus === "q" && zoek) {

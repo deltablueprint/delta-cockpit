@@ -710,3 +710,8 @@ body.sleept .lijsttabel { pointer-events: none; }
 .kiezerknoppen .ikoonknop { font-size: 15px; line-height: 1; }
 .verborgen { display: none; }
 .rluitleg { font-size: 11.5px; color: var(--mut); font-style: italic; }
+
+/* Een regel die bewerkt wordt, laat dat zien: dan weet je waar je zit en wat
+   er meegaat als je opslaat. */
+.lijsttabel tr.regelbewerkt td { background: #F7FAFC; }
+.lijsttabel tr.regelbewerkt { box-shadow: inset 2px 0 0 var(--blue); }
