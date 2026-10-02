@@ -34,9 +34,10 @@ async function kolominfo(env, tabelnaam) {
 // Standaardwaarden uit de definitielaag. Twee woorden hebben een betekenis in
 // plaats van een waarde: 'vandaag' en 'nu'. Een datum die vandaag is, hoef je
 // niet in te typen.
-function standaardwaarde(w) {
+function standaardwaarde(w, ik) {
   if (w === "vandaag") return new Date().toISOString().slice(0, 10);
   if (w === "nu") return new Date().toISOString().slice(0, 16).replace("T", " ");
+  if (w === "ik") return ik ? ik.id : null;
   return w;
 }
 
@@ -374,7 +375,10 @@ export async function maakAan(env, ik, tabelnaam, body) {
     // die wordt bij het aanmaken juist vastgezet.
     const isOuder = veld.type === "verwijzing" && w !== null && w !== "" &&
                     (kolom === body.ouderkolom || veld.toon_op_formulier === 0);
-    if (veld.alleen_lezen && !isOuder) continue;
+    // Een alleen-lezen veld dat het systeem zelf invult (jij, vandaag, nu)
+    // mag het formulier wel meesturen: het komt immers van het systeem.
+    const isSysteem = veld.standaard && ["ik", "vandaag", "nu"].includes(veld.standaard);
+    if (veld.alleen_lezen && !isOuder && !isSysteem) continue;
     nieuw[kolom] = w === "" ? null : w;
   }
 
@@ -411,7 +415,7 @@ export async function maakAan(env, ik, tabelnaam, body) {
   for (const veld of velden.filter((v) => v.verplicht)) {
     const leeg = nieuw[veld.kolom] === undefined || nieuw[veld.kolom] === null || nieuw[veld.kolom] === "";
     if (!leeg) continue;
-    if (veld.standaard) { nieuw[veld.kolom] = standaardwaarde(veld.standaard); continue; }
+    if (veld.standaard) { nieuw[veld.kolom] = standaardwaarde(veld.standaard, ik); continue; }
 
     const kolom = info[veld.kolom];
     if (kolom && (kolom.dflt_value !== null || !kolom.notnull)) {
@@ -454,7 +458,7 @@ export async function maakAan(env, ik, tabelnaam, body) {
 
 // Een leeg record om mee te beginnen: standaardwaarden uit de definitielaag,
 // en de verwijzing naar de ouder al ingevuld.
-export async function sjabloon(env, tabelnaam, ouder) {
+export async function sjabloon(env, tabelnaam, ouder, ik) {
   const tabel = await tabelVan(env, tabelnaam);
   if (!tabel) return { fout: `Onbekende tabel: ${tabelnaam}`, status: 404 };
   const velden = await veldenVan(env, tabelnaam);
@@ -463,7 +467,7 @@ export async function sjabloon(env, tabelnaam, ouder) {
   ).bind(tabelnaam).all()).results;
 
   const waarden = {};
-  for (const v of velden) waarden[v.kolom] = standaardwaarde(v.standaard) ?? null;
+  for (const v of velden) waarden[v.kolom] = standaardwaarde(v.standaard, ik) ?? null;
 
   let ouderkolom = null;
   let ouderInfo = null;

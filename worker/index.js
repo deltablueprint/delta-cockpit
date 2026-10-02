@@ -248,7 +248,7 @@ async function behandel(request, env) {
         const ouder = ouderParam && ouderParam.includes(":")
           ? { tabel: ouderParam.split(":")[0], id: ouderParam.split(":")[1] }
           : null;
-        const uitkomst = await sjabloon(env, nieuwPad[1], ouder);
+        const uitkomst = await sjabloon(env, nieuwPad[1], ouder, ik);
         if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
         return json(uitkomst);
       }
