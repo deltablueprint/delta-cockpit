@@ -237,6 +237,7 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
       <div class="kapitaalvak">
         <div class="kapitaalbalk">
           <span class="kdeel marge" style="width:${margePct}%"></span>
+          <span class="kdeel voorstel" id="kvoorstel" style="width:0"></span>
           <span class="kdeel vrij"></span>
           ${p.max_inzet_pct ? `<span class="kplafond" style="left:${Math.min(100, Number(p.max_inzet_pct))}%">
             <i></i><span>plafond ${getal(p.max_inzet_pct, 0)} %</span></span>` : ""}
@@ -245,9 +246,12 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
           <span class="klegend"><i class="vlak marge"></i>
             <b>${euro(marge)}</b> marge <span class="faint">${getal(margePct, 1)} % · ${
               p.open_tranches.length} open ${p.open_tranches.length === 1 ? "tranche" : "tranches"}</span></span>
+          <span class="klegend" id="kvoorstelregel" hidden><i class="vlak voorstel"></i>
+            <b id="kvoorstelbedrag"></b> dit besluit
+            <span class="faint" id="kvoorstelnoot"></span></span>
           <span class="klegend"><i class="vlak vrij"></i>
-            <b>${euro(Math.max(kapitaal - marge, 0))}</b> beschikbaar
-            <span class="faint">${getal(Math.max(100 - margePct, 0), 1)} % van het kapitaal</span></span>
+            <b id="kvrijbedrag">${euro(Math.max(kapitaal - marge, 0))}</b> beschikbaar
+            <span class="faint" id="kvrijnoot">${getal(Math.max(100 - margePct, 0), 1)} % van het kapitaal</span></span>
         </div>
         ${p.open_tranches.length ? `<p class="paneelnoot">Open: ${p.open_tranches.map((t) =>
           `${ontsnap(t.cyclusnaam)} — ${ontsnap(contractnaam(t.expiratiedatum, t.strike))} × ${t.aantal}`
@@ -389,6 +393,49 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
     hertel();
   }
 
+  // De balk volgt het inzetveld terwijl je typt: je ziet meteen wat dit besluit
+  // van de portefeuille zou vragen en of het boven het plafond uitkomt. Het is
+  // een rekensom, geen oordeel — het systeem adviseert niets.
+  const inzetveld = inhoud.querySelector("#u_inzet");
+  if (inzetveld && kapitaal) {
+    const balk = inhoud.querySelector("#kvoorstel");
+    const regel = inhoud.querySelector("#kvoorstelregel");
+    const bedrag = inhoud.querySelector("#kvoorstelbedrag");
+    const noot = inhoud.querySelector("#kvoorstelnoot");
+    const vlak = regel ? regel.querySelector(".vlak") : null;
+    const vrijB = inhoud.querySelector("#kvrijbedrag");
+    const vrijN = inhoud.querySelector("#kvrijnoot");
+    const plafond = p.max_inzet_pct ? Number(p.max_inzet_pct) : null;
+
+    const teken = () => {
+      const pct = Number(inzetveld.value);
+      const erbij = Number.isFinite(pct) && pct > 0 ? pct : 0;
+      const samen = margePct + erbij;
+      // De balk kan niet meer dan vol; het getal eronder zegt wél wat je typte.
+      const breedte = Math.min(erbij, Math.max(100 - margePct, 0));
+      const over = plafond !== null && samen > plafond;
+      if (balk) {
+        balk.style.width = `${breedte}%`;
+        balk.classList.toggle("over", over);
+      }
+      if (regel) regel.hidden = !erbij;
+      if (vlak) vlak.classList.toggle("over", over);
+      if (erbij && bedrag) bedrag.textContent = euro((kapitaal * erbij) / 100);
+      if (erbij && noot) {
+        noot.textContent = plafond === null
+          ? `${getal(erbij, 1)} % — samen ${getal(samen, 1)} %`
+          : over
+            ? `${getal(erbij, 1)} % — samen ${getal(samen, 1)} %, dat is ${getal(samen - plafond, 1)} % boven het plafond`
+            : `${getal(erbij, 1)} % — samen ${getal(samen, 1)} %, ${getal(plafond - samen, 1)} % onder het plafond`;
+      }
+      if (vrijB) vrijB.textContent = euro(Math.max(kapitaal - marge - (kapitaal * erbij) / 100, 0));
+      if (vrijN) vrijN.textContent = `${getal(Math.max(100 - samen, 0), 1)} % van het kapitaal`;
+    };
+    inzetveld.addEventListener("input", teken);
+    if (keuze) keuze.addEventListener("change", () => { if (keuze.value !== "go") { inzetveld.value = ""; } teken(); });
+    teken();
+  }
+
   const melding = inhoud.querySelector("#umelding");
   const knop = inhoud.querySelector("#vastleggen");
   if (knop) {
@@ -429,7 +476,10 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
       melding.className = "recordmelding";
       try {
         await besluitUitkomst(momentId, body);
-        location.hash = `/t/beoordelingsmoment/${momentId}`;
+        // De uitkomst is vastgelegd; het besluit is daarmee af. Wat je daarna
+        // wilt zien is de cyclus — met de positie die er bij een go net onder
+        // ontstaan is.
+        location.hash = `/t/cyclus/${cyclus.id}`;
       } catch (fout) {
         knop.disabled = false;
         melding.textContent = fout.message;

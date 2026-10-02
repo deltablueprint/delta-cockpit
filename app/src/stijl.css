@@ -364,7 +364,7 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
    streep bovenaan, en herhaalt de paneelkop de naam niet nog eens klein. */
 .relatieblok { margin-top: 18px; }
 .tabbalk {
-  display: flex; gap: 2px; padding: 0;
+  display: flex; gap: 2px; padding: 0 0 0 14px;
   background: var(--soft); border: 1px solid var(--b1); border-bottom: none;
   border-radius: 3px 3px 0 0; overflow-x: auto;
 }
@@ -911,6 +911,9 @@ body.sleept .lijsttabel { pointer-events: none; }
 .kdeel:first-child { border-radius: 2px 0 0 2px; }
 .kdeel:last-child { border-radius: 0 2px 2px 0; }
 .kdeel.marge { background: #DEDAD2; }
+/* Wat dit besluit erbij zou leggen, terwijl je het intikt. */
+.kdeel.voorstel { background: #8FBF9D; transition: width .12s linear; }
+.kdeel.voorstel.over { background: #D08A80; }
 .kdeel.vrij { flex: 1 1 auto; background: #DFF0E2; }
 .kplafond { position: absolute; top: -7px; bottom: -7px; }
 .kplafond i { display: block; width: 2px; height: 100%; background: var(--ink2); }
@@ -924,6 +927,9 @@ body.sleept .lijsttabel { pointer-events: none; }
 .klegend .vlak { width: 11px; height: 11px; border-radius: 2px; border: 1px solid var(--b1); }
 .klegend .vlak.marge { background: #DEDAD2; }
 .klegend .vlak.vrij { background: #DFF0E2; }
+.klegend .vlak.voorstel { background: #8FBF9D; }
+.klegend .vlak.voorstel.over { background: #D08A80; }
+.klegend[hidden] { display: none; }
 
 /* Het uitkomstblok: links de velden, rechts wie erbij was. De kiezer is geen
    veld tussen de velden maar een eigen kolom, over de volle hoogte van het
