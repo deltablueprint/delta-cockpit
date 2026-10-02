@@ -16,7 +16,7 @@
 // Rijen die elk hun eigen raster zijn vallen per rij anders uit — dat was fout.
 // ============================================================================
 
-import { lijst as haalLijst, bewaar, archiveer, leesVoorkeur, zetVoorkeur } from "./api.js";
+import { lijst as haalLijst, bewaar, bewaarSamen, archiveer, leesVoorkeur, zetVoorkeur } from "./api.js";
 import { lees, invoer, keuzesVoor } from "./veld.js";
 
 const KLEUR = {
@@ -546,136 +546,175 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     });
   });
 
-  // ---- bewerken in de lijst ----
-  // Dubbelklikken opent de hele regel, niet één cel: je verandert zelden maar
-  // één ding. Tab loopt door de velden, Enter slaat alles in één keer op,
-  // Escape zet de regel terug. Het opslaan draagt de revisie mee — heeft
-  // iemand anders intussen opgeslagen, dan zie je dat in plaats van zijn werk
-  // te overschrijven.
-  const bewerkbaar = kolommen.filter((k) => !k.alleen_lezen);
-  let regelInBewerking = null;
+  // ---- cellen kiezen en in één keer zetten ----
+  // Cmd- of ctrl-klik kiest losse cellen, shift-klik een reeks — altijd binnen
+  // één kolom, want een waarde hoort bij een kolom. Bewerk je daarna één van
+  // die cellen, dan gaat dezelfde waarde naar alle gekozen regels. Zo zet je
+  // tien events in één handeling op 'zwaar' in plaats van tien keer hetzelfde
+  // te doen.
+  const keuze = { kolom: null, ids: new Set(), laatste: null };
 
-  function openRegel(rij, beginKolom) {
-    if (regelInBewerking) return;
-    const id = Number(rij.dataset.id);
-    const rijgegevens = data.rijen.find((r) => r.id === id);
-    if (!rijgegevens) return;
-
-    const cellen = [];
-    for (const cel of rij.querySelectorAll("td[data-kolom]")) {
-      const veld = kolommen.find((k) => k.kolom === cel.dataset.kolom);
-      if (!veld || veld.alleen_lezen) continue;
-      cellen.push({ cel, veld, oudeHtml: cel.innerHTML, oudeWaarde: rijgegevens[veld.kolom] ?? null });
-      cel.classList.add("bewerkt");
-      cel.innerHTML = invoer(veld, rijgegevens[veld.kolom] ?? null, meta, 'class="celinvoer"');
-    }
-    if (!cellen.length) return;
-
-    rij.classList.add("regelbewerkt");
-    regelInBewerking = { rij, id, rijgegevens, cellen, klaar: false };
-
-    const eerste = cellen.find((c) => c.veld.kolom === beginKolom) || cellen[0];
-    const el = eerste.cel.querySelector("[data-kolom]");
-    if (el) { el.focus(); if (el.select) el.select(); }
-
-    rij.addEventListener("keydown", opKeydown);
-    setTimeout(() => document.addEventListener("mousedown", opKlikBuiten), 0);
-  }
-
-  function herstelRegel() {
-    if (!regelInBewerking) return;
-    const { rij, cellen } = regelInBewerking;
-    for (const c of cellen) {
-      c.cel.classList.remove("bewerkt", "bezigcel");
-      c.cel.innerHTML = c.oudeHtml;
-    }
-    rij.classList.remove("regelbewerkt");
-    sluitAf();
-  }
-
-  function sluitAf() {
-    if (!regelInBewerking) return;
-    regelInBewerking.rij.removeEventListener("keydown", opKeydown);
-    document.removeEventListener("mousedown", opKlikBuiten);
-    regelInBewerking = null;
-  }
-
-  function opKlikBuiten(e) {
-    if (!regelInBewerking) return;
-    if (regelInBewerking.rij.contains(e.target)) return;
-    bewaarRegel();
-  }
-
-  function opKeydown(e) {
-    if (!regelInBewerking) return;
-    if (e.key === "Escape") { e.preventDefault(); herstelRegel(); return; }
-    if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") { e.preventDefault(); bewaarRegel(); }
-  }
-
-  async function bewaarRegel() {
-    if (!regelInBewerking || regelInBewerking.klaar) return;
-    regelInBewerking.klaar = true;
-    const { rij, id, rijgegevens, cellen } = regelInBewerking;
-
-    const gewijzigd = {};
-    for (const c of cellen) {
-      const el = c.cel.querySelector("[data-kolom]");
-      if (!el) continue;
-      const nieuweWaarde = el.value === "" ? null : el.value;
-      if (String(nieuweWaarde ?? "") !== String(c.oudeWaarde ?? "")) gewijzigd[c.veld.kolom] = nieuweWaarde;
-      c.nieuweWaarde = nieuweWaarde;
-    }
-
-    if (!Object.keys(gewijzigd).length) return herstelRegel();
-
-    cellen.forEach((c) => c.cel.classList.add("bezigcel"));
-    try {
-      const uitkomst = await bewaar(tabelnaam, id, gewijzigd, rijgegevens.revisie);
-      rijgegevens.revisie = uitkomst.revisie ?? rijgegevens.revisie;
-
-      for (const c of cellen) {
-        rijgegevens[c.veld.kolom] = c.nieuweWaarde;
-        c.cel.classList.remove("bewerkt", "bezigcel");
-        const getoond = waarde(c.veld, c.nieuweWaarde, meta, rijgegevens, data.verwijzingen || {});
-        // De eerste kolom blijft de ingang naar het record; na het bewerken
-        // moet die link er dus weer omheen.
-        c.cel.innerHTML = c.cel.cellIndex === (metVinkjes ? 1 : 0)
-          ? `<a href="#/t/${tabelnaam}/${id}" class="recordlink">${getoond}</a>`
-          : getoond;
-        if (c.veld.kolom in gewijzigd) {
-          c.cel.classList.add("zojuist");
-          setTimeout(() => c.cel.classList.remove("zojuist"), 1200);
-        }
-      }
-      rij.classList.remove("regelbewerkt");
-      sluitAf();
-
-      if (uitkomst.waarschuwingen && uitkomst.waarschuwingen.length) {
-        meld(uitkomst.waarschuwingen[0].melding, "waarschuwing");
-      }
-      // Een wijziging kan de fase laten opschuiven of een andere regel raken;
-      // dan klopt de lijst alleen nog als hij opnieuw kijkt.
-      if (uitkomst.gewijzigd && uitkomst.gewijzigd.includes("status")) {
-        lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand);
-      }
-    } catch (fout) {
-      cellen.forEach((c) => c.cel.classList.remove("bezigcel"));
-      herstelRegel();
-      meld(fout.message, "fouttekst");
-      if (String(fout.message).includes("intussen")) {
-        lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand);
-      }
-    }
-  }
-
-  if (bewerkbaar.length) {
-    inhoud.querySelectorAll("tbody tr[data-id]").forEach((rij) => {
-      rij.addEventListener("dblclick", (e) => {
-        const cel = e.target.closest("td[data-kolom]");
-        openRegel(rij, cel ? cel.dataset.kolom : null);
-      });
+  const toonKeuze = () => {
+    inhoud.querySelectorAll("tbody td[data-kolom]").forEach((cel) => {
+      const rij = cel.closest("tr");
+      const gekozen = keuze.kolom === cel.dataset.kolom && keuze.ids.has(Number(rij.dataset.id));
+      cel.classList.toggle("celgekozen", gekozen);
     });
-  }
+    const n = keuze.ids.size;
+    if (n > 1) {
+      const veld = kolommen.find((k) => k.kolom === keuze.kolom);
+      meld(`${n} cellen gekozen in ${veld ? veld.label.toLowerCase() : keuze.kolom}. Dubbelklik er één om ze samen te zetten.`, "keuze");
+    }
+  };
+
+  const wisKeuze = () => {
+    keuze.kolom = null;
+    keuze.ids.clear();
+    keuze.laatste = null;
+    toonKeuze();
+  };
+
+  const rijVolgorde = () => data.rijen.map((r) => r.id);
+
+  inhoud.querySelectorAll("tbody td[data-kolom]").forEach((cel) => {
+    cel.addEventListener("click", (e) => {
+      const kolom = cel.dataset.kolom;
+      const veld = kolommen.find((k) => k.kolom === kolom);
+      const id = Number(cel.closest("tr").dataset.id);
+      if (!veld || veld.alleen_lezen) return;
+
+      if (e.metaKey || e.ctrlKey) {
+        e.preventDefault();
+        if (keuze.kolom !== kolom) { keuze.kolom = kolom; keuze.ids.clear(); }
+        if (keuze.ids.has(id)) keuze.ids.delete(id); else keuze.ids.add(id);
+        keuze.laatste = id;
+        toonKeuze();
+        return;
+      }
+
+      if (e.shiftKey) {
+        e.preventDefault();
+        const volgorde = rijVolgorde();
+        if (keuze.kolom !== kolom || keuze.laatste === null) {
+          keuze.kolom = kolom;
+          keuze.ids = new Set([id]);
+          keuze.laatste = id;
+        } else {
+          const van = volgorde.indexOf(keuze.laatste);
+          const tot = volgorde.indexOf(id);
+          const [a, b] = van < tot ? [van, tot] : [tot, van];
+          for (let i = a; i <= b; i++) keuze.ids.add(volgorde[i]);
+        }
+        toonKeuze();
+        return;
+      }
+
+      if (keuze.ids.size) wisKeuze();
+    });
+  });
+
+  // ---- bewerken in de lijst ----
+  // Dubbelklik op een cel maakt er een invoerveld van. Enter of wegklikken
+  // slaat op, Escape maakt ongedaan. Opslaan draagt de revisie mee: heeft
+  // iemand anders intussen opgeslagen, dan zie je dat in plaats van zijn
+  // werk te overschrijven.
+  inhoud.querySelectorAll("tbody td[data-kolom]").forEach((cel) => {
+    cel.addEventListener("dblclick", () => {
+      if (cel.querySelector("input, select, textarea")) return;
+      const kolom = cel.dataset.kolom;
+      const veld = kolommen.find((k) => k.kolom === kolom);
+      if (!veld || veld.alleen_lezen) return;
+
+      const rij = cel.closest("tr");
+      const id = Number(rij.dataset.id);
+      const oudeHtml = cel.innerHTML;
+      const rijgegevens = data.rijen.find((r) => r.id === id);
+      const oudeWaarde = rijgegevens ? rijgegevens[kolom] : null;
+
+      // Hoort deze cel bij een keuze in dezelfde kolom, dan gaat de waarde naar
+      // alle gekozen regels.
+      const samenMet = keuze.kolom === kolom && keuze.ids.has(id)
+        ? [...keuze.ids]
+        : [id];
+
+      cel.classList.add("bewerkt");
+      cel.innerHTML = invoer(veld, oudeWaarde, meta, 'class="celinvoer"');
+      const el = cel.querySelector("[data-kolom]");
+      el.focus();
+      if (el.select) el.select();
+
+      let klaar = false;
+      const herstel = () => { cel.classList.remove("bewerkt"); cel.innerHTML = oudeHtml; };
+
+      const toonCel = (doelcel, doelrij, nieuweWaarde) => {
+        doelcel.classList.remove("bewerkt", "bezigcel", "celgekozen");
+        const getoond = waarde(veld, nieuweWaarde, meta, doelrij, data.verwijzingen || {});
+        doelcel.innerHTML = doelcel.cellIndex === (metVinkjes ? 1 : 0)
+          ? `<a href="#/t/${tabelnaam}/${doelrij.id}" class="recordlink">${getoond}</a>`
+          : getoond;
+        doelcel.classList.add("zojuist");
+        setTimeout(() => doelcel.classList.remove("zojuist"), 1200);
+      };
+
+      const opslaan = async () => {
+        if (klaar) return;
+        klaar = true;
+        const nieuweWaarde = el.value === "" ? null : el.value;
+        if (samenMet.length === 1 && String(nieuweWaarde ?? "") === String(oudeWaarde ?? "")) return herstel();
+
+        cel.classList.add("bezigcel");
+        try {
+          if (samenMet.length > 1) {
+            const revisies = {};
+            for (const d of samenMet) {
+              const r = data.rijen.find((x) => x.id === d);
+              if (r) revisies[d] = r.revisie;
+            }
+            const uitkomst = await bewaarSamen(tabelnaam, samenMet, { [kolom]: nieuweWaarde }, revisies);
+            for (const g of uitkomst.gelukt) {
+              const r = data.rijen.find((x) => x.id === g.id);
+              if (!r) continue;
+              r[kolom] = nieuweWaarde;
+              r.revisie = g.revisie ?? r.revisie;
+              const doelcel = inhoud.querySelector(`tr[data-id="${g.id}"] td[data-kolom="${kolom}"]`);
+              if (doelcel) toonCel(doelcel, r, nieuweWaarde);
+            }
+            wisKeuze();
+            if (uitkomst.mislukt.length) {
+              meld(`${uitkomst.gelukt.length} aangepast, ${uitkomst.mislukt.length} niet: ${uitkomst.mislukt[0].fout}`, "fouttekst");
+            } else {
+              meld(`${uitkomst.gelukt.length} regels aangepast.`, "waarschuwing");
+            }
+            return;
+          }
+
+          const uitkomst = await bewaar(tabelnaam, id, { [kolom]: nieuweWaarde }, rijgegevens?.revisie);
+          if (rijgegevens) {
+            rijgegevens[kolom] = nieuweWaarde;
+            rijgegevens.revisie = uitkomst.revisie ?? rijgegevens.revisie;
+          }
+          toonCel(cel, rijgegevens || { id }, nieuweWaarde);
+          if (uitkomst.waarschuwingen && uitkomst.waarschuwingen.length) {
+            meld(uitkomst.waarschuwingen[0].melding, "waarschuwing");
+          }
+        } catch (fout) {
+          cel.classList.remove("bezigcel");
+          herstel();
+          meld(fout.message, "fouttekst");
+          if (String(fout.message).includes("intussen")) {
+            lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand);
+          }
+        }
+      };
+
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && veld.type !== "lang") { e.preventDefault(); opslaan(); }
+        if (e.key === "Escape") { klaar = true; herstel(); }
+      });
+      el.addEventListener("blur", opslaan);
+      if (el.tagName === "SELECT") el.addEventListener("change", opslaan);
+    });
+  });
 
   // De cursor terug in het veld waar hij stond, anders is typen onmogelijk.
   if (laatsteFocus === "q" && zoek) {

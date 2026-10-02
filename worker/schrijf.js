@@ -512,3 +512,24 @@ export async function sjabloon(env, tabelnaam, ouder) {
     nieuw: true, relaties: [], verwijzingen: {},
   };
 }
+
+// Dezelfde wijziging op meerdere records tegelijk: wat je in de lijst in één
+// kolom aanwijst en in één keer zet. Elk record loopt door dezelfde controles
+// als wanneer je het los opslaat — regels, revisies en de audit trail gelden
+// hier net zo goed.
+export async function samen(env, ik, tabelnaam, ids, velden, revisies = {}) {
+  if (!Array.isArray(ids) || !ids.length) return { fout: "Geen records opgegeven.", status: 400 };
+  if (ids.length > 200) return { fout: "Maximaal 200 regels tegelijk.", status: 413 };
+
+  const gelukt = [];
+  const mislukt = [];
+  for (const id of ids) {
+    const uit = await wijzig(env, ik, tabelnaam, Number(id), {
+      velden,
+      revisie: revisies[id],
+    });
+    if (uit.fout) mislukt.push({ id: Number(id), fout: uit.fout });
+    else gelukt.push({ id: Number(id), revisie: uit.revisie });
+  }
+  return { gelukt, mislukt };
+}

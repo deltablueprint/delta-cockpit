@@ -27,6 +27,11 @@ const ICOON = {
   vink: `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12l4 4 10-10"/></svg>`,
 };
 
+// De klikluisteraar van het overnemen hangt aan het werkvlak, niet aan het
+// scherm: tekenen we opnieuw, dan moet de vorige eraf. Anders reageren er twee
+// op dezelfde klik en krijg je het paneel twee keer.
+let overnemenLuisteraar = null;
+
 export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties = {}) {
   let data;
   try {
@@ -307,7 +312,11 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   // De vraag is vaak dezelfde; alleen het antwoord verschilt per cyclus. Die
   // vragen opnieuw intypen levert niets op en zorgt voor kleine verschillen in
   // naamgeving, waardoor je ze later niet meer naast elkaar kunt leggen.
-  inhoud.addEventListener("click", async (e) => {
+  if (overnemenLuisteraar) {
+    overnemenLuisteraar.el.removeEventListener("click", overnemenLuisteraar.fn);
+    overnemenLuisteraar = null;
+  }
+  const overnemenKlik = async (e) => {
     const knop = e.target.closest("#rlovernemen");
     if (!knop) return;
     const vak = knop.closest(".lijst");
@@ -368,7 +377,9 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         alert(fout.message);
       }
     });
-  });
+  };
+  inhoud.addEventListener("click", overnemenKlik);
+  overnemenLuisteraar = { el: inhoud, fn: overnemenKlik };
 
   // ---- de aanwezigenkiezer ----
   if (toonAanwezigen) {

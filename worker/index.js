@@ -6,7 +6,7 @@
 //      schrijfactie draagt een identiteit (BOUWSPEC 11). Geen gedeelde sleutel.
 
 import { lijst } from "./lijst.js";
-import { wijzig, archiveer, dupliceer, maakAan, sjabloon } from "./schrijf.js";
+import { wijzig, archiveer, dupliceer, maakAan, sjabloon, samen } from "./schrijf.js";
 import { record } from "./record.js";
 import { voorbereiden, uitvoeren } from "./import.js";
 import { stand, startMoment, versturen, uitkomst as gonogoUitkomst } from "./gonogo.js";
@@ -320,6 +320,15 @@ async function behandel(request, env) {
         const uitkomst = await wijzig(env, ik, recordPad[1], Number(recordPad[2]), body);
         if (uitkomst.fout) return json(uitkomst, uitkomst.status || 400);
         return json(uitkomst);
+      }
+
+      // /api/t/<tabel>/samen — dezelfde wijziging op meerdere records
+      const samenPad = pad.match(/^\/api\/t\/([a-z_]+)\/samen$/);
+      if (samenPad && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const uit = await samen(env, ik, samenPad[1], body.ids || [], body.velden || {}, body.revisies || {});
+        if (uit.fout) return json(uit, uit.status || 400);
+        return json(uit);
       }
 
       // /api/t/<tabel>/archiveer — één of meer records naar het archief
