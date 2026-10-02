@@ -232,7 +232,7 @@ Exitregels:
 | Snelle winst | daling van 30% in de eerste één tot twee sessies |
 | Eventblok | verplichte herbeoordeling vóór een zwaar eventblok |
 
-**OPEN** — na een rol: rekent de stoploss en het winstanker tegen de premie van de nieuwe tranche, tegen de cumulatieve netto premie van de keten, of gesplitst (exitregels per tranche, rolbesluit tegen de keten)? Voorstel is de gesplitste variant. Moet vastliggen vóór etappe 12.
+**OPEN** — na een rol: rekent de stoploss en het winstanker tegen de premie van de nieuwe tranche, tegen de cumulatieve netto premie van de keten, of gesplitst (exitregels per tranche, de keten als geheel alleen in de post-analyse)? Voorstel is de gesplitste variant. Moet vastliggen vóór etappe 12. Een rol loopt niet meer via een besluit (6), dus de keten wordt achteraf getoetst en niet vooraf.
 
 ---
 
@@ -383,6 +383,16 @@ Elk gesprek wordt gedocumenteerd, ongeacht de uitkomst: het voorlopige en defini
 - **Tranches** zijn aparte records met eigen strike, aantal, premie en expiratie. Verschillende expiraties binnen één cyclus zijn toegestaan. De cyclus toont de eerstvolgende en de laatste expiratie.
 - **Sizing** wordt ingevuld bij het innemen van de eerste tranche en getoetst **op portefeuilleniveau**, niet per cyclus. Zie 6.1. **OPEN** — onder welke omstandigheden mag de tweede tranche geschreven worden?
 - **Doorrollen** is de vierde uitkomst naast waardeloos expireren, vervroegd sluiten en exitplan-activatie. Rollen gebeurt bij de broker; het dashboard neemt het over. De oude tranche krijgt status *doorgerold* met verwijzing naar de opvolger, de nieuwe krijgt herkomst *roll van*. De rol wordt doorgerekend als één bedrag (teruggekochte premie tegenover nieuw ontvangen premie). Het rolbesluit komt met reden in de besluitlog.
+
+**Eenmaal in positie beslist niet meer de vergadering, maar de markt.** Het besluitproces — aanwezigen, blind inzenden, quorum, gesprek — geldt voor de **instap**, en daar houdt het op. Doorrollen, vervroegd terugkopen en een stoploss die raakt zijn **tijdsgevoelig**: wie daarvoor eerst drie blinde inzendingen moet verzamelen en een overleg moet beleggen, is het moment kwijt. De handeling gebeurt dus bij Lynx, door wie er op dat moment aan zet is, en de cockpit **leest achteraf wat er gebeurd is en vraagt om duiding**. Dat is geen gemis aan zorgvuldigheid maar een andere plek ervan: niet vooraf stemmen, maar achteraf verantwoorden, met de transacties van de broker als bewijs in plaats van een verslag.
+
+Daaruit volgt wat er **niet** gebouwd wordt: er komen geen besluitsoorten *rol*, *vervroegd sluiten* en *afwijken van het exitplan*. Het veld `beoordelingsmoment.soort` houdt alleen *instap* over; de andere drie waarden vervallen. Wat die besluiten zouden vastleggen — wat er gebeurde en waarom — legt het vastleggen van de uitkomst vast, op de tranche zelf.
+
+**Het systeem herkent wat er gebeurd is; het bepaalt het niet.** Een rol ziet er bij de broker uit als twee transacties: de lopende tranche wordt gesloten en een nieuw contract wordt geopend. Vervroegd terugkopen is alleen die eerste. Waardeloos aflopen is geen transactie maar een positie die verdwijnt op haar expiratiedag. Die drie zijn uit het Flex-rapport te onderscheiden, en het systeem doet dat — maar als **voorstel**, met erbij welke transacties het zag. Een mens bevestigt of kiest een andere uitkomst. Het rapport is bovendien minuten oud (zie 11): dit is een middel om vast te leggen wat er gebeurd is, geen middel om te bewaken wat er gebeurt.
+
+**Een doorrol laat de volgende tranche ontstaan zonder besluit erboven.** Het systeem koppelt de nieuwe positie aan dezelfde cyclus met tranchenummer n+1, vult contract, strike, expiratie, aantal en premie uit de uitvoering bij Lynx, en zet `herkomst` op *van de broker* — niet op *uit een besluit*, want er was er geen. De oude tranche krijgt uitkomst *doorgerold* met `doorgerold_naar` naar de nieuwe. Het veld `beoordelingsmoment` blijft bij zo'n tranche leeg, en de velden *wat het besluit zei* blijven dus ook leeg: er valt niets te vergelijken, en een afwijking tegen een besluit dat niet bestaat is geen afwijking. Het **exitplan** van de nieuwe tranche wordt wel klaargezet zoals bij elke tranche, en zolang het niet volledig is komt de tranche de eerste stand niet uit.
+
+**Wat er verplicht bij moet.** Precies omdat er geen overleg aan voorafging, vraagt het vastleggen om een **toelichting** zodra de handeling van het plan afwijkt: een tranche die gesloten werd terwijl de stoploss niet geraakt was, een stoploss die niet uitgevoerd werd terwijl hij wél geraakt was, of een rol die verder weg of groter is dan de portefeuilleregels toelaten. Dat is één verplicht veld bij het vastleggen, geen proces — en het staat in de audit trail met wie het schreef.
 
 **Uitkomst vastleggen loopt via de brokerkoppeling.** Een tranche eindigt doordat jíj iets doet bij Lynx; het systeem ziet dat en vraagt om duiding. De volgorde is vast: de koppeling **meldt de wijziging** (contract, aantal, prijs, tijdstip), het systeem **stelt de uitkomst voor** op grond van wat het gelezen heeft, en een mens **bevestigt of corrigeert** — vastleggen gebeurt nooit automatisch. Zolang de uitkomst niet vastligt staat de tranche in de tussentoestand *bij Lynx gewijzigd, nog niet vastgelegd* en gaat er niets naar de leden.
 
@@ -971,7 +981,8 @@ Na etappe 4 is een echte cyclus volledig vast te leggen. Werken op desktop, iPad
 
 *Opgelost in versie 1.0: versiebeheer van de rekenlaag (3.4), blootstelling en sizing op portefeuilleniveau (6.1), de handelskalender als tabel (3.2), het splitsen van voorgenomen en uitgevoerde posities (3.3), registratie van afwijking tussen besluit en uitvoering (6), plus de vier standen met "niet gemeten" (4.4), de chartanalyse volgens de metadata-lijn (4.3b) en aanmelden per persoon (1, 11).*
 
-1. **Premie-referentie na een rol** — per tranche, cumulatief, of gesplitst. Voorstel: gesplitst. Blokkeert etappe 12.
+1. **Premie-referentie na een rol** — per tranche, cumulatief, of gesplitst. Voorstel: gesplitst. Blokkeert etappe 12. *Blijft staan nu de rol buiten het besluitproces valt: de nieuwe tranche krijgt nog steeds een stoploss en een winstanker, en die rekenen ergens tegen.*
+1a. **Mag de stoploss verruimd worden, en waardoor is dat dan gedekt?** Aanscherpen mag altijd; verruimen wordt nu hard geweigerd. Het besluit *afwijken van het exitplan* zou dat dekken, maar dat besluit komt er niet (6). Twee wegen: verruimen blijft onmogelijk, of het mag met een verplichte toelichting in de audit trail. Blokkeert niets, maar het hoort beslist te zijn voordat een echte tranche loopt.
 2. **Inzet van de tweede tranche** — vast te leggen regel of oordeel per situatie? Blokkeert niets, maar bepaalt of het een voorwaarde wordt.
 3. **Staartrisico-tegel** — wel of niet opnemen, en bij welke percentages.
 4. **Standaardzwaarte per eventsoort** — beginlijst wordt bij het bouwen ingevuld en daarna bijgesteld.
