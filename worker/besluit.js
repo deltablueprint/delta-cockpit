@@ -8,6 +8,7 @@
 
 import { schermAf } from "./blind.js";
 import { instelling } from "./positie.js";
+import { kapitaalUitLynx } from "./lynx.js";
 
 export async function overzicht(env, ik, momentId) {
   const moment = await env.DB.prepare(
@@ -41,13 +42,18 @@ export async function overzicht(env, ik, momentId) {
     instelling(env),
   ]);
 
+  // Het kapitaal komt bij voorkeur van de broker zelf; staat de nettowaarde
+  // niet in het Flex-rapport, dan geldt het ingestelde bedrag.
+  const uitLynx = await kapitaalUitLynx(env).catch(() => null);
+
   const erbij = String(moment.aanwezigen_ids || "").split(",").map((w) => w.trim()).filter(Boolean);
   const inzendingen = await schermAf(env, ik, "inzending", inzendingenRuw.results);
 
   // De portefeuille: wat er uitstaat, wat dit besluit erbij zou leggen, en
   // waar het plafond ligt. Eén regel waaraan je ziet of er nog ruimte is.
   const multiplier = inst && inst.multiplier ? Number(inst.multiplier) : 10;
-  const kapitaal = inst ? Number(inst.kapitaal) : null;
+  const ingesteld = inst && inst.kapitaal ? Number(inst.kapitaal) : null;
+  const kapitaal = uitLynx ? uitLynx.kapitaal : ingesteld;
   const blootstelling = tranches.results.reduce(
     (n, p) => n + (Number(p.strike) || 0) * multiplier * (Number(p.aantal) || 0), 0
   );
@@ -63,6 +69,9 @@ export async function overzicht(env, ik, momentId) {
     events: events.results,
     portefeuille: {
       kapitaal,
+      kapitaal_bron: uitLynx ? "lynx" : "instelling",
+      kapitaal_opgehaald_op: uitLynx ? uitLynx.opgehaald_op : null,
+      kapitaal_ingesteld: ingesteld,
       multiplier,
       blootstelling,
       ingezet_pct,

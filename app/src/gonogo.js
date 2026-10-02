@@ -66,9 +66,6 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
     inhoud.innerHTML = `
       <div class="recordbalk">
         <span class="recordnaam">${ontsnap(cyclus.label)}</span>
-        <span class="recordacties">
-          <a class="knop tweede" href="#/t/cyclus/${cyclus.id}">Terug naar ${ontsnap(cyclus.label)}</a>
-        </span>
       </div>
       <div class="kaart leeg">
         Deze cyclus staat op <em>${ontsnap(cyclus.status)}</em>. Een go/no-go begint op het
@@ -293,9 +290,6 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
     <div class="recordbalk">
       <span class="recordnaam">${ontsnap(cyclus.label)} — ${titel}</span>
       <span class="recordmelding" id="gmelding"></span>
-      <span class="recordacties">
-        <a class="knop tweede" href="#/t/cyclus/${cyclus.id}">Terug naar ${ontsnap(cyclus.label)}</a>
-      </span>
     </div>
     ${chevrons}
     <div class="formulier">

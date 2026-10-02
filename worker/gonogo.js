@@ -296,6 +296,15 @@ export async function uitkomst(env, ik, cyclusId, body = {}) {
   if (keuze === "no-go" && !String(body.volgend_moment || "").trim()) {
     return { fout: "Elke no-go eindigt met een nieuw analysemoment.", status: 422, veld: "volgend_moment" };
   }
+  if (keuze === "go" && (body.inzet_pct === null || body.inzet_pct === undefined || body.inzet_pct === "")) {
+    return { fout: "Bij een go hoort de inzet in % van het kapitaal.", status: 422, veld: "inzet_pct" };
+  }
+  if (!String(body.aanwezigen || "").trim()) {
+    return { fout: "Leg vast wie er bij het gesprek waren.", status: 422, veld: "aanwezigen" };
+  }
+  if (!String(body.wat_veranderde || "").trim()) {
+    return { fout: "Schrijf op wat het gesprek veranderde; ook 'niets' is een antwoord.", status: 422, veld: "wat_veranderde" };
+  }
 
   const w = (k) => (body[k] === "" || body[k] === undefined ? null : body[k]);
   await env.DB.prepare(

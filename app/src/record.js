@@ -68,8 +68,12 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   // Kom je via een cyclus bij een voorwaarde, dan hoort 'Voorwaarden' in de
   // breadcrumb de voorwaarden van díé cyclus te tonen — niet die van alle
   // cycli. De kruimel draagt het ouderfilter dus mee.
-  kruimels.push(data.ouder && data.ouder.kolom
-    ? `<a href="#/t/${tabelnaam}?fid.${data.ouder.kolom}=${data.ouder.id}">${ontsnap(data.tabel.label_mv)}</a>`
+  // Kom je van een ouderrecord, dan is deze kruimel de gerelateerde lijst waar
+  // je net uit kwam. Die is geen bestemming op zichzelf — je staat er al — dus
+  // hij is wel te lezen en niet aan te klikken. Het hele bestand opvragen doe
+  // je via het menu.
+  kruimels.push(data.ouder
+    ? `<span>${ontsnap(data.tabel.label_mv)}</span>`
     : `<a href="#/t/${tabelnaam}">${ontsnap(data.tabel.label_mv)}</a>`);
   kruimels.push(`<span>${ontsnap(titel)}</span>`);
   kruimel.innerHTML = kruimels.join(` <span class="pijlje">&rsaquo;</span> `);
@@ -236,17 +240,12 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   const toonBroker = tabelnaam === "positie" &&
     ["besluit goedgekeurd", "order bij lynx"].includes(String(standNu || ""));
 
-  const terugNaar = data.ouder
-    ? { href: `#/t/${data.ouder.tabel}/${data.ouder.id}`, label: `Terug naar ${data.ouder.titel}` }
-    : { href: `#/t/${tabelnaam}`, label: "Terug naar de lijst" };
-
   inhoud.innerHTML = `
     <div class="recordbalk">
       <span class="recordnaam">${ontsnap(titel)}</span>
       <span class="recordmelding" id="opslagmelding"></span>
       <span class="recordacties">
         <button class="knop tweede" id="bijlage" title="Bijlage toevoegen">${ICOON.bijlage}<span>Bijlage</span></button>
-        <a class="knop tweede" href="${terugNaar.href}">${ontsnap(terugNaar.label)}</a>
         ${data.actie && !isNieuw
           ? `<a class="knop" href="#${data.actie.route}" title="${ontsnap(data.actie.stap || "")}">${ontsnap(data.actie.label)}</a>`
           : ""}

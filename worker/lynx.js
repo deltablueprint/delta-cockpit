@@ -190,6 +190,37 @@ export function leesPosities(xml) {
 // keer achter elkaar hetzelfde scherm openen hoort niet twee keer te wachten,
 // dus het antwoord blijft vijf minuten in de cache van de worker staan. Het is
 // toch rapportage: verser dan de bron wordt het er niet van.
+// Het kapitaal zoals de broker het ziet.
+//
+// Een Flex-rapport draagt de nettowaarde van de rekening mee zodra de query de
+// sectie *Net Asset Value* of *Change in NAV* bevat. Staat die er niet in, dan
+// geven we niets terug: dan blijft het ingestelde kapitaal gelden en zegt het
+// scherm eerlijk waar het getal vandaan komt.
+export function leesKapitaal(xml) {
+  const kandidaten = [
+    ...elementen(xml, "EquitySummaryByReportDateInBase").map((r) => ({ d: r.reportDate, n: getal(r.total) })),
+    ...elementen(xml, "EquitySummaryInBase").map((r) => ({ d: r.reportDate, n: getal(r.total) })),
+    ...elementen(xml, "ChangeInNAV").map((r) => ({ d: r.toDate, n: getal(r.endingValue) })),
+  ].filter((k) => Number.isFinite(k.n) && k.n > 0);
+  if (!kandidaten.length) return null;
+  kandidaten.sort((a, b) => String(a.d || "").localeCompare(String(b.d || "")));
+  return kandidaten[kandidaten.length - 1].n;
+}
+
+// Het kapitaal voor de schermen: uit Lynx als het rapport het draagt, anders
+// uit de portefeuille-instelling. Het scherm toont er altijd bij welke van de
+// twee het is.
+export async function kapitaalUitLynx(env) {
+  const rapport = await laatsteRapport(env);
+  if (!rapport) return null;
+  try {
+    const n = leesKapitaal(rapport.xml);
+    return n === null ? null : { kapitaal: n, opgehaald_op: rapport.opgehaald_op };
+  } catch {
+    return null;
+  }
+}
+
 const CACHESLEUTEL = "https://delta-blueprint.intern/lynx/posities";
 const CACHE_SECONDEN = 300;
 
