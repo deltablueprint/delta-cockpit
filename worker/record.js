@@ -6,13 +6,19 @@
 import { schermAfEen } from "./blind.js";
 import { actieVoor } from "./gonogo.js";
 import { magTrancheAanmaken, besluitOpties } from "./positie.js";
-import { stappenVoor } from "./proces.js";
+import { stappenVoor, beweegFase } from "./proces.js";
 
 export async function record(env, tabelnaam, id, ik) {
   const tabel = await env.DB.prepare(
     "select * from db_table where naam = ? and actief = 1"
   ).bind(tabelnaam).first();
   if (!tabel) return { fout: `Onbekende tabel: ${tabelnaam}`, status: 404 };
+
+  // Voordat we het record laten zien: klopt de fase nog? Een stap kan gedaan
+  // zijn door iets wat elders gebeurde — een inzending die binnenkwam, een
+  // tranche die sloot. Dan hoort de balk dat te weten zodra je kijkt, en niet
+  // pas als je toevallig iets opslaat.
+  if (tabel.proces_veld) await beweegFase(env, tabelnaam, id, ik);
 
   const [velden, secties, rij] = await Promise.all([
     env.DB.prepare("select * from db_field where tabel = ? and actief = 1 order by volgorde").bind(tabelnaam).all(),
