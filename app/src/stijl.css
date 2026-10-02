@@ -736,6 +736,12 @@ body.sleept .lijsttabel { pointer-events: none; }
 .overnemen .kiezerlijst li { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 8px; }
 .overnemen .kiezerlijst .faint { grid-column: 1 / -1; font-size: 11px; }
 
+/* Shift-klikken in een tabel selecteert anders de tekst van alles ertussen —
+   dat is de selectie van de browser, niet die van ons, en hij leidt af van
+   welke cellen je werkelijk hebt aangewezen. */
+.lijsttabel tbody { user-select: none; }
+.lijsttabel tbody td.bewerkt, .lijsttabel tbody input, .lijsttabel tbody textarea { user-select: text; }
+
 /* Cellen die je in één kolom hebt aangewezen om samen te zetten. */
 .lijsttabel td.celgekozen { background: var(--bluebg); box-shadow: inset 0 0 0 1px var(--blue); }
 .lijstmelding.keuze { background: var(--bluebg); color: var(--ink2); }
