@@ -1,6 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "delta-cockpit",
+
+  // Het account waarin de databases en de workers staan. Zonder dit neemt
+  // wrangler het account van je laatste aanmelding, en dan wijst hij naar een
+  // database die daar niet bestaat.
+  "account_id": "054e2d50a3b1cee270a84aa4c6a6b3e7",
   "main": "worker/index.js",
   "compatibility_date": "2026-09-01",
   "observability": { "enabled": true },
