@@ -667,7 +667,7 @@ De go/no-go is geen aparte schermfamilie en ook geen los record dat je uit een m
 
 **3 · Quorum is een instelling, geen aanname.** Hoeveel inzendingen nodig zijn om door te mogen, staat als veld op de **processtap** in Procesbeheer (bijvoorbeeld *2 van 3* als iemand er niet bij kan zijn). Het staat zichtbaar in de kop van de gerelateerde lijst, zodat je ziet waaraan je toe bent. Wordt het quorum gehaald, dan gaan de inzendingen open en verandert de actieknop.
 
-**4 · Go / no-go meeting.** De knop *Go / no-go meeting* opent hetzelfde scherm als bij het versturen — dezelfde tijdlijn, dezelfde voorwaarden, dezelfde technische analyse — maar nu met de gerelateerde lijst *Inzendingen* **open** eronder: ieders positie, strike, expiratie en reden naast elkaar.
+**4 · Go / no-go meeting.** De knop *Go / No-Go overleg* op het besluitrecord opent hetzelfde scherm als bij het versturen — dezelfde tijdlijn, dezelfde voorwaarden, dezelfde technische analyse — maar nu met de gerelateerde lijst *Inzendingen* **open** eronder: ieders positie, strike, expiratie en reden naast elkaar.
 
 **1a · De argumentatie hoort bij allebei.** Het veld heette *Reden bij no-go* en kwam alleen bij een no-go in beeld. Maar waarom je wél wilt schrijven is net zo goed het gesprek waard als waarom je het niet wilt: het veld heet **Argumentatie**, staat er altijd en is altijd verplicht.
 
