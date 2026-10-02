@@ -76,6 +76,27 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     }).join("")}</div>`;
   }
 
+  // ---- wat er in deze fase gedaan moet worden ----
+  // Onder de chevronbalk staat de checklist van de fase waarin het record nu
+  // staat: wat er gebeurd is, wat er nog moet, en wie aan zet is. Niets om aan
+  // te vinken — elke stap vinkt zichzelf af zodra het gedaan is.
+  const stappenNu = (data.stappen || []).filter((st) => st.fase === standNu);
+  const stappenHtml = !stappenNu.length ? "" : `
+    <div class="stappen">
+      <div class="stappenkop">In deze fase<span class="stappenmeta">${
+        stappenNu.filter((st) => st.gedaan).length} van ${stappenNu.length} gedaan</span></div>
+      <ul class="stappenlijst">
+        ${stappenNu.map((st) => `
+          <li class="stap ${st.gedaan ? "gedaan" : "open"}">
+            <span class="stapvink">${st.gedaan ? ICOON.vink : ""}</span>
+            <span class="stapnaam">${ontsnap(st.naam)}${
+              st.verplicht ? "" : ` <span class="faint">(mag later)</span>`}</span>
+            ${st.stand ? `<span class="stapstand">${ontsnap(st.stand)}</span>` : ""}
+            ${st.uitleg ? `<span class="stapuitleg">${ontsnap(st.uitleg)}</span>` : ""}
+          </li>`).join("")}
+      </ul>
+    </div>`;
+
   // ---- formulier: twee kolommen, velden om en om verdeeld ----
   const velden = data.velden.filter(
     (v) => v.toon_op_formulier !== 0 && (v.sectie !== "systeem" || !isNieuw)
@@ -194,6 +215,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       </span>
     </div>
     ${procesHtml}
+    ${isNieuw ? "" : stappenHtml}
     <div class="formulier">${sectieHtml}</div>
     ${toonBroker ? `<div class="brokervak" id="brokervak">
       <div class="brokerkop">Open posities bij Lynx<span class="feitmeta">lezend — het systeem plaatst nooit zelf een order</span></div>

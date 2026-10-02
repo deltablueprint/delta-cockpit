@@ -7,6 +7,7 @@
 import { toets } from "./regels.js";
 import { vulEventsBij, vulCyclitBij } from "./events.js";
 import { startMoment } from "./gonogo.js";
+import { beweegFase } from "./proces.js";
 import { instelling, wijktAf, stoplossVerruimd, noteerGeweigerdeStoploss,
          volgendeTranche, contractnaam, zetExitplanKlaar, exitplanCompleet,
          herberekenExitplan, besluitOpties, neemBesluitOver, premieInPunten } from "./positie.js";
@@ -231,25 +232,30 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
     await herberekenExitplan(env, id, straks);
   }
 
-  // De cyclus volgt zijn tranches. Loopt er één in de markt, dan staat de
-  // cyclus in positie; is elke tranche gesloten, dan is er niets meer te
-  // bewaken en begint de post-analyse. Afsluiten blijft mensenwerk.
-  if (tabelnaam === "positie" && teSchrijven.some((t) => t.veld.kolom === "status")) {
-    const rij = await env.DB.prepare("select cyclus, status from positie where id = ?").bind(id).first();
-    if (rij) {
-      if (["publiceren naar leden", "bewaken"].includes(rij.status)) {
-        await env.DB.prepare(
-          "update cyclus set status = 'in positie' where id = ? and status in ('go-nogo', 'uitvoering ophalen')"
-        ).bind(rij.cyclus).run();
-      }
-      const open = await env.DB.prepare(
-        "select count(*) as n from positie where cyclus = ? and archief = 0 and status <> 'gesloten'"
-      ).bind(rij.cyclus).first();
-      if (open && open.n === 0) {
-        await env.DB.prepare(
-          "update cyclus set status = 'post-analyse' where id = ? and status = 'in positie'"
-        ).bind(rij.cyclus).run();
-      }
+  // Verschuift de datum van een event, dan verschuift hij mee in de
+  // behandelingen: anders staan ze in de lijst op een dag waarop ze niet meer
+  // vallen.
+  if (tabelnaam === "event" && teSchrijven.some((t) => t.veld.kolom === "datum")) {
+    await env.DB.prepare("update cyclus_event set datum = ? where event = ?")
+      .bind(straks.datum, id).run();
+  }
+
+  // De fase volgt uit wat er gebeurd is: elk record schuift op zodra de
+  // verplichte stappen van zijn fase gedaan zijn, en een cyclus volgt zijn
+  // besluiten en tranches.
+  await beweegFase(env, tabelnaam, id);
+  if (["beoordelingsmoment", "positie"].includes(tabelnaam)) {
+    const ouder = await env.DB.prepare(`select cyclus from "${tabelnaam}" where id = ?`).bind(id).first();
+    if (ouder && ouder.cyclus) await beweegFase(env, "cyclus", ouder.cyclus);
+  }
+
+  // Het tijdstip bij de twee handelingen die een mens bevestigt.
+  if (tabelnaam === "positie") {
+    if (teSchrijven.some((t) => t.veld.kolom === "order_geplaatst") && Number(straks.order_geplaatst) === 1) {
+      await env.DB.prepare("update positie set order_op = datetime('now') where id = ? and order_op is null").bind(id).run();
+    }
+    if (teSchrijven.some((t) => t.veld.kolom === "gepubliceerd") && Number(straks.gepubliceerd) === 1) {
+      await env.DB.prepare("update positie set gepubliceerd_op = datetime('now') where id = ? and gepubliceerd_op is null").bind(id).run();
     }
   }
 

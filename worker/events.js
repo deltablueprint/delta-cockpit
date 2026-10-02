@@ -19,8 +19,8 @@ export async function vulEventsBij(env, cyclusId) {
   if (!einde) return { bijgezet: 0 };
 
   const uitkomst = await env.DB.prepare(
-    `insert or ignore into cyclus_event (cyclus, event, behandeling, zwaarte)
-     select ?, e.id, 'nog te wegen', e.zwaarte
+    `insert or ignore into cyclus_event (cyclus, event, behandeling, zwaarte, datum)
+     select ?, e.id, 'nog te wegen', e.zwaarte, e.datum
        from event e
       where e.archief = 0 and e.datum >= ? and e.datum <= ?`
   ).bind(cyclusId, cyclus.geopend_op, einde).run();
@@ -39,13 +39,13 @@ export async function vulCyclitBij(env, eventId) {
   if (!event || !event.datum || event.archief) return { bijgezet: 0 };
 
   const uitkomst = await env.DB.prepare(
-    `insert or ignore into cyclus_event (cyclus, event, behandeling, zwaarte)
-     select c.id, ?, 'nog te wegen', ?
+    `insert or ignore into cyclus_event (cyclus, event, behandeling, zwaarte, datum)
+     select c.id, ?, 'nog te wegen', ?, ?
        from cyclus c
       where c.archief = 0
         and c.geopend_op is not null and c.geopend_op <= ?
         and coalesce(c.doelexpiratie, c.afgesloten_op) >= ?`
-  ).bind(eventId, event.zwaarte, event.datum, event.datum).run();
+  ).bind(eventId, event.zwaarte, event.datum, event.datum, event.datum).run();
 
   return { bijgezet: uitkomst.meta ? uitkomst.meta.changes || 0 : 0 };
 }

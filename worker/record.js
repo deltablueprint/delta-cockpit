@@ -6,6 +6,7 @@
 import { schermAfEen } from "./blind.js";
 import { actieVoor } from "./gonogo.js";
 import { magTrancheAanmaken, besluitOpties } from "./positie.js";
+import { stappenVoor } from "./proces.js";
 
 export async function record(env, tabelnaam, id, ik) {
   const tabel = await env.DB.prepare(
@@ -130,9 +131,10 @@ export async function record(env, tabelnaam, id, ik) {
   // Keuzelijsten voor verwijzingen die je mag kiezen (db_field.keuzelijst) en
   // de actieknop rechtsboven: allebei tegelijk, want ze weten niets van elkaar.
   const opties = {};
-  const [keuzes, actie] = await Promise.all([
+  const [keuzes, actie, stappen] = await Promise.all([
     tabelnaam === "positie" && rij.cyclus ? besluitOpties(env, rij.cyclus) : null,
     actieVoor(env, tabelnaam, rij, tabel, ik),
+    stappenVoor(env, tabelnaam, rij),
   ]);
   if (keuzes) opties.beoordelingsmoment = keuzes;
 
@@ -141,6 +143,7 @@ export async function record(env, tabelnaam, id, ik) {
     proces,
     actie,
     opties,
+    stappen,
     tabel: {
       naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv,
       titel_veld: tabel.titel_veld, related_weergave: tabel.related_weergave,

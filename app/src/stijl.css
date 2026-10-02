@@ -659,3 +659,30 @@ body.sleept .lijsttabel { pointer-events: none; }
   .koppelpad i:nth-child(2) { left: 38px; }
   .koppelpad i:nth-child(3) { left: 76px; }
 }
+
+/* --- de checklist van de fase ---
+   Onder de chevronbalk: wat er in deze fase gedaan moet worden. Niets om aan
+   te vinken — elke stap vinkt zichzelf af zodra het gebeurd is. */
+.stappen { background: #fff; border: 1px solid var(--b1); border-top: none; }
+.stappenkop {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 9px 16px; background: var(--soft); border-bottom: 1px solid var(--b1);
+  font-size: 10px; font-weight: 700; letter-spacing: 1.4px; color: var(--dim); text-transform: uppercase;
+}
+.stappenmeta { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--mut); }
+.stappenlijst { margin: 0; padding: 6px 0; list-style: none; }
+.stap {
+  display: grid; grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: baseline; gap: 2px 8px; padding: 6px 16px;
+}
+.stapvink {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1px solid #D8D5CE; color: #fff; background: #fff;
+}
+.stap.gedaan .stapvink { background: var(--grn, #1B6B3A); border-color: var(--grn, #1B6B3A); }
+.stapnaam { font-size: 12.5px; color: var(--ink2); }
+.stap.gedaan .stapnaam { color: var(--mut); }
+.stapstand { font-size: 11.5px; color: var(--mut); white-space: nowrap; }
+.stapuitleg { grid-column: 2 / -1; font-size: 11.5px; color: var(--faint); line-height: 1.45; }
+.stap.open .stapnaam { font-weight: 600; color: var(--ink); }
