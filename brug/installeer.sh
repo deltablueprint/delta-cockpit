@@ -63,7 +63,9 @@ IBC_URL=$(curl -fsSL https://api.github.com/repos/IbcAlpha/IBC/releases/latest \
 [ -n "$IBC_URL" ] || { echo "Kon IBC niet vinden; haal hem met de hand van github.com/IbcAlpha/IBC/releases"; exit 1; }
 mkdir -p /opt/ibc && cd /opt/ibc
 curl -fsSL -o ibc.zip "$IBC_URL" && unzip -oq ibc.zip && rm ibc.zip
-chmod o+x /opt/ibc/*.sh /opt/ibc/scripts/*.sh
+# a+x, niet o+x: delta wordt de eigenaar van deze bestanden, en voor de
+# eigenaar telt het eigenaarsrecht — niet dat van 'overige gebruikers'.
+chmod a+x /opt/ibc/*.sh /opt/ibc/scripts/*.sh
 chown -R $GEBRUIKER:$GEBRUIKER /opt/ibc
 echo "   IBC geïnstalleerd uit $IBC_URL"
 
@@ -83,16 +85,39 @@ echo "   $THUIS/ibc-config.ini    — IbLoginId, IbPassword, TradingMode=paper,"
 echo "                              ReadOnlyApi=yes of no, OverrideTwsApiPort=7497"
 
 zeg "7 · de diensten"
+cat > /etc/systemd/system/xvfb.service <<'EOF'
+[Unit]
+Description=Virtueel scherm voor IB Gateway
+
+[Service]
+ExecStart=/usr/bin/Xvfb :1 -screen 0 1024x768x24
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# IB Gateway start via ibcstart.sh en niet via gatewaystart.sh: dan staan het
+# versienummer en de paden hier, en niet in een bestand van IBC dat bij elke
+# nieuwe uitgave overschreven wordt. Het versienummer komt uit de installatie —
+# zie VERSIE hierboven.
+VERSIE=$(ls -1 $THUIS/Jts 2>/dev/null | grep -E '^[0-9]+$' | sort -n | tail -1)
+VERSIE=${VERSIE:-1050}
 cat > /etc/systemd/system/ibgateway.service <<EOF
 [Unit]
 Description=IB Gateway via IBC
-After=network-online.target
+After=network-online.target xvfb.service
+Requires=xvfb.service
 
 [Service]
 User=$GEBRUIKER
 Environment=DISPLAY=:1
-ExecStartPre=/bin/bash -c '/usr/bin/Xvfb :1 -screen 0 1024x768x24 & sleep 2'
-ExecStart=/opt/ibc/gatewaystart.sh -inline
+ExecStart=/opt/ibc/scripts/ibcstart.sh $VERSIE --gateway \\
+  --mode=paper \\
+  --tws-path=$THUIS/Jts \\
+  --tws-settings-path=$THUIS/Jts \\
+  --ibc-path=/opt/ibc \\
+  --ibc-ini=$THUIS/ibc-config.ini
 Restart=always
 RestartSec=30
 
@@ -119,6 +144,7 @@ WantedBy=multi-user.target
 EOF
 touch /var/log/delta-brug.log && chown $GEBRUIKER:$GEBRUIKER /var/log/delta-brug.log
 systemctl daemon-reload
+systemctl enable --now xvfb
 
 zeg "klaar met het automatische deel"
 cat <<EOF
@@ -126,6 +152,10 @@ cat <<EOF
 Wat jij nog doet, in deze volgorde:
 
   1. IB Gateway installeren:   sudo -u $GEBRUIKER $THUIS/ibgateway.sh
+     (zeg 'n' op de vraag of hij gestart moet worden — IBC doet dat)
+     Kijk daarna welke versie het werd:  ls $THUIS/Jts
+     Staat daar iets anders dan $VERSIE, pas dat nummer dan aan in
+     /etc/systemd/system/ibgateway.service en draai 'systemctl daemon-reload'.
   2. $THUIS/ibc-config.ini invullen (inloggegevens, TradingMode=paper)
   3. $THUIS/.delta-brug.env invullen (BRUG_SLEUTEL)
   4. De brug erheen kopiëren vanaf je Mac:
