@@ -16,6 +16,7 @@ import { openPosities, haalRapport, neemRapportAan, laatsteRapport } from "./lyn
 import { stappenVoor } from "./proces.js";
 import { sjablonen, importeer as importeerVoorwaarden } from "./voorwaarden.js";
 import { overzicht } from "./besluit.js";
+import { voorstellen } from "./afloop.js";
 import { favorieten, favorietToevoegen, favorietWijzigen, favorietWeg,
          favorietenVolgorde, bezoeken, bezoekBijzetten, bezoekenLeeg } from "./navigator.js";
 
@@ -217,6 +218,12 @@ async function behandel(request, env) {
         const uitkomst = await lijst(env, lijstPad[1], url.searchParams, ik);
         if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
         return json(uitkomst);
+      }
+
+      // Wat er met de lopende tranches gebeurd is bij Lynx. Lezend en
+      // voorstellend: dit eindpunt legt niets vast en verandert niets.
+      if (pad === "/api/lynx/afloop" && request.method === "GET") {
+        return json(await voorstellen(env));
       }
 
       // Favorieten en geschiedenis: de twee tabbladen van de navigator. Altijd

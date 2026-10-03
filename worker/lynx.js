@@ -186,6 +186,40 @@ export function leesPosities(xml) {
     });
 }
 
+// De transacties uit het rapport, in onze eigen woorden.
+//
+// Hieruit valt af te lezen wat er met een tranche gebeurd is: een koop die een
+// positie sluit is een terugkoop, een verkoop die er een opent is een nieuwe
+// tranche, en staan die twee op dezelfde dag met dezelfde onderliggende waarde,
+// dan is er doorgerold. Het systeem leest; het oordeelt niet.
+export function leesTransacties(xml) {
+  return elementen(xml, "Trade")
+    .filter((t) => (t.assetCategory || "").toUpperCase() === "OPT")
+    .map((t) => {
+      const richting = (t.buySell || "").toUpperCase() === "BUY" ? "koop" : "verkoop";
+      const soort = (t.openCloseIndicator || "").toUpperCase().startsWith("C") ? "sluitend"
+                  : (t.openCloseIndicator || "").toUpperCase().startsWith("O") ? "openend" : null;
+      return {
+        conid: t.conid,
+        contract: t.description || `${t.underlyingSymbol || t.symbol || ""} ${datum(t.expiry) || ""} ${t.strike || ""} ${(t.putCall || "").toUpperCase()}`.replace(/\s+/g, " ").trim(),
+        onderliggend: t.underlyingSymbol || t.symbol || null,
+        strike: getal(t.strike),
+        expiratiedatum: datum(t.expiry),
+        putcall: (t.putCall || "").toUpperCase() || null,
+        richting,
+        soort,
+        aantal: Math.abs(getal(t.quantity) ?? 0) || null,
+        prijs_pt: getal(t.tradePrice),
+        multiplier: getal(t.multiplier) || 10,
+        commissie: getal(t.ibCommission),
+        netto: getal(t.netCash),
+        datum: datum(t.tradeDate) || (tijdstip(t.dateTime) || "").slice(0, 10) || null,
+        moment: tijdstip(t.dateTime),
+      };
+    })
+    .sort((a, b) => String(a.moment || a.datum || "").localeCompare(String(b.moment || b.datum || "")));
+}
+
 // Het rapport bij IBKR wordt op aanvraag gemaakt en dat duurt seconden. Twee
 // keer achter elkaar hetzelfde scherm openen hoort niet twee keer te wachten,
 // dus het antwoord blijft vijf minuten in de cache van de worker staan. Het is

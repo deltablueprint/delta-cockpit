@@ -592,6 +592,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         zet("ontvangen_premie_eur", p.premie_eur);
         zet("uitvoering_op", p.uitvoering_op);
         zet("herkomst", "broker");
+        zet("conid", p.conid);
         toonTranche();
       };
 
