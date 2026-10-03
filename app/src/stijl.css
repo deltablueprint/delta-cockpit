@@ -1078,3 +1078,23 @@ body.sleept .lijsttabel { pointer-events: none; }
 }
 .ikoonvak:hover { background: var(--soft); }
 .ikoonvak.actief { border-color: var(--blue); background: var(--bluebg); }
+
+/* --- de brokerkoppeling ---
+   Bovenaan geen tabel maar één zin die klopt: leeft de verbinding, en zo niet,
+   hoe lang al niet. Het lampje is de samenvatting, de zin is het antwoord. */
+.verbindingvak { display: flex; align-items: center; gap: 14px; padding: 16px 20px; flex-wrap: wrap; }
+.verbindinglamp {
+  width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+  background: #B9B5AD; box-shadow: 0 0 0 4px rgba(0,0,0,.04);
+}
+.verbindinglamp.live { background: #2FA84F; box-shadow: 0 0 0 4px rgba(47,168,79,.18); }
+.verbindinglamp.weg { background: #E04434; box-shadow: 0 0 0 4px rgba(224,68,52,.16); }
+.verbindingtekst { display: flex; flex-direction: column; gap: 2px; min-width: 240px; flex: 1 1 auto; }
+.verbindingtekst b { font-size: 15px; }
+.verbindingtekst span { font-size: 12.5px; color: var(--ink2); line-height: 1.5; }
+.verbindingcijfers { display: flex; gap: 28px; flex-wrap: wrap; }
+.verbindingcijfers span { display: flex; flex-direction: column; font-size: 12px; color: var(--mut); }
+.verbindingcijfers b { font-size: 16px; font-weight: 700; color: var(--ink); }
+.veldwaarde.metnoot { flex-direction: column; align-items: flex-start; gap: 0; }
+.veldnoot { display: block; margin-top: 3px; font-size: 11.5px; color: var(--mut); line-height: 1.45; max-width: 520px; }
+.feittabel th.rechts, .feittabel td.rechts { text-align: right; }

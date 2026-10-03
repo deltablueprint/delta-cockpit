@@ -17,7 +17,7 @@ import { stappenVoor } from "./proces.js";
 import { sjablonen, importeer as importeerVoorwaarden } from "./voorwaarden.js";
 import { overzicht } from "./besluit.js";
 import { voorstellen } from "./afloop.js";
-import { neemStand, stand as brugstand } from "./brug.js";
+import { neemStand, stand as brugstand, zetInstellingen } from "./brug.js";
 import { favorieten, favorietToevoegen, favorietWijzigen, favorietWeg,
          favorietenVolgorde, bezoeken, bezoekBijzetten, bezoekenLeeg } from "./navigator.js";
 
@@ -242,6 +242,20 @@ async function behandel(request, env) {
       // De live stand van de broker, met hoe vers hij is.
       if (pad === "/api/brug" && request.method === "GET") {
         return json(await brugstand(env));
+      }
+      if (pad === "/api/brug/instelling" && request.method === "PUT") {
+        const body = await request.json().catch(() => ({}));
+        const uit = await zetInstellingen(env, ik, body.waarden || {});
+        if (uit.fout) return json(uit, uit.status || 400);
+        return json(await brugstand(env));
+      }
+      // Of het laatste Flex-rapport er is, en hoe oud: het vangnet hoort ook
+      // zichtbaar te zijn.
+      if (pad === "/api/brug/flex" && request.method === "GET") {
+        const r = await env.DB.prepare(
+          "select opgehaald_op, bron, regels, length(xml) as grootte from lynx_rapport order by id desc limit 1"
+        ).first().catch(() => null);
+        return json({ rapport: r || null });
       }
 
       if (pad === "/api/lynx/afloop" && request.method === "GET") {

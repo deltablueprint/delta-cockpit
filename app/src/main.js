@@ -7,6 +7,7 @@ import { importscherm } from "./importeren.js";
 import { gonogoscherm } from "./gonogo.js";
 import { uitkomstscherm } from "./uitkomst.js";
 import { favorietenscherm } from "./favorieten.js";
+import { koppelingscherm } from "./koppeling.js";
 import { zetBezoek } from "./api.js";
 import { stopLive } from "./live.js";
 
@@ -57,6 +58,13 @@ function teken() {
     if (!route || !titel || titel === "Delta Blueprint Cockpit") return;
     zetBezoek({ route, titel, soort: soortVanRoute(route) }).catch(() => {});
   }, 1200);
+
+  if (pad === "/koppeling") {
+    huidigeLijst.tabelnaam = null;
+    huidigeLijst.url = null;
+    koppelingscherm(inhoud, kruimel);
+    return;
+  }
 
   if (pad === "/favorieten") {
     huidigeLijst.tabelnaam = null;

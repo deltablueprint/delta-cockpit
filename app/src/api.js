@@ -120,3 +120,9 @@ export const zetFavorietenVolgorde = (ids) =>
 export const haalBezoeken = () => haal("/api/bezoek");
 export const zetBezoek = (body) => haal("/api/bezoek", { methode: "POST", body });
 export const wisBezoeken = () => haal("/api/bezoek", { methode: "DELETE" });
+
+// ---- de brokerkoppeling ----
+export const brugStand = () => haal("/api/brug");
+export const brugInstelling = (waarden) =>
+  haal("/api/brug/instelling", { methode: "PUT", body: { waarden } });
+export const brugFlex = () => haal("/api/brug/flex");

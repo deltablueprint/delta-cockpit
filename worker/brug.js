@@ -7,9 +7,54 @@
 const getal = (w) => (Number.isFinite(Number(w)) ? Number(w) : null);
 const kort = (w, n = 200) => (w === null || w === undefined ? null : String(w).slice(0, n));
 
-// Hoe lang stilte nog normaal is. De brug stuurt elke tien seconden een
-// hartslag; drie keer niets is geen toeval meer.
-const STILTE_SECONDEN = 35;
+// Wat je aan de koppeling mag veranderen zonder op de machine in te loggen.
+// De brug krijgt ze terug in het antwoord op zijn eigen zending: zo komt een
+// wijziging binnen tien seconden aan, zonder dat de cockpit ooit iets naar de
+// brug hoeft te sturen. Het verkeer blijft één kant op.
+export async function instellingen(env) {
+  try {
+    const r = await env.DB.prepare(
+      "select sleutel, waarde, label, uitleg, soort, volgorde, gewijzigd from brokerinstelling order by volgorde"
+    ).all();
+    return r.results;
+  } catch {
+    return [];   // de tabel bestaat nog niet in deze omgeving
+  }
+}
+
+function alsKaart(lijst) {
+  const uit = {};
+  for (const r of lijst) uit[r.sleutel] = r.soort === "getal" ? Number(r.waarde) : r.waarde;
+  return uit;
+}
+
+export async function zetInstellingen(env, ik, waarden = {}) {
+  const bestaand = await instellingen(env);
+  const werk = [];
+  for (const r of bestaand) {
+    if (!(r.sleutel in waarden)) continue;
+    let w = String(waarden[r.sleutel]);
+    if (r.soort === "getal") {
+      const n = Number(w);
+      if (!Number.isFinite(n) || n <= 0) return { fout: `${r.label} moet een getal boven nul zijn.`, status: 422 };
+      w = String(Math.round(n));
+    }
+    if (r.soort === "ja_nee") w = (w === "1" || w === "true" || w === "ja") ? "1" : "0";
+    werk.push(env.DB.prepare(
+      "update brokerinstelling set waarde = ?, gewijzigd = datetime('now'), gewijzigd_door = ? where sleutel = ?"
+    ).bind(w, ik ? ik.id : null, r.sleutel));
+  }
+
+  // De stiltegrens onder de hartslag zetten betekent dat de koppeling altijd
+  // op 'weg' staat. Dat is geen instelling maar een vergissing.
+  const na = { ...alsKaart(bestaand), ...waarden };
+  if (Number(na.stilte_grens_seconden) <= Number(na.hartslag_seconden)) {
+    return { fout: "De stiltegrens moet ruim boven de hartslag liggen, anders staat de koppeling altijd op weg.", status: 422 };
+  }
+
+  if (werk.length) await env.DB.batch(werk);
+  return { ok: true };
+}
 
 export async function neemStand(env, pakket = {}) {
   const posities = Array.isArray(pakket.posities) ? pakket.posities : [];
@@ -43,8 +88,8 @@ export async function neemStand(env, pakket = {}) {
     werk.push(env.DB.prepare(
       `insert into brokerpositie (conid, contract, onderliggend, soort, strike, expiratiedatum,
                                   putcall, multiplier, aantal, gem_kostprijs, marktprijs, waarde,
-                                  ongerealiseerd, gerealiseerd, gewijzigd_op)
-       values (?,?,?,?,?,?,?,?,?,?,?,?,?,?, datetime('now'))
+                                  ongerealiseerd, gerealiseerd, biedprijs, laatprijs, gewijzigd_op)
+       values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, datetime('now'))
        on conflict (conid) do update set
          contract = excluded.contract, onderliggend = excluded.onderliggend,
          soort = excluded.soort, strike = excluded.strike,
@@ -52,12 +97,13 @@ export async function neemStand(env, pakket = {}) {
          multiplier = excluded.multiplier, aantal = excluded.aantal,
          gem_kostprijs = excluded.gem_kostprijs, marktprijs = excluded.marktprijs,
          waarde = excluded.waarde, ongerealiseerd = excluded.ongerealiseerd,
-         gerealiseerd = excluded.gerealiseerd, gewijzigd_op = datetime('now')`
+         gerealiseerd = excluded.gerealiseerd, biedprijs = excluded.biedprijs,
+         laatprijs = excluded.laatprijs, gewijzigd_op = datetime('now')`
     ).bind(
       String(p.conid), kort(p.contract), kort(p.onderliggend, 40), kort(p.soort, 20),
       getal(p.strike), kort(p.expiratiedatum, 10), kort(p.putcall, 4), getal(p.multiplier),
       getal(p.aantal) ?? 0, getal(p.gem_kostprijs), getal(p.marktprijs), getal(p.waarde),
-      getal(p.ongerealiseerd), getal(p.gerealiseerd)
+      getal(p.ongerealiseerd), getal(p.gerealiseerd), getal(p.biedprijs), getal(p.laatprijs)
     ));
   }
 
@@ -76,7 +122,14 @@ export async function neemStand(env, pakket = {}) {
   }
 
   await env.DB.batch(werk);
-  return { ok: true, posities: posities.length, gebeurtenissen: gebeurtenissen.length };
+  // Het antwoord draagt de instellingen: zo haalt de brug ze op zonder dat er
+  // ooit iets naar hem toe gestuurd hoeft te worden.
+  return {
+    ok: true,
+    posities: posities.length,
+    gebeurtenissen: gebeurtenissen.length,
+    instellingen: alsKaart(await instellingen(env)),
+  };
 }
 
 // Wat de schermen lezen: de stand én hoe vers hij is. Die twee horen bij
@@ -90,15 +143,19 @@ export async function stand(env) {
     ).all(),
   ]);
 
+  const kaart = alsKaart(await instellingen(env));
+  const grens = Number(kaart.stilte_grens_seconden) || 35;
+
   const stil = await env.DB.prepare(
     "select cast((julianday('now') - julianday(coalesce(laatste_bericht, '2000-01-01'))) * 86400 as integer) as s from brokerverbinding where id = 1"
   ).first();
   const seconden = stil ? Number(stil.s) : null;
 
   return {
-    live: Boolean(verbinding && verbinding.verbonden) && seconden !== null && seconden <= STILTE_SECONDEN,
+    live: Boolean(verbinding && verbinding.verbonden) && seconden !== null && seconden <= grens,
     stil_seconden: seconden,
-    stilte_grens: STILTE_SECONDEN,
+    stilte_grens: grens,
+    instellingen: await instellingen(env),
     verbonden: Boolean(verbinding && verbinding.verbonden),
     laatste_bericht: verbinding ? verbinding.laatste_bericht : null,
     rekening: verbinding ? verbinding.rekening : null,

@@ -147,6 +147,11 @@ async function stuur(reden) {
     });
     if (!antwoord.ok) throw new Error(`${antwoord.status} ${(await antwoord.text()).slice(0, 160)}`);
     vuil = false;
+    // Het antwoord draagt de instellingen. Zo komt een wijziging uit het
+    // scherm binnen één hartslag aan, zonder dat de cockpit ooit iets naar de
+    // brug hoeft te sturen: het verkeer blijft één kant op.
+    const terug = await antwoord.json().catch(() => null);
+    if (terug && terug.instellingen) pasAan(terug.instellingen);
     if (mislukt) { log(`cockpit weer bereikbaar na ${mislukt} mislukte pogingen`); mislukt = 0; }
   } catch (fout) {
     mislukt++;
@@ -155,6 +160,56 @@ async function stuur(reden) {
     if (mislukt <= 3 || mislukt % 30 === 0) log(`cockpit onbereikbaar (${mislukt}×): ${fout.message}`);
   } finally {
     bezig = false;
+  }
+}
+
+// De hartslag kan vanuit het scherm bijgesteld worden; de klok wordt dan
+// opnieuw gezet. Meer dan dit laat de brug zich niet vertellen — hij neemt geen
+// opdrachten aan, alleen instellingen die over hemzelf gaan.
+let hartslagklok = null;
+function zetHartslag(seconden) {
+  const n = Math.max(2, Math.min(300, Number(seconden) || inst.hartslag));
+  if (hartslagklok && n === inst.hartslag) return;
+  inst.hartslag = n;
+  if (hartslagklok) clearInterval(hartslagklok);
+  hartslagklok = setInterval(() => stuur(vuil ? "wijziging" : "hartslag"), n * 1000);
+}
+
+function pasAan(nieuw) {
+  if (nieuw.hartslag_seconden) zetHartslag(nieuw.hartslag_seconden);
+  const wil = Number(nieuw.marktdata) === 1;
+  if (wil !== marktdataAan) {
+    marktdataAan = wil;
+    log(`koersen meesturen staat nu ${wil ? "aan" : "uit"}`);
+    if (wil) volgKoersen(); else stopKoersen();
+  }
+}
+
+// Koersen volgen van wat er open staat. Zonder een abonnement op Eurex-data
+// komt er niets door en kost het niets; daarom staat het standaard uit.
+let marktdataAan = false;
+const koersVerzoeken = new Map();   // conid -> reqId
+let volgendVerzoek = 1000;
+
+function volgKoersen() {
+  if (!marktdataAan) return;
+  for (const p of posities.values()) {
+    if (koersVerzoeken.has(p.conid) || Number(p.aantal) === 0) continue;
+    const id = volgendVerzoek++;
+    koersVerzoeken.set(p.conid, id);
+    try {
+      ib.reqMktData(id, { conId: Number(p.conid), exchange: "SMART" }, "", false, false);
+    } catch (fout) {
+      log(`koers volgen van ${p.contract} lukt niet: ${fout.message}`);
+      koersVerzoeken.delete(p.conid);
+    }
+  }
+}
+
+function stopKoersen() {
+  for (const [conid, id] of koersVerzoeken) {
+    try { ib.cancelMktData(id); } catch { /* al weg */ }
+    koersVerzoeken.delete(conid);
   }
 }
 
@@ -238,6 +293,23 @@ ib.on(EventName.execDetails, (reqId, contract, uitvoering) => {
   melden();
 });
 
+// De koers van een contract dat we volgen. Veld 4 is de laatste prijs, 1 de
+// bied- en 2 de laatprijs; voor een geschreven optie is de laatprijs wat het
+// kost om eruit te stappen, en dus de prijs waar het exitplan op rekent.
+ib.on(EventName.tickPrice, (reqId, veld, prijs) => {
+  if (!marktdataAan || !Number.isFinite(prijs) || prijs <= 0) return;
+  const conid = [...koersVerzoeken.entries()].find(([, id]) => id === reqId);
+  if (!conid) return;
+  const p = posities.get(conid[0]);
+  if (!p) return;
+  const sleutel = veld === 2 ? "laatprijs" : veld === 1 ? "biedprijs" : veld === 4 ? "marktprijs" : null;
+  if (!sleutel) return;
+  if (p[sleutel] === rond(prijs, 4)) return;
+  p[sleutel] = rond(prijs, 4);
+  vuil = true;
+  melden();
+});
+
 function verbind() {
   try {
     ib.connect();
@@ -249,7 +321,7 @@ function verbind() {
 
 // De hartslag. Hij stuurt ook als er niets veranderd is: dat is precies het
 // punt — de cockpit weet dan dat de stilte klopt.
-setInterval(() => stuur(vuil ? "wijziging" : "hartslag"), inst.hartslag * 1000);
+zetHartslag(inst.hartslag);
 
 process.on("SIGINT", () => { log("afsluiten"); verbonden = false; stuur("afsluiten").finally(() => process.exit(0)); });
 process.on("SIGTERM", () => { log("afsluiten"); verbonden = false; stuur("afsluiten").finally(() => process.exit(0)); });
