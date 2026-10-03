@@ -17,6 +17,7 @@ import { stappenVoor } from "./proces.js";
 import { sjablonen, importeer as importeerVoorwaarden } from "./voorwaarden.js";
 import { overzicht } from "./besluit.js";
 import { voorstellen } from "./afloop.js";
+import { neemStand, stand as brugstand } from "./brug.js";
 import { favorieten, favorietToevoegen, favorietWijzigen, favorietWeg,
          favorietenVolgorde, bezoeken, bezoekBijzetten, bezoekenLeeg } from "./navigator.js";
 
@@ -162,6 +163,22 @@ async function behandel(request, env) {
     // mag. Dat is geen mens: hij meldt zich niet aan met e-mailadres en
     // wachtwoord maar met een eigen sleutel, en hij kan ook niets anders dan
     // dit ene ding.
+    // De brug levert af zonder aanmelding, met de afgesproken sleutel: dit is
+    // een programma en geen mens. Eén kant op — er is geen route terug naar de
+    // broker, en de brug vraagt de cockpit nooit iets.
+    if (pad === "/api/brug" && request.method === "POST") {
+      const sleutel = request.headers.get("x-brug-sleutel") || "";
+      const verwacht = env.BRUG_SLEUTEL || "";
+      if (!verwacht || !gelijkInVasteTijd(sleutel, verwacht)) {
+        return json({ fout: "Niet herkend." }, 401);
+      }
+      const pakket = await request.json().catch(() => null);
+      if (!pakket) return json({ fout: "Geen leesbaar pakket." }, 400);
+      const uit = await neemStand(env, pakket);
+      if (uit.fout) return json(uit, uit.status || 400);
+      return json(uit);
+    }
+
     if (pad === "/api/lynx/rapport" && request.method === "POST") {
       const sleutel = request.headers.get("x-lynx-sleutel") || "";
       const verwacht = env.LYNX_PUSH_SLEUTEL || "";
@@ -222,6 +239,11 @@ async function behandel(request, env) {
 
       // Wat er met de lopende tranches gebeurd is bij Lynx. Lezend en
       // voorstellend: dit eindpunt legt niets vast en verandert niets.
+      // De live stand van de broker, met hoe vers hij is.
+      if (pad === "/api/brug" && request.method === "GET") {
+        return json(await brugstand(env));
+      }
+
       if (pad === "/api/lynx/afloop" && request.method === "GET") {
         return json(await voorstellen(env));
       }

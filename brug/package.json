@@ -1,0 +1,9 @@
+{
+  "name": "delta-brug",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "De brug tussen IB Gateway en de Delta Blueprint Cockpit. Leest, schrijft nooit.",
+  "scripts": { "start": "node brug.mjs" },
+  "dependencies": { "@stoqey/ib": "^1.3.26" }
+}

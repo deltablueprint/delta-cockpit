@@ -1,0 +1,258 @@
+// De brug: van IB Gateway naar de cockpit, zodra er iets verandert.
+//
+// Waarom dit bestaat. Het Flex-rapport is rapportage — je vraagt het aan en
+// krijgt een beeld van minuten tot een dag oud. Voor het vastleggen van wat er
+// gebeurd is, is dat genoeg; voor het bewaken van een stoploss niet. De TWS API
+// is het tegenovergestelde: geen vraag-en-antwoord maar een open verbinding die
+// je aantikt op het moment dat er iets verandert.
+//
+// Wat deze brug doet: luisteren naar posities, portefeuillewaarde en
+// uitvoeringen, en elke verandering meteen doorduwen naar de cockpit. Plus een
+// hartslag, zodat de cockpit het verschil kent tussen 'er gebeurt niets' en
+// 'ik hoor niets meer'. Dat laatste is geen detail: stil oude getallen tonen is
+// erger dan niets tonen.
+//
+// Wat deze brug NIET doet, en nooit zal doen: een order plaatsen, wijzigen of
+// annuleren. Er is in dit bestand geen enkele aanroep die dat kan. De cockpit
+// kan de brug ook niet aansturen — het verkeer gaat één kant op, van hier naar
+// daar. Staat in IB Gateway bovendien *Read-Only API* aan, dan weigert IBKR's
+// eigen software het ook nog eens. Drie sloten op dezelfde deur.
+//
+// Instellen: maak ~/.delta-brug.env met
+//
+//   COCKPIT_URL=https://delta-cockpit-staging.dejonghe-simon.workers.dev
+//   BRUG_SLEUTEL=...        dezelfde sleutel als die bij Cloudflare staat
+//   IB_HOST=127.0.0.1       IB Gateway draait op dezelfde machine
+//   IB_PORT=7497            7497 = paper, 7496 = live
+//   IB_CLIENT_ID=17         elk nummer, zolang het uniek is per verbinding
+//
+// Draaien: node brug.mjs
+
+import { IBApi, EventName } from "@stoqey/ib";
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
+// ------------------------------------------------------------- instellingen
+function instellingen() {
+  const pad = process.env.DELTA_BRUG_ENV || join(homedir(), ".delta-brug.env");
+  const uit = {};
+  try {
+    for (const regel of readFileSync(pad, "utf8").split("\n")) {
+      const m = /^\s*([A-Z_]+)\s*=\s*(.*?)\s*$/.exec(regel);
+      if (m) uit[m[1]] = m[2];
+    }
+  } catch {
+    throw new Error(`Kan ${pad} niet lezen. Zie de kop van dit bestand voor wat erin hoort.`);
+  }
+  for (const nodig of ["COCKPIT_URL", "BRUG_SLEUTEL"]) {
+    if (!uit[nodig]) throw new Error(`${nodig} ontbreekt in ${pad}`);
+  }
+  return {
+    url: uit.COCKPIT_URL.replace(/\/$/, ""),
+    sleutel: uit.BRUG_SLEUTEL,
+    host: uit.IB_HOST || "127.0.0.1",
+    poort: Number(uit.IB_PORT || 7497),
+    clientId: Number(uit.IB_CLIENT_ID || 17),
+    hartslag: Number(uit.HARTSLAG_SECONDEN || 10),
+  };
+}
+
+const inst = instellingen();
+const log = (...w) => console.log(new Date().toISOString(), ...w);
+
+// ------------------------------------------------------------------ de stand
+// Wat we weten, en wat er sinds de vorige zending veranderd is. We sturen niet
+// bij elke tik het hele beeld: alleen wat er anders is, plus een hartslag.
+const posities = new Map();      // conid -> regel
+const gebeurtenissen = [];       // uitvoeringen en veranderingen, in volgorde
+let rekening = null;
+let kapitaal = null;
+let vuil = false;
+let verbonden = false;
+
+const rond = (n, c = 4) => (Number.isFinite(Number(n)) ? Math.round(Number(n) * 10 ** c) / 10 ** c : null);
+
+function contractnaam(c) {
+  if (!c) return null;
+  const maand = ["JAN","FEB","MRT","APR","MEI","JUN","JUL","AUG","SEP","OKT","NOV","DEC"];
+  const m = /^(\d{4})(\d{2})(\d{2})$/.exec(String(c.lastTradeDateOrContractMonth || ""));
+  const exp = m ? `${m[3]}${maand[Number(m[2]) - 1]}${m[1].slice(2)}` : (c.lastTradeDateOrContractMonth || "");
+  return [c.symbol, exp, c.strike, c.right === "P" ? "PUT" : c.right === "C" ? "CALL" : c.right]
+    .filter(Boolean).join(" ").trim();
+}
+
+function expiratiedatum(c) {
+  const m = /^(\d{4})(\d{2})(\d{2})$/.exec(String(c && c.lastTradeDateOrContractMonth || ""));
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
+}
+
+function zetPositie(contract, aantal, gemKostprijs, extra = {}) {
+  const conid = String(contract.conId || "");
+  if (!conid) return;
+  const oud = posities.get(conid);
+  const nieuw = {
+    conid,
+    contract: contractnaam(contract),
+    onderliggend: contract.symbol || null,
+    soort: contract.secType || null,
+    strike: rond(contract.strike, 2),
+    expiratiedatum: expiratiedatum(contract),
+    putcall: contract.right || null,
+    multiplier: Number(contract.multiplier) || null,
+    aantal: rond(aantal, 2),
+    gem_kostprijs: rond(gemKostprijs, 4),
+    ...extra,
+  };
+  // Alleen melden wat écht anders is: anders stuurt een koersbeweging van een
+  // cent de halve portefeuille opnieuw over de lijn.
+  const zelfde = oud && ["aantal", "gem_kostprijs", "marktprijs", "waarde"]
+    .every((k) => (oud[k] ?? null) === (nieuw[k] ?? oud[k] ?? null));
+  posities.set(conid, { ...oud, ...nieuw });
+  if (!zelfde) {
+    vuil = true;
+    if (!oud || oud.aantal !== nieuw.aantal) {
+      gebeurtenissen.push({
+        soort: "positie",
+        conid, contract: nieuw.contract,
+        van: oud ? oud.aantal : null, naar: nieuw.aantal,
+        moment: new Date().toISOString(),
+      });
+      log(`positie ${nieuw.contract}: ${oud ? oud.aantal : "—"} → ${nieuw.aantal}`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------- versturen
+let bezig = false;
+let mislukt = 0;
+
+async function stuur(reden) {
+  if (bezig) return;
+  bezig = true;
+  const pakket = {
+    reden,
+    moment: new Date().toISOString(),
+    verbonden,
+    rekening,
+    kapitaal,
+    posities: [...posities.values()].filter((p) => Number(p.aantal) !== 0),
+    gebeurtenissen: gebeurtenissen.splice(0, gebeurtenissen.length),
+  };
+  try {
+    const antwoord = await fetch(`${inst.url}/api/brug`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-brug-sleutel": inst.sleutel },
+      body: JSON.stringify(pakket),
+    });
+    if (!antwoord.ok) throw new Error(`${antwoord.status} ${(await antwoord.text()).slice(0, 160)}`);
+    vuil = false;
+    if (mislukt) { log(`cockpit weer bereikbaar na ${mislukt} mislukte pogingen`); mislukt = 0; }
+  } catch (fout) {
+    mislukt++;
+    // De gebeurtenissen gingen niet weg: terugleggen, anders zijn ze stil weg.
+    gebeurtenissen.unshift(...pakket.gebeurtenissen);
+    if (mislukt <= 3 || mislukt % 30 === 0) log(`cockpit onbereikbaar (${mislukt}×): ${fout.message}`);
+  } finally {
+    bezig = false;
+  }
+}
+
+// Veranderingen komen in trosjes binnen; we wachten een halve seconde zodat
+// twintig tikken één zending worden, en sturen dan meteen.
+let klok = null;
+function melden() {
+  if (klok) return;
+  klok = setTimeout(() => { klok = null; if (vuil) stuur("wijziging"); }, 500);
+}
+
+// ------------------------------------------------------------- IB Gateway
+const ib = new IBApi({ host: inst.host, port: inst.poort, clientId: inst.clientId });
+
+ib.on(EventName.connected, () => {
+  verbonden = true;
+  log(`verbonden met IB Gateway op ${inst.host}:${inst.poort}`);
+});
+
+ib.on(EventName.disconnected, () => {
+  verbonden = false;
+  log("verbinding met IB Gateway weg — opnieuw proberen");
+  stuur("verbinding weg");
+  setTimeout(verbind, 5000);
+});
+
+ib.on(EventName.error, (fout, code, reqId) => {
+  // 2104/2106/2158 zijn 'market data farm connection is OK': geen fouten.
+  if ([2104, 2106, 2107, 2158, 2119].includes(Number(code))) return;
+  log(`IB melding ${code}${reqId && reqId !== -1 ? ` (verzoek ${reqId})` : ""}: ${fout.message || fout}`);
+});
+
+ib.on(EventName.managedAccounts, (lijst) => {
+  rekening = String(lijst || "").split(",")[0] || null;
+  log(`rekening ${rekening}`);
+  if (rekening) ib.reqAccountUpdates(true, rekening);
+  ib.reqPositions();
+});
+
+// De volledige lijst posities, en daarna elke wijziging.
+ib.on(EventName.position, (account, contract, pos, avgCost) => {
+  zetPositie(contract, pos, avgCost);
+  melden();
+});
+
+// Portefeuilleregels dragen ook de marktprijs en de waarde.
+ib.on(EventName.updatePortfolio, (contract, positie, marktprijs, waarde, gemKostprijs, ongerealiseerd, gerealiseerd) => {
+  zetPositie(contract, positie, gemKostprijs, {
+    marktprijs: rond(marktprijs, 4),
+    waarde: rond(waarde, 2),
+    ongerealiseerd: rond(ongerealiseerd, 2),
+    gerealiseerd: rond(gerealiseerd, 2),
+  });
+  melden();
+});
+
+// De nettowaarde van de rekening: het kapitaal waar de portefeuillebalk op
+// rekent. Dit is de waarde die het Flex-rapport niet meestuurde.
+ib.on(EventName.updateAccountValue, (sleutel, waarde, valuta, account) => {
+  if (sleutel !== "NetLiquidation" || (valuta && valuta !== "EUR" && valuta !== "BASE")) return;
+  const n = rond(waarde, 2);
+  if (n !== kapitaal) { kapitaal = n; vuil = true; melden(); }
+});
+
+// Uitvoeringen: wát er precies gebeurd is, met prijs en tijdstip. Komt alleen
+// door als *Read-Only API* uit staat; met read-only aan ziet de brug de
+// positiewijziging wel en de prijs niet, en vult Flex die 's nachts aan.
+ib.on(EventName.execDetails, (reqId, contract, uitvoering) => {
+  gebeurtenissen.push({
+    soort: "uitvoering",
+    conid: String(contract.conId || ""),
+    contract: contractnaam(contract),
+    richting: (uitvoering.side || "").toUpperCase() === "BOT" ? "koop" : "verkoop",
+    aantal: rond(uitvoering.shares, 2),
+    prijs: rond(uitvoering.price, 4),
+    uitvoering_id: uitvoering.execId || null,
+    moment: uitvoering.time || new Date().toISOString(),
+  });
+  vuil = true;
+  log(`uitvoering ${contractnaam(contract)} ${uitvoering.side} ${uitvoering.shares} × ${uitvoering.price}`);
+  melden();
+});
+
+function verbind() {
+  try {
+    ib.connect();
+  } catch (fout) {
+    log(`verbinden mislukt: ${fout.message} — over 5 seconden opnieuw`);
+    setTimeout(verbind, 5000);
+  }
+}
+
+// De hartslag. Hij stuurt ook als er niets veranderd is: dat is precies het
+// punt — de cockpit weet dan dat de stilte klopt.
+setInterval(() => stuur(vuil ? "wijziging" : "hartslag"), inst.hartslag * 1000);
+
+process.on("SIGINT", () => { log("afsluiten"); verbonden = false; stuur("afsluiten").finally(() => process.exit(0)); });
+process.on("SIGTERM", () => { log("afsluiten"); verbonden = false; stuur("afsluiten").finally(() => process.exit(0)); });
+
+log(`brug start — cockpit ${inst.url}, gateway ${inst.host}:${inst.poort}`);
+verbind();
