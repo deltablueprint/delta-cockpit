@@ -130,6 +130,28 @@ select p.id, datetime('now', '-' || v.n || ' days', '+16 hours'),
   join v
  where c.label = 'DEMO · dispatch' and p.tranche = 3;
 
+-- De afgelopen tranche heeft haar eigen verloop: ze liep eerst op — krap, even
+-- onder druk — en zakte daarna weg naar niets. Zo laat de strook zien wat een
+-- tranche doet die waardeloos afloopt, in plaats van twintig grijze dagen.
+with recursive v(n) as (select 0 union all select n + 1 from v where n < 27)
+insert into positiemeting (positie, moment, ask, bod, stand, binnen)
+select p.id,
+       datetime('now', '-' || (17 + v.n) || ' days', '+16 hours'),
+       case when v.n >= 24 then 40.0 when v.n >= 20 then 54.0
+            when v.n >= 15 then 38.0 when v.n >= 10 then 18.0
+            when v.n >= 5 then 9.0 else 3.0 end,
+       case when v.n >= 24 then 39.5 when v.n >= 20 then 53.5
+            when v.n >= 15 then 37.5 when v.n >= 10 then 17.5
+            when v.n >= 5 then 8.6 else 2.7 end,
+       case when v.n >= 24 then 2 when v.n >= 20 then 1
+            when v.n >= 15 then 2 when v.n >= 10 then 3
+            when v.n >= 5 then 4 else 5 end,
+       case when v.n >= 24 then -81.8 when v.n >= 20 then -145.5
+            when v.n >= 15 then -72.7 when v.n >= 10 then 18.2
+            when v.n >= 5 then 59.1 else 86.4 end
+  from positie p join cyclus c on c.id = p.cyclus join v
+ where c.label = 'DEMO · dispatch' and p.tranche = 4;
+
 -- Een paar standwisselingen, zodat de geschiedenis rechts niet leeg is.
 insert into barometerstand (cyclus, stand, venster, reden, herkomst, vastgesteld_op, vastgesteld_door, gepubliceerd_op)
 select id, 2, 'opent_binnenkort', 'Demo: het venster gaat open.', 'mens', datetime('now', '-17 days'), 'simon', datetime('now', '-17 days')
