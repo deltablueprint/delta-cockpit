@@ -97,11 +97,14 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   // straks nog komt, in plaats van alleen de fase waar je nu in staat. De fase
   // waarin het record staat draagt de kleur; de rest staat gedoofd. Niets om
   // aan te vinken: elke stap vinkt zichzelf af zodra het gedaan is.
+  // Alleen de naam van de stap. De stand ('1 van 1 gelezen') stond eronder en
+  // herhaalde wat je in de lijst eronder al ziet; op een balk die je elke keer
+  // langsloopt is dat ruis. Hij blijft wel in de titel staan, voor wie hem zoekt.
   const stapHtml = (st) => `
-    <li class="stap ${st.gedaan ? "gedaan" : "open"}${st.verplicht ? "" : " mag-later"}">
+    <li class="stap ${st.gedaan ? "gedaan" : "open"}${st.verplicht ? "" : " mag-later"}"${
+      st.stand ? ` title="${ontsnap(st.stand)}"` : ""}>
       <span class="stapvink">${st.gedaan ? ICOON.vink : ""}</span>
-      <span class="stapnaam">${ontsnap(st.naam)}${
-        st.stand ? ` <i class="stapstand">${ontsnap(st.stand)}</i>` : ""}</span>
+      <span class="stapnaam">${ontsnap(st.naam)}</span>
     </li>`;
 
   const fasekolommen = () => {

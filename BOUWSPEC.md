@@ -399,6 +399,8 @@ Wat wél bestaat is een eenvoudige gerelateerde lijst op de cyclus waarin je per
 
 **En één naam die niet klopte:** *Tranche in de markt* → **Eerste Tranche geplaatst**. De stap gaat over wat je gedaan hebt, niet over waar iets staat.
 
+**De stappenbalk toont alleen de naam van de stap (0136, 5 okt 2026).** De stand eronder — '1 van 1 gelezen', '0 van 5 gemeten' — herhaalde wat de lijst eronder al laat zien, op een balk die je elke keer langsloopt. Hij staat nog in de tooltip. En *Technische analyse gelezen* heet nu *Technische analyse*: de balk leest als een lijst onderwerpen, dus hoort er een onderwerp te staan; het werkwoord zei wat de afvinkregel telt.
+
 **Niets wordt bevroren.** Een eerder ontwerp zette de set op slot bij de start van het gesprek, zodat iedereen tegen dezelfde cijfers oordeelde. Dat is bewust losgelaten: de beoordeling wordt op maat gemaakt op het moment van de markt, en dat de drie co-founders op een iets ander moment naar een iets andere markt kijken is geen ruis maar **precies de waarde van drie perspectieven**. Een bevroren tabel zou die verschillen juist wegpoetsen.
 
 **Wat de beoordeling dan verankert, is de inzending.** Omdat er geen gedeelde momentopname meer is, draagt elke inzending zelf wat die persoon zag: de positie (go of no-go), bij go de strike en de expiratie, bij no-go de reden, plus de motivering en de intuïtieve waarneming. Achteraf is daarmee nog steeds te reconstrueren waaróm iemand oordeelde zoals hij oordeelde — niet via een tabel die voor iedereen hetzelfde was, maar via wat ieder zelf opschreef. Aanbevolen extra veld op de inzending: **wat ik zag** — één regel met de stand van de markt op het moment van versturen.
