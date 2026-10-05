@@ -60,7 +60,11 @@ function datum(s) {
 }
 
 function waarde(veld, w, meta, rij = {}, namen = {}) {
-  if (w === null || w === undefined || w === "") return `<span class="faint">&mdash;</span>`;
+  // Nul is bij een vlag en bij 'actief' een antwoord, geen leegte.
+  if ((w === null || w === undefined || w === "") && !["vlag", "actief"].includes(veld.type)) {
+    return `<span class="faint">&mdash;</span>`;
+  }
+  if (veld.type === "vlag" || veld.type === "actief") return lees(veld, w, meta, {}, rij);
   if (veld.type === "keuze" || veld.type === "tijd" || veld.type === "verwijzing") {
     const vertaald = namen[veld.kolom] && namen[veld.kolom][w] !== undefined
       ? { [veld.kolom]: namen[veld.kolom][w] } : {};
@@ -156,6 +160,7 @@ export function toestandUitUrl(zoekdeel) {
     richting: p.get("richting") === "desc" ? "desc" : "asc",
     offset: Math.max(parseInt(p.get("offset") || "0", 10) || 0, 0),
     filters,
+    archief: p.get("archief") === "alles" ? "alles" : "actief",
   };
 }
 
@@ -167,6 +172,7 @@ function urlVoor(tabelnaam, t) {
   if (t.offset) p.set("offset", String(t.offset));
   for (const [k, v] of Object.entries(t.filters)) if (v) p.set(`f.${k}`, v);
   for (const [k, v] of Object.entries(t.idfilters || {})) if (v) p.set(`fid.${k}`, v);
+  if (t.archief === "alles") p.set("archief", "alles");
   const vraag = p.toString();
   return `#/t/${tabelnaam}${vraag ? "?" + vraag : ""}`;
 }
@@ -180,14 +186,36 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   params.set("limiet", String(PAGINA));
   for (const [k, v] of Object.entries(toestand.filters)) if (v) params.set(`f.${k}`, v);
   for (const [k, v] of Object.entries(toestand.idfilters || {})) if (v) params.set(`fid.${k}`, v);
+  // Een lijstscherm uit het menu staat standaard op wat actief is, met de kolom
+  // erbij die dat zegt. Klik je dat filter weg, dan zie je ook het archief. Een
+  // gerelateerde lijst onder een record kent die keuze niet: daar hoort wat er
+  // nú hangt.
+  if (!toestand.ingebed) params.set("archief", toestand.archief === "alles" ? "alles" : "actief");
 
   // Alleen een lijst die rechtstreeks in dit vak staat telt als 'dezelfde
   // lijst'. Stond er een recordscherm met een gerelateerde lijst erin, dan
   // werd díé even grijs gemaakt voordat het scherm verwisselde — dat zag je
   // als een flikkering bij het klikken op Cycli.
+  // Een gerelateerde lijst krijgt geen kaartje 'Bezig met laden' dat even later
+  // door de tabel vervangen wordt: dat is de flikkering die je ziet als je een
+  // record opent. In plaats daarvan staat er meteen een leeg lijstvak van de
+  // juiste hoogte, met het dunne lijntje erboven dat zegt dat er iets onderweg
+  // is. Er verschijnt dus één ding, en dat vult zich.
+  // Er mag maar één ding in dit vak verschijnen: de lijst zelf. Zette je er
+  // eerst een kaartje of een leeg omlijnd vak neer, dan zag je dat als een
+  // flikkering zodra de tabel het verving. Tijdens het wachten blijft het vak
+  // dus leeg; alleen het dunne lijntje bovenaan zegt dat er iets onderweg is.
+  // Er mag maar één ding in dit vak verschijnen: de lijst zelf.
+  //
+  // Staat er al een lijst, dan blijft die staan en zegt een dun lijntje erboven
+  // dat er iets onderweg is — dat is sorteren of filteren, en dan wil je zien
+  // waar je vandaan komt. Is het vak nog leeg, dan komt er tijdens het wachten
+  // ook niets in: een laadkaartje, een omlijnd vak of een lopend lijntje dat
+  // even later verdwijnt, lees je allemaal als een flikkering. Het vak houdt
+  // zijn hoogte vast en vult zich in één keer.
   const bestaand = inhoud.querySelector(":scope > .lijst");
   if (bestaand) bestaand.classList.add("bezig");
-  else inhoud.innerHTML = `<div class="kaart leeg">Bezig met laden&hellip;</div>`;
+  else { inhoud.innerHTML = ""; inhoud.classList.add("wachtlijst"); }
 
   let data;
   try {
@@ -196,6 +224,8 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     inhoud.innerHTML = `<div class="fout">${ontsnap(fout.message)}</div>`;
     return;
   }
+
+  inhoud.classList.remove("wachtlijst");
 
   if (!toestand.ingebed) {
     kruimel.textContent = data.tabel.label_mv;
@@ -216,8 +246,8 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     <div class="lijstkop">
       ${ICOON.menu}
       <span class="lijsttitel">${ontsnap(data.tabel.label_mv)}</span>
-      ${data.tabel.nieuw_vanuit_lijst ? `<a class="knop klein" href="#/t/${tabelnaam}/nieuw">Nieuw</a>` : ""}
-      ${data.tabel.import_toegestaan ? `<a class="knop klein tweede" href="#/import/${tabelnaam}">Inlezen uit document</a>` : ""}
+      ${data.tabel.nieuw_vanuit_lijst ? `<a class="knop" href="#/t/${tabelnaam}/nieuw">Nieuw</a>` : ""}
+      ${data.tabel.import_toegestaan ? `<a class="knop tweede" href="#/import/${tabelnaam}">Inlezen uit document</a>` : ""}
       <span class="lijstselectie" id="rlselectie"></span>
       <span class="zoeklabel">Zoeken</span>
       <select class="zoekveld" aria-label="Zoekveld"><option>Alle velden</option>${
@@ -246,7 +276,13 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         <button class="chipweg" data-vast="${k}" aria-label="Filter weghalen">&times;</button></span>`)
     .join("");
 
-  const chips = vasteChips + Object.entries(toestand.filters)
+  // Het standaardfilter draagt zijn eigen chip: zo zie je dát er gefilterd
+  // wordt, en haal je het archief erbij met één klik.
+  const archiefChip = toestand.ingebed || toestand.archief === "alles" ? "" :
+    `<span class="chip">Actief = true
+       <button class="chipweg" data-archief aria-label="Ook het archief tonen">&times;</button></span>`;
+
+  const chips = archiefChip + vasteChips + Object.entries(toestand.filters)
     .filter(([k, v]) => v && !(toestand.ingebed && k === toestand.ingebed.kolom))
     .map(([k, v]) => {
       const veld = kolommen.find((x) => x.kolom === k);
@@ -289,6 +325,25 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       <col>
     </colgroup>`;
 
+  // Een kolom met maar twee waarden filter je niet door te typen: je kiest.
+  // 'Zoeken' als lege stand betekent 'allebei', net als een leeg zoekvak.
+  const zoekvak = (k, waarde) => {
+    const keuzes = k.type === "actief" ? [["true", "true"], ["false", "false"]]
+                 : k.type === "ja_nee" ? [["ja", "ja"], ["nee", "nee"]]
+                 : null;
+    if (keuzes) {
+      return `<select data-kolom="${k.kolom}" class="${waarde ? "" : "leeg"}"
+        aria-label="Filteren op ${ontsnap(k.label)}">
+        <option value="">Zoeken</option>
+        ${keuzes.map(([w, l]) => `<option value="${w}"${waarde.toLowerCase() === w ? " selected" : ""}>${l}</option>`).join("")}
+      </select>`;
+    }
+    const tip = k.type === "datum" || k.type === "tijdstip"
+      ? ' title="Bijvoorbeeld: 2026 · jul · jul 2026 · 6 jul 2026 · 202607 · 6/7/2026"' : "";
+    return `<input type="text" data-kolom="${k.kolom}"
+      aria-label="Zoeken in ${ontsnap(k.label)}" value="${ontsnap(waarde)}" placeholder="Zoeken"${tip}>`;
+  };
+
   const thead = `
     <thead>
       <tr class="kopregel">
@@ -307,9 +362,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         ${metVinkjes ? `<td class="vink"><button class="ikoonknop rlweg onzichtbaar" id="rlweg"
             title="Aangevinkte regels archiveren" aria-label="Aangevinkte regels archiveren">${ICOON.prullenbak}</button></td>
         <td class="sterkol"></td>` : ""}
-        ${kolommen.map((k) => `<td><input type="text" data-kolom="${k.kolom}"
-            aria-label="Zoeken in ${ontsnap(k.label)}" value="${ontsnap(toestand.filters[k.kolom] || "")}"
-            placeholder="Zoeken"${k.type === "datum" || k.type === "tijdstip" ? ' title="Bijvoorbeeld: 2026 · jul · jul 2026 · 6 jul 2026 · 202607 · 6/7/2026"' : ""}></td>`).join("")}
+        ${kolommen.map((k) => `<td>${zoekvak(k, toestand.filters[k.kolom] || "")}</td>`).join("")}
         <td></td>
       </tr>
     </thead>`;
@@ -334,10 +387,17 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     meld.klok = setTimeout(() => { vak.hidden = true; }, 6000);
   };
 
-  // Waar een favoriet van dit record naar heet: wat er in de eerste kolom staat.
+  // Waar de link naar het record op zit, en waar een favoriet van dit record
+  // naar heet: allebei het titelveld, want dát is de naam van de regel. De
+  // eerste kolom nemen ging goed zolang die altijd de naam was — tot er een
+  // vlag vóór kwam te staan, en een favoriet ineens 'Cyclus: 0' heette.
+  const linkkolom = kolommen.some((k) => k.kolom === data.tabel.titel_veld)
+    ? data.tabel.titel_veld
+    : (kolommen[0] && kolommen[0].kolom);
+
   const rijnaam = (r) => {
-    const eerste = kolommen[0];
-    const w = eerste ? platteTekst(eerste, r[eerste.kolom], meta, data.verwijzingen || {}) : "";
+    const veld = kolommen.find((k) => k.kolom === linkkolom);
+    const w = veld ? platteTekst(veld, r[veld.kolom], meta, data.verwijzingen || {}) : "";
     return `${data.tabel.label}: ${w || `#${r.id}`}`;
   };
 
@@ -354,7 +414,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
           ${kolommen.map((k, i) => {
             const tip = platteTekst(k, r[k.kolom], meta, data.verwijzingen || {});
             return `<td data-kolom="${k.kolom}" class="${rechtsUit(k) ? "rechts " : ""}${toestand.sorteer === k.kolom ? "gesorteerd" : ""}"${tip ? ` title="${ontsnap(tip)}"` : ""}>${
-              i === 0
+              k.kolom === linkkolom
                 ? `<a href="#/t/${tabelnaam}/${r.id}" class="recordlink">${waarde(k, r[k.kolom], meta, r, data.verwijzingen || {})}</a>`
                 : waarde(k, r[k.kolom], meta, r, data.verwijzingen || {})
             }</td>`;
@@ -374,7 +434,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
         : ingebed.direct
           ? `<button class="knop" id="rldirect">Nieuw</button>`
           : `<a class="knop" href="#/t/${tabelnaam}/nieuw?ouder=${ingebed.ouder.tabel}:${ingebed.ouder.id}">Nieuw</a>`}
-      ${ingebed.overnemen ? `<button class="knop tweede klein" id="rlovernemen">Overnemen uit een eerdere cyclus</button>` : ""}
+      ${ingebed.overnemen ? `<button class="knop tweede" id="rlovernemen">Overnemen uit een eerdere cyclus</button>` : ""}
       <span class="rlselectie" id="rlselectie"></span>
     </div>`;
 
@@ -383,7 +443,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       <h1>${ontsnap(data.tabel.label_mv)}</h1>
       <span class="sub">${tot} ${tot === 1 ? "regel" : "regels"}</span>
     </div>`) + `
-    <div class="lijst${ingebed ? " ingebed" : ""}">${relatiekop}${ingebed ? (chips || toestand.q ? filterrij : "") : toolbar + filterrij}
+    <div class="lijst${ingebed ? " ingebed" : ""}">${relatiekop}${ingebed ? "" : toolbar}${filterrij}
       <div class="lijstmelding" id="lijstmelding" hidden></div>
       <div class="tabelomhulsel"><table class="lijsttabel" style="min-width:${minBreedte}px">${colgroup}${thead}${tbody}</table></div>
     </div>`;
@@ -457,6 +517,15 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
       });
     }
   }
+
+  inhoud.querySelectorAll(".zoekregel select").forEach((el) => {
+    el.addEventListener("change", () => {
+      const filters = { ...toestand.filters };
+      const v = el.value.trim();
+      if (v) filters[el.dataset.kolom] = v; else delete filters[el.dataset.kolom];
+      ga({ filters, offset: 0 });
+    });
+  });
 
   inhoud.querySelectorAll(".zoekregel input").forEach((el) => {
     let k2;
@@ -557,6 +626,8 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
 
   inhoud.querySelectorAll(".chipweg").forEach((el) => {
     el.addEventListener("click", () => {
+      // Het standaardfilter weghalen betekent: ook het archief erbij.
+      if (el.dataset.archief !== undefined) return ga({ archief: "alles", offset: 0 });
       if (el.dataset.vast) {
         const idfilters = { ...(toestand.idfilters || {}) };
         delete idfilters[el.dataset.vast];

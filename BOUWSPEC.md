@@ -93,6 +93,232 @@ Gevolg voor het model: `cyclus` krijgt een uniciteitsregel op status — hoogste
 | `toetsing` | Het oordeel achteraf over één voorwaarde | Cyclus, voorwaarde, oordeel (hielp/neutraal/misleidend), toelichting, wie, wanneer |
 | `audit` | Eén wijziging aan een record | Tabel, record, veld, oude waarde, nieuwe waarde, wie, wanneer |
 
+### 3.2a De stroom — één tijdlijn per cyclus (migratie 0101)
+
+Wat er in een cyclus gebeurt stond tot nu toe verspreid: een uitvoering in `brokergebeurtenis`, een besluit in `beoordelingsmoment`, een bericht in `publicatie`, een wijziging in `audit`. Je kunt zien wát er staat, maar niet wanneer er wat gebeurde en in welke volgorde.
+
+De tabel `gebeurtenis` legt dat op één tijdlijn. Eén rij is één gebeurtenis, met een **bron**: `ibkr` (de brug meldde een uitvoering), `meting` (een waarde ging over een drempel), `klok` (een datum of een ritme), `mens` (een van ons deed iets). Verder draagt ze een titel in gewone woorden, een regel detail, de feiten als JSON, en hoogstens één verwijzing naar waar het over gaat: positie, publicatie, beoordelingsmoment of processtap.
+
+**Dit is etappe A van de werkbank-als-wachtrij.** Twee velden staan er al in en blijven voorlopig leeg:
+
+- `vraagt_antwoord` — wordt de wachtrij: een gebeurtenis die een antwoord vraagt en het nog niet heeft, is een kaart.
+- `sleutel` — houdt die kaarten uniek (uniek-index), zodat dezelfde gebeurtenis niet twee keer gaat openstaan. Dit is het enige stuk dat in etappe C echt goed moet zitten.
+
+**Schrijven mag nooit de handeling breken waar het bij hoort.** `worker/stroom.js` vangt zijn eigen fouten op en geeft `null` terug: een mislukte log is vervelend, een mislukte spiegeling is erger. `scripts/proef/stroom.mjs` test dat expliciet.
+
+De zes plekken die nu meeschrijven, alle in code die er al stond:
+
+| Waar | Soort | Bron |
+|---|---|---|
+| `spiegel()` — een contract verschijnt | `positie_geopend` | ibkr |
+| `spiegel()` — een contract verdwijnt | `positie_gesloten` | ibkr |
+| `zetConceptKlaar()` | `concept_klaargezet` | ibkr |
+| `wijsToe()` | `positie_toegewezen` | mens |
+| `verstuurPublicatie()` | `bericht_verstuurd` | mens |
+| `gonogo.uitkomst()` | `besluit_vastgelegd` | mens |
+
+**De hartslag van de brug schrijft niets.** Elke tien seconden een regel is meten, geen gebeurtenis.
+
+**Geen terugwerkende kracht.** De stroom begint leeg op de dag dat 0101 live gaat. Oude cycli krijgen geen geschiedenis: een reconstructie achteraf is duurder dan ze waard is, en ze zou niet kloppen.
+
+**`auditlog` blijft bestaan.** Pas als de stroom een paar cycli heeft bewezen, bekijken we of audit erin opgaat. Niet eerder, en niets wordt gewist.
+
+### 3.2b De kaartdefinitie — de wachtrij staat in de database (migratie 0102)
+
+**Etappe B van de werkbank-als-wachtrij.** Welke kaarten bestaan en wanneer ze verschijnen hoort niet in de code. Dat is procesinrichting, en die staat in dit systeem al ergens: op `processtap`.
+
+**Een kaart ís een processtap.** Dezelfde rij die zegt "deze stap hoort bij deze stand van dit record" zegt er met negentien nieuwe kolommen bij: hoe de kaart heet, waar de aanleiding vandaan komt, wanneer hij opent, hoe hij in de rij heet, welke twee knoppen eronder staan en wat die doen. Een processtap **zonder** `kaartsoort` is een gewone stap en verandert niet. Een processtap **met** `kaartsoort` is een kaartdefinitie.
+
+De kolommen, in drie groepen:
+
+| Groep | Kolommen | Wat ze doen |
+|---|---|---|
+| Wanneer | `kaartsoort`, `bron`, `voorwaarde`, `sleutel_bron` | welke gebeurtenis een kaart wordt, en wanneer twee aanleidingen dezelfde kaart zijn |
+| Hoe dringend | `prioriteit`, `opschalen_na_uur`, `opschalen_naar` | hoog/medium/laag, en hoe de kaart vanzelf omhoog kruipt |
+| Wat je ziet | `reden`, `kaarttitel`, `feiten`, `knop1_*`, `knop2_*`, `prullenbak`, `prullenbak_doel`, `tweede_lezer` | de kaart zelf |
+
+Vier dingen liggen hiermee vast:
+
+- **De sleutel is het enige wat echt goed moet zitten.** `sleutel_bron` zegt wanneer twee aanleidingen dezelfde kaart zijn — per positie, per cyclus en week, per moment en deelnemer, per publicatie en lezer, per maand. Zonder dat staat na drie keer draaien dezelfde vraag drie keer in de rij.
+- **Prioriteit is rood, amber of grijs — nooit groen.** Groen betekent in dit systeem overal 'in orde', en een kaart die openstaat is dat juist niet. Opschalen gaat alleen omhoog; de proef weigert een definitie die naar beneden schaalt of die opschaalt zonder termijn.
+- **De prullenbak wist niets.** `prullenbak_doel` is `afsluiten` of `uitstellen`. Een kaart wegklikken is een antwoord, en antwoorden blijven staan.
+- **De tweede lezer is een echte gebruiker** (`verwijzing` naar `gebruiker`), geen keuzelijstje dat naast de gebruikerstabel gaat leven.
+
+De twaalf kaarten die er nu staan: nieuwe positie, sluiting, doorrol, barometerstand, week-update, technische analyse, go/no-go, reviewbesluit, herbeoordeling, bericht nalezen, maandverslag, maandbericht.
+
+**Het proces `Wachtrij` (id 4) heeft met opzet `toepassing = 'wachtrij'`** — geen tabelnaam. `stappenVoor()` zoekt op `toepassing = <tabelnaam>`, dus geen enkel recordscherm pikt deze stappen per ongeluk op als zijn eigen stappenlijst. `scripts/proef/kaartdefinitie.mjs` bewaakt dat er ook nooit een tabel zo gaat heten.
+
+**Er draait nog niets.** 0102 zet alleen de definitie neer. De motor die hiernaar kijkt en gebeurtenissen omzet in kaarten is etappe C.
+
+### 3.2c De motor — van gebeurtenis naar kaart (worker/motor.js)
+
+**Etappe C.** De wachtrij is een vraag over één tabel:
+
+```sql
+select * from gebeurtenis where vraagt_antwoord = 1 and beantwoord_op is null
+```
+
+`worker/motor.js` is het enige dat die `1` erin zet. Hij leest de kaartdefinities van §3.2b en stempelt gebeurtenissen die eraan voldoen tot kaart: `vraagt_antwoord = 1`, een `sleutel`, en `processtap` → de definitie waar de kaart vandaan komt.
+
+**Wat de motor met opzet níét opslaat:**
+
+- **Geen prioriteit.** Die wordt afgeleid bij het lezen, uit de definitie en de leeftijd van de kaart. Een opgeslagen prioriteit veroudert niet mee en staat binnen een dag te liegen.
+- **Geen kaarttekst.** De titel staat al op de gebeurtenis; wat de kaart toont bouwt het scherm uit de definitie. Twee keer dezelfde tekst opslaan betekent dat je hem twee keer moet bijwerken en dat de ene het wint.
+- **Geen volgorde.** Dat is een sorteerregel, geen gegeven.
+
+**Twee keer draaien mag geen schade doen.** Dat is geen nette eigenschap maar een harde eis — een cron die een keer dubbel vuurt hoort geen tweede kaart op te leveren. Drie sloten:
+
+1. Het stempel zelf: de weger kijkt alleen naar `processtap is null and vraagt_antwoord = 0`.
+2. De sleutel: bestaat er al een kaart met deze sleutel, dan wordt de gebeurtenis wél gestempeld (hij is echt gebeurd en blijft in de stroom staan) maar geen tweede kaart.
+3. De unieke index op `gebeurtenis.sleutel`, voor twee ronden tegelijk.
+
+**Overlappende voorwaarden: de eerste definitie wint.** De weger loopt op `volgorde`, en een gestempelde gebeurtenis wordt niet door een tweede definitie opgepakt. Die volgorde staat in beheer.
+
+**De voorwaarde zit achter een slot.** `voorwaarde` is SQL uit de definitielaag. Dat is geen invoer van buiten, maar het gaat wel ongelezen een query in. `voorwaardeDeugt()` weigert `;`, commentaar, `union`, en alles wat schrijft of `pragma` zegt, eist gebalanceerde haakjes en maximaal 500 tekens. **Een definitie die niet deugt kost alleen zijn eigen kaart, nooit de rij** — hij komt in `verslag.overgeslagen` en de ronde loopt door. Dat geldt ook voor een voorwaarde die wél door het slot komt maar waar de database over struikelt.
+
+**De sleutelvormen staan in code, de keuze in de definitie.** Acht vormen (per positie, per cyclus en stand/week/moment/voorwaarde, per moment en deelnemer, per publicatie en lezer, per maand). Dit is het enige stuk dat echt goed moet zitten: te ruim en een kaart die had moeten openstaan verdwijnt, te krap en dezelfde vraag staat drie keer in de rij.
+
+**De klok schrijft de stilte.** 'Er is een week voorbij' is geen melding van IBKR en geen handeling van ons — er gebeurde juist niets. `tik()` schrijft die slagen als gebeurtenis (`week_verstreken`, `maand_verstreken`) zodat de weger er daarna hetzelfde mee kan doen als met al het andere. Het zijn met opzet alleen **kalenderslagen, geen toestandscontroles**: een kaart die moet kijken of iets nog openstaat (go/no-go, reviewbesluit, technische analyse) wacht tot het scherm bestaat waar je hem beantwoordt. Die vier definities staan al in 0102 maar vuren nog niet.
+
+**De cron: elk uur, op het hele uur** (`triggers.crons` in `wrangler.jsonc`, zowel productie als staging). De `scheduled`-handler draait `tik()` en dan `weeg()`, in die volgorde, zodat wat de klok vandaag schrijft dezelfde ronde nog een kaart wordt. Een ronde die omvalt neemt de volgende niet mee.
+
+**Dit is het enige dat zonder mens draait, en het doet één ding: stempelen.** Er gaat niets naar de broker, er wordt niets verstuurd en er wordt niets gewist. Een kaart is een vraag aan ons; het antwoord blijft mensenwerk.
+
+`scripts/proef/motor.mjs` stelt niet de vraag "werkt het een keer" maar "overleeft het een cron die dubbel vuurt": twee ronden, een dubbele melding van IBKR, een beantwoorde kaart die niet terugkomt, twee tikken op dezelfde dag, en een kapotte definitie tussen de goede.
+
+### 3.2c-bis De aanleiding — kaarten uit iets dat er níét gebeurde (migratie 0112)
+
+De motor van §3.2c dekt alles wat IBKR meldt en alles wat wij doen: er gebeurt iets, dat wordt een gebeurtenis, de weger stempelt die tot kaart.
+
+**Vier kaarten vallen daarbuiten**, want ze gaan over iets dat er juist niet gebeurde: een go/no-go waarin jouw stem ontbreekt, een besluit dat niet is vastgelegd, charts die niet gelezen zijn, een voorwaarde die op rood staat. Daar is geen gebeurtenis van — er is alleen een toestand die blijft hangen.
+
+In etappe C stonden deze vier wel als definitie klaar maar vuurden ze niet, met als reden dat hun schermen nog niet bestonden. Die bestaan nu.
+
+**De zoekopdracht staat in beheer, niet in de code.** `processtap.aanleiding` is een SELECT die rijen oplevert waar een kaart bij hoort. Was dit code geweest, dan was dit de ene plek waar kaartlogica alsnog naar binnen kruipt.
+
+**Hij mag alleen lezen.** `aanleidingDeugt()` eist dat de tekst met `select` begint en weigert `;`, commentaar, `union` en elk schrijfwoord. Dat is geen formaliteit: dit is het enige stuk ingerichte tekst dat zelf bepaalt welke rijen de motor te zien krijgt, en als het ooit meer dan lezen kan, kan een vergissing in beheer gegevens kwijtmaken. De inrichtingsaudit controleert elke ingerichte aanleiding opnieuw tegen datzelfde slot.
+
+**Wat een aanleiding mag teruggeven** staat vast (`AANLEIDINGSKOLOMMEN`): `cyclus`, `positie`, `publicatie`, `beoordelingsmoment`, `titel`, `detail`, `sleuteldeel`, `feiten_json`. Wat er niet in staat wordt genegeerd in plaats van blind in een insert geduwd.
+
+**`sleuteldeel` is wat deze toestand uniek maakt**, en de aanleiding wijst het zelf aan: een deelnemer bij een go/no-go, een moment bij een besluit, een voorwaarde bij een herbeoordeling. De motor hoeft het niet te raden. Zonder deze grendel zou één go/no-go die een week openstaat honderdzestig kaarten opleveren — de cron draait elk uur.
+
+**De melder stempelt zelf.** Hij schrijft de gebeurtenis én zet er meteen `vraagt_antwoord`, `sleutel` en `processtap` op, omdat de sleutel uit de aanleiding komt en niet uit de feiten. De weger komt er daarna niet meer aan (hij zoekt op `processtap is null`), dus er blijft één pad en geen tweede soort kaart.
+
+**Een toestand die oplost haalt zijn kaart niet weg.** Dat hoort ook zo: een kaart verdwijnt niet, hij wordt beantwoord. Maar er komt ook geen nieuwe bij — wie heeft ingezonden krijgt geen tweede kaart, en een beantwoorde kaart komt niet terug. `scripts/proef/toestand.mjs` test precies die drie overgangen.
+
+De backtest draait deze nu mee: elke dag kan het beoordelingsmoment van stand wisselen en kan een voorwaarde op rood springen, en invariant 13 eist dat geen enkele toestand ooit twee kaarten oplevert.
+
+### 3.2d De wachtrij — de kaart wordt afgeleid, niet opgeslagen (worker/wachtrij.js)
+
+**Etappe D.** `wachtrij(env, ik, {cyclus})` beantwoordt één vraag — `vraagt_antwoord = 1 and beantwoord_op is null` — en leidt de rest af uit de kaartdefinitie en de gebeurtenis, **bij elke aanroep opnieuw**. Er wordt niets van de kaart opgeslagen, want het verandert mee: een kaart van vanmorgen is vanavond dringender geworden zonder dat er iets aan hem gebeurd is.
+
+**De prioriteit schuift met de klok.** De definitie zegt waar hij begint; staat de kaart langer open dan `opschalen_na_uur`, dan schuift hij naar `opschalen_naar`. Opschalen gaat **alleen omhoog**, ook als iemand het andersom inricht — de afleiding neemt het dringendste van de twee. Rood, amber, grijs; nooit groen.
+
+**Wat niet ingevuld kan worden valt weg.** Een titel uit een sjabloon (`Positie gesloten: {{positie.naam}}`) met een gat erin leest nog; een titel met accolades op het scherm leest als een storing. Idem voor de feiten: een leeg feit komt er niet in, want een feitenvak met 'onbekend' erin is erger dan een feitenvak met drie regels. Is de sjabloontitel helemaal niet invulbaar, dan valt de kaart terug op de titel van de gebeurtenis zelf — er staat altijd iets leesbaars boven een kaart.
+
+**Sorteren: dringend bovenaan, en daarbinnen het oudste eerst.** Een kaart die drie dagen wacht hoort niet onder een kaart van vanmorgen.
+
+**Twintig kaarten zijn geen zestig vragen aan de database.** Positie, cyclus, publicatie en moment worden per tabel in één slag opgehaald. Een kolom die nog niet bestaat legt de wachtrij niet om; die kaart toont dan minder feiten.
+
+#### Een kaart verlaat de rij op drie manieren, en verdwijnen is er geen van
+
+| Doel | Wat er gebeurt |
+|---|---|
+| een knop (`publicatie`, `scherm`, `splitsen`, `terug`) | beantwoord, met wie en wanneer |
+| de prullenbak op `afsluiten` | ook een antwoord: "gezien, en we doen niets" |
+| de prullenbak op `uitstellen` | **niet** beantwoord — `wachten_tot` wordt gezet en de kaart komt terug |
+
+`POST /api/wachtrij/:id/antwoord` weigert een knop die niet op déze kaart staat, een doel dat de definitie niet kent, een tweede antwoord op dezelfde kaart, en knop 2 zonder reden als de definitie er een vraagt. **Er is geen route die een kaart wist.**
+
+**`wachten_tot` is een eigen veld (migratie 0103)**, omdat alle andere manieren om uitstellen erin te wringen stuk zijn: de kaart beantwoorden met 'later' betekent dat hij nooit meer terugkomt (zijn sleutel ligt vast, de motor maakt er geen tweede); het moment van de gebeurtenis vooruit zetten laat de tijdlijn liegen over wanneer het gebeurde, en dat is precies waar de stroom voor is; wissen en opnieuw maken doen we niet.
+
+**De knop zet niets in gang.** `doel: publicatie` betekent dat het scherm de berichtenopsteller opent. Dat het bericht ook echt weggaat is een tweede handeling, met een tweede knop, door een mens.
+
+### 3.2e De berichten — van kaart naar bericht (migraties 0104/0105, worker/bericht.js)
+
+**Etappe E.** Een kaart met de knop *Bericht opstellen* wijst een sjabloon aan. `conceptUitKaart()` zet dat om in een concept: de feiten ingevuld, de tekst klaar, **de oordelen nog open**. Elk sjabloon heeft een regel als `Wat dit betekent: [in één alinea]` — het sjabloon zet de feiten klaar, niet het oordeel.
+
+**`publicatie.positie` is nullable geworden (0104).** Dat stond op `not null` toen een bericht altijd over één tranche ging. De wachtrij levert nu ook kaarten op die een bericht vragen zónder positie: een barometerstand, een week-update, een maandbericht. SQLite kan `not null` niet weghalen, dus de tabel is herbouwd — met `pragma defer_foreign_keys`, want `gebeurtenis.publicatie` hangt eronder. **Dit is de tweede keer dat dat ons kost; zie §12.**
+
+Erbij gekomen: `gebeurtenis` (uit welke kaart dit bericht voortkwam, zodat achteraf zichtbaar is welke vraag tot welk bericht leidde), `titel`, `kanaal`, `nalezer`, `nagelezen_op`.
+
+**De sjablonen staan in beheer (0105), niet in de code.** De woorden waarmee wij onze leden aanspreken horen op een scherm te staan waar ze te lezen en te wijzigen zijn zonder dat er iemand hoeft te deployen. Zes sjablonen, met dezelfde plaatshouders als de kaart (`{{positie.naam}}`, `{{feiten.naar}}`), en dezelfde regel: wat niet ingevuld kan worden valt weg. Een bericht met een gat erin kun je nalezen; een bericht met accolades erin gaat per ongeluk zo de deur uit.
+
+#### Nalezen is een stap, geen vinkje
+
+De opsteller vinkt niet zelf af dat er iemand meegekeken heeft. `vraagNalezen()` zet het bericht op `nalezen` en schrijft een gebeurtenis — en de motor maakt daar **een kaart van in de wachtrij van de lezer**. Er is geen aparte postbus: er is één rij, en dit staat erin.
+
+| Stand | Wat het betekent |
+|---|---|
+| `concept` | de opsteller schrijft |
+| `nalezen` | ligt bij de lezer; de opsteller kan het niet langs hem heen sturen |
+| `klaar` | nagelezen en vrijgegeven — **nog niet weg** |
+| `verstuurd` | de deur uit |
+
+`klaar` bestaat apart van `verstuurd` omdat nalezen en versturen twee handelingen zijn: iets kan goedgekeurd zijn en toch nog niet weg. Terugsturen kan alleen mét een reden, en die reden komt in de stroom te staan.
+
+**Vier sloten op de deur**, en de proef probeert ze allemaal te forceren: een leeg bericht gaat niet weg; de opsteller kan niet versturen terwijl het bij een lezer ligt; iemand anders dan de nalezer geeft niet vrij; twee keer versturen kan niet. Twee keer op *Bericht opstellen* drukken levert hetzelfde concept op — anders staan er twee halve berichten en gaat er een de deur uit die iemand anders nog zat te schrijven.
+
+**De feiten worden vastgelegd zoals ze op dat moment waren.** Verandert de positie later, dan verandert een verstuurd bericht niet mee: wat eruit ging, ging eruit.
+
+### 3.2f De achterstand — de enige blijvende meter (worker/achterstand.js)
+
+**Etappe F.** De werkbank heeft één permanente indicator, en die meet niet ons maar de leden: **hoe lang weten wij iets dat zij niet weten.**
+
+Niet "hoeveel kaarten staan er open" — dat is een maat voor onze drukte, en daar wordt niemand buiten dit kantoor beter van. De achterstand is de enige maat waarin de leden voorkomen.
+
+**De rekensom is kort.** Een kaart waarvan het antwoord een bericht aan de leden is, en waar dat bericht nog niet verstuurd is, is achterstand. De leeftijd van de oudste daarvan is het getal.
+
+**Welke kaarten meetellen staat in de definitie, niet in een lijst hier**: een kaart waarvan `knop1_doel = 'publicatie'` vraagt om een bericht. Richten we morgen een nieuwe kaartsoort in die om een bericht vraagt, dan telt die vanzelf mee. Een technische analyse die weken openstaat telt niet mee, hoe vervelend dat ook is — dat is werk van ons, niet van hen.
+
+**Hij wordt afgeleid, nooit bijgehouden.** Er is geen teller die opgehoogd wordt en die na één fout de rest van het jaar scheef staat.
+
+**Grijs, amber, rood — groen bestaat hier niet.** Een achterstand van nul is niet 'goed' maar gewoon niets: dan staat de meter grijs en zwijgt hij. De grenzen (24 uur amber, 72 uur rood) staan als `instelling` in beheer (migratie 0106), want het is een keuze van ons en we gaan hem bijstellen zodra we hem een paar cycli gezien hebben. Onzin in een instelling valt terug op de standaard in plaats van de meter om te leggen.
+
+**Drie manieren waarop de achterstand zakt**, en alle drie zijn een handeling van een mens:
+
+| Wat er gebeurt | Zakt de meter? |
+|---|---|
+| een concept opstellen | **nee** — er is nog niets bij de leden |
+| het bericht versturen | ja |
+| bewust 'niet melden' antwoorden | ja — ook een besluit is bijgewerkt zijn |
+
+**Versturen sluit ook de kaart die erom vroeg.** Dat ontbrak en is bij deze etappe gevonden: zonder dat bleef de kaart staan voor iets dat de leden allang wisten, en bleef de meter hangen. `verstuurPublicatie()` beantwoordt nu de gebeurtenis waar het bericht uit voortkwam.
+
+**Migratie 0106 voegt één tabel toe: `instelling`.** Geen scherm vol knoppen — alleen waarden die we echt gaan draaien, elk met de uitleg erbij waarom hij bestaat. Wie de uitleg niet kan schrijven, heeft de instelling niet nodig.
+
+### 3.2g De barometer — wat wij van een lid vragen (migratie 0107)
+
+**Etappe G, en daarmee is de wachtrij af.**
+
+**De barometer beantwoordt één vraag: hoeveel aandacht vraagt deze cyclus van een lid.** Niet hoe de markt staat. De meeste maanden expireert de optie waardeloos en hoeft er niets te gebeuren, hoe bewogen de markt ook was — een meter die de markt beschrijft zou dan onrust melden waar geen onrust is.
+
+De schaal, 1 is rustig: **Niets · Meekijken · Volgen · Dichtbij blijven · Paraat.** De labels staan in `db_choice`, niet in de code: ze gaan naar 412 leden, dus ze gaan nog veranderen, en dat hoort geen deploy te zijn.
+
+**Het venster staat ernaast en apart:** open / wacht / dicht. Eén meter voor allebei zou moeten liegen zodra ze uit elkaar lopen — rustige markt maar het kapitaal zit vast, dan is de stand 1 en het venster dicht, en allebei waar. De proef legt expliciet *rustig én dicht* en *dichtbij blijven én open* vast, want zodra die twee combinaties niet meer kunnen zitten stand en venster alsnog aan elkaar en hadden we net zo goed één meter kunnen houden.
+
+**Op stand 1 mag groen.** Dat is geen uitzondering op de regel dat groen "in orde" betekent — het ís in orde. Die regel geldt voor kaarten die openstaan, niet voor een toestand.
+
+**Een stand is een rij, geen veld op de cyclus.** Twee redenen: de geschiedenis is het interessante deel (*"van 5 naar 4 op 12 september, omdat de volatiliteit zakte"* is wat je een lid vertelt, niet "4"), en wat wij weten en wat de leden weten lopen uiteen. Elke stand draagt verplicht een **reden** — zonder is het een getal zonder verhaal, en precies dat verhaal gaat naar de leden.
+
+**Het systeem stelt voor, een mens stelt vast.** `stelVoor()` schrijft alleen een gebeurtenis; de motor maakt daar een kaart van; pas het antwoord op die kaart zet de stand. Een getal dat zegt hoeveel aandacht iemand moet geven hoort niet vanzelf te verschijnen zonder dat iemand ernaar gekeken heeft. `herkomst` houdt bij of een stand uit een voorstel kwam of met de hand gezet is.
+
+**Wat wij weten en wat de leden weten zijn twee velden.** `huidig()` geeft ze allebei terug plus `gelijk`. Een stand is pas bij de leden als het bericht erover verstuurd is — er is geen knop "markeer als gemeld", alleen `verstuurPublicatie()` van een barometerbericht zet `gepubliceerd_op`. Zolang ze verschillen loopt de achterstand van §3.2f, en dat hoort niet weggerekend te worden tot één getal.
+
+**Een ingehaalde stand komt nooit alsnog bij de leden.** Bij deze etappe gevonden: `meldGepubliceerd()` pakte eerst de laatste nog niet gemelde stand in plaats van de huidige. Bij drie standen achter elkaar zonder bericht publiceerde het versturen dan een stand die intussen al ingehaald was.
+
+### 3.2c-ter Een toestandskaart sluit zichzelf (migratie-loos, worker/motor.js)
+
+Eerst gold: *een kaart verdwijnt niet, hij wordt beantwoord.* Dat klopt voor een kaart die iets vraagt — *zullen we dit de leden vertellen?* — want daar is het antwoord het punt, ook als het antwoord 'nee' is.
+
+Het klopt **niet** voor een toestandskaart. *"De charts zijn nog niet gelezen"* is geen vraag maar een constatering. Lees je ze, dan is de constatering niet meer waar en hoort de kaart weg — niet omdat iemand hem wegklikte, maar omdat het werk gedaan is. Hem laten staan betekent dat de werkbank iets beweert dat niet klopt, en dat is precies wat een werkbank niet mag doen.
+
+**De aanleiding is de waarheid, in twee richtingen.** `meld()` berekent per definitie de verzameling sleutels die nú geldig is. Elke openstaande kaart van die definitie die er niet meer in zit, wordt gesloten met antwoord `vanzelf opgelost`. Komt de toestand terug — een inzending die wordt ingetrokken, een voorwaarde die weer op rood springt — dan verschijnt de kaart gewoon opnieuw: de sleutel is vrij omdat hij beantwoord is (§0113).
+
+Dit geldt **alleen voor kaarten met een `aanleiding`**. Een kaart die uit een gebeurtenis komt heeft geen toestand om tegen te toetsen en blijft staan tot een mens antwoordt.
+
+`scripts/proef/flow.mjs` loopt hierop één cyclus van begin tot eind door en controleert na elke handeling of de wachtrij precies toont wat er op dat moment gevraagd wordt — niet meer en niet minder. Drie deelnemers die één voor één inzenden halen één voor één hun eigen kaart weg; een voorwaarde die rood → groen → rood gaat levert twee keer een kaart op; een berichtkaart blijft staan tot het bericht verstuurd is, ook nadat het concept al klaarstond.
+
 ### 3.3 Relaties met betekenis
 
 - `event` staat **buiten** de cycli. Een cyclus bezit geen events; hij heeft een periode. De koppeling met een beoordeling loopt via `cyclus_event`.
@@ -565,13 +791,80 @@ Dit is de zwaarste regel van hoofdstuk 10. Wie een scherm ontwerpt begint hier, 
 
 **De brug.** Naast IB Gateway draait een klein programma (`brug/brug.mjs`) dat luistert naar posities, nettowaarde en uitvoeringen en elke verandering meteen doorduwt naar `/api/brug`. Het stuurt het **hele** positiebeeld mee, niet losse mutaties: één gemiste zending zou het beeld anders voorgoed laten afwijken. Daarnaast een **hartslag** van tien seconden, ook als er niets gebeurd is — zo kent de cockpit het verschil tussen *er gebeurt niets* en *ik hoor niets meer*. Blijft het meer dan vijfendertig seconden stil, dan is de verbinding niet langer *live* en zegt elk scherm dat erbij. Stil oude getallen tonen is erger dan niets tonen.
 
-**Het verkeer gaat één kant op.** De brug belt naar de cockpit; de cockpit kan de brug niet bereiken en heeft geen enkele route naar de broker. In het bestand van de brug staat geen aanroep die een order kan plaatsen, wijzigen of annuleren, en in IB Gateway kan bovendien *Read-Only API* aan — dan weigert IBKR's eigen software het ook. Drie sloten op dezelfde deur; hard uitgangspunt 1 wordt hier dus sterker, niet zwakker. Let op: met read-only aan komt ook orderinformatie niet door, dus geen uitvoeringsprijzen — de positiewijziging zie je wel, en de prijs vult Flex 's nachts aan.
+**Het verkeer gaat één kant op.** De brug belt naar de cockpit; de cockpit kan de brug niet bereiken en heeft geen enkele route naar de broker. In het bestand van de brug staat geen aanroep die een order kan plaatsen, wijzigen of annuleren. Twee sloten op dezelfde deur, en ze zitten allebei in wat wij bouwen — niet in een instelling die iemand ooit per ongeluk omzet.
+
+**Read-Only API staat uit (beslist 3 okt 2026).** Dat was het derde slot, en het is bewust losgelaten. Met read-only aan komt orderinformatie niet door: je ziet een positie naar nul gaan maar niet tegen welke prijs. Dat is onverenigbaar met het voornemen, waar de nieuwe tranche met de échte fill-prijs moet ontstaan voordat er naar de leden gepubliceerd wordt — en liever een minuut later publiceren dan een geschatte premie versturen. De afweging is dus: één slot minder bij IBKR, in ruil voor een publicatie die klopt. Wat overblijft is sterker dan een instelling: de cockpit kent geen route naar de broker, en in de brug bestaat de aanroep om een order te plaatsen niet.
 
 **Flex blijft, als vangnet.** Eén keer per nacht, niet elk kwartier. De stroom levert alleen wat er gebeurt terwijl de brug luistert; wat er gebeurde terwijl hij eruit lag, kent de TWS API niet meer. Het rapport kijkt terug en vult dat aan — en corrigeert de prijzen en commissies met wat er werkelijk afgerekend is. Stroom voor de tijd, rapport voor de waarheid.
 
 **Drie tabellen.** `brokerpositie` is wat er nú open staat (de brug overschrijft het hele beeld), `brokergebeurtenis` is het spoor van wat er gebeurde — een aantal dat naar nul gaat, een uitvoering met haar prijs — en wordt nooit overschreven, en `brokerverbinding` draagt de stand van de verbinding zelf. Een uitvoering draagt haar eigen nummer (`execId`), zodat dezelfde fill bij een herhaalde zending niet twee keer in het spoor belandt.
 
 **De machine.** De brug hoort op iets dat niet slaapt: een kleine VPS in Frankfurt of Amsterdam, met IB Gateway headless en IBC voor het dagelijkse herstarten. De blokkade die de Flex-webservice tegenhield, geldt hier niet — die zat op IBKR's webkant; IB Gateway belt zelf naar buiten. Op die machine staan brokergegevens: geen inkomende poorten behalve SSH met sleutels, Gateway alleen op localhost, de brug ernaast.
+
+**Einde van een tranche — gebouwd (3 okt 2026).** Het scherm *Einde van een tranche* onder VASTLEGGING leest het laatste rapport en zet per lopende tranche naast elkaar: wat het rapport laat zien, en wat het systeem denkt dat het was. Vier uitkomsten — waardeloos geëxpireerd, doorgerold, vervroegd teruggekocht, exitplan uitgevoerd — en een vijfde antwoord dat het systeem ook mag geven: *dit weet ik niet, kies zelf*. Het bewijs staat náást het voorstel en niet erachter; een voorstel dat je moet geloven is geen voorstel. Vastleggen doet een mens, per tranche, en bij een rol ontstaat dan de volgende tranche van dezelfde cyclus met het contract uit het rapport — dat is de enige plek waar dit scherm iets aanmaakt. Het resultaat in punten is een aftrekking (ontvangen premie min terugkoopprijs), zichtbaar en te overschrijven.
+
+**De broker is de bron; de cockpit spiegelt (4 okt 2026).** Hiervóór hield de cockpit een eigen begrip bij — de tranche — en probeerde dat te koppelen aan wat er bij de broker stond. Alles wat moeizaam voelde bestond alleen om die koppeling te onderhouden: herkenning, voorstellen, een vlag per cyclus, aangekondigde voornemens, het overnemen van onbekende contracten. Dat is geen bedrijfsproces maar boekhouding om twee lijsten gelijk te houden, en het staat bovendien in de weg op het enige moment dat het snel moet gaan.
+
+De broker weet wat er openstaat. Dus spiegelt de cockpit dat, en verdwijnt de machinerie:
+
+- **Besluit** hoort bij de cyclus. Nul of meer, chronologisch. Het zegt één ding: mogen we (nog) een positie innemen, en onder welke parameters. Een no-go terwijl je in positie zit gaat over de vólgende positie, niet over de lopende. Uitstappen gaat altijd en alleen via het exitplan; de twee overlappen nergens.
+- **Positie** spiegelt de broker (`worker/spiegel.js`). Verschijnt er een contract, dan ontstaat de positie met de echte fill-prijs uit de uitvoeringen en een exitplan, en staat ze meteen op *publiceren naar leden*. Verdwijnt het contract, dan sluit de positie met de terugkoopprijs en het resultaat. Zonder fill-prijs ontstaat ze wel maar blijft ze op *uitvoering ophalen*: liever een minuut later publiceren dan een geschatte premie versturen.
+- **Exitplan** hangt aan een positie en rekent tegen háár premie.
+- **Cyclus** ís de keten. De besluiten en de posities naast elkaar op de tijdlijn — dat is het verhaal, en de post-analyse telt op wat eruit kwam.
+
+Twee dingen zijn afgeleid en worden nooit gevraagd. Een positie verwijst naar het laatste *go*-besluit van haar cyclus vóór ze openging; zit dat in een raar geval naast, dan breekt er niets, want het is een verwijzing voor de post-analyse en geen mechaniek. En de uitkomst volgt uit de feiten: teruggekocht als er een terugkoop staat, waardeloos geëxpireerd als het contract verdween met de expiratie voorbij.
+
+**Het bericht aan de leden is de rem (4 okt 2026).** Een positie staat binnen een seconde in de cockpit met de echte prijzen, maar daarmee is ze niet klaar om naar buiten te gaan: de cijfers vertellen wát er gebeurd is, niet waaróm. Dat laatste is het enige deel van deze hele keten dat een mens moet schrijven, en het enige deel dat leden werkelijk lezen.
+
+Dus levert elke opening én elke sluiting een **concept** op in `publicatie`, met de feiten er al in en de begeleidende tekst leeg. Zolang dat concept openstaat, blijft de positie op *publiceren naar leden* staan — zichtbaar wachtend. Pas als jij de tekst schrijft en verstuurt, gaat ze door naar *bewaken*. Versturen is een eigen handeling met een eigen knop die om bevestiging vraagt, en nadrukkelijk geen gevolg van een gevuld veld: het is onomkeerbaar, en wat eruit ging ging eruit. Daarom draagt een verstuurd bericht ook zijn eigen kopie van de feiten; verandert de positie later, dan verandert het bericht niet mee.
+
+Het scherm heet *Klaar voor de leden* en staat onder WERKEN, naast de posities zonder cyclus — geen tabel om in te kijken maar iets wat op je ligt te wachten. De tabel *Publicaties* onder VASTLEGGING houdt wat verstuurd is.
+
+**'Doorgerold' bestaat niet meer als gegeven.** De cockpit weet dat een contract sloot en een ander opende; dát het één de opvolger van het ander was, is een verhaal over twee posities. Verhalen horen in de ledencommunicatie, niet in een datamodel.
+
+Er blijft één vraag over die de broker niet kan beantwoorden: **bij welke cyclus hoort deze positie?** Loopt er één, dan is het die. Lopen er meerdere, dan blijft ze onverdeeld staan tot iemand kiest — één rolmenu, geen flow. Een positie die er niet bij hoort, zet je *buiten de cycli*. En één controle blijft: duikt er een positie op in een cyclus zonder voorafgaande go, dan valt dat op. Het blokkeert niets — de positie bestáát — maar je ziet het.
+
+Wat verviel staat in `legacy/spiegel-overgang/`: het voornemen, de herkenning met haar voorstellen, de duidingsvlag, het scherm *Einde van een tranche*. Het is niet weggegooid maar opzijgezet; het heeft de aanname waarop het rustte grondig getest, en die aanname bleek de verkeerde.
+
+**Een rol verlengt de boog (3 okt 2026).** Opent er een tranche met een expiratie voorbij de doelexpiratie van de cyclus, dan rekt die doelexpiratie mee. Anders lijkt de looptijd op elk scherm korter dan ze is, en — erger — vallen de events ná de oude datum buiten de cyclus terwijl je er juist doorheen moet. Het bijtrekken gebeurt overal waar een tranche ontstaat of van expiratie wijzigt, en trekt meteen de eventskalender opnieuw door de nieuwe periode.
+
+**Een tranche uit een rol draagt geen besluit (3 okt 2026).** Het besluitproces liep op de eerste tranche; rollen gaat daar bewust buitenom omdat het tijdsgevoelig is. De opvolger erft dus niet het beoordelingsmoment en ook niet 'wat het besluit zei' — anders zou het formulier drie regels tonen over een besluit dat voor deze tranche nooit genomen is, en zou de afwijkingstoets een uitvoering vergelijken met een beslissing die er niet bij hoort. De keten blijft leesbaar via `doorgerold_naar`; dáár volgt de post-analyse hem. Het blok *Het besluit* verdwijnt op zo'n tranche van het formulier.
+
+**Lezen in de lijst (3 okt 2026).** Drie regels die voor alle lijsten gelden. Een stand — status, uitkomst — staat altijd als **tweede kolom**, direct na de naam: je scant van links naar rechts, wat iets ís vooraan en hoe het ervoor staat meteen erachter. *Gesloten* is **grijs**, niet groen: groen betekent hier 'goed', en een gesloten tranche is niet goed of slecht maar klaar. En wat een tranche opbracht lees je in **punten**, zoals het in de optieketen staat — geschreven op 38,5, teruggekocht op 12,0, resultaat 26,5 — met de terugkoopprijs erbij, want zonder dat getal zie je het resultaat wel maar niet waaruit het bestaat. Een waardeloze expiratie staat op 0: je betaalde niets om eruit te komen, en dat is een getal en geen leegte.
+
+**Break-even is een ask, niet een indexstand (3 okt 2026).** Het exitplan rekende break-even als *strike min premie* en noemde dat een indexniveau: "onder dit niveau kost de tranche geld". Dat klopt alleen op de expiratiedag. Eerder hangt de waarde van de optie ook af van volatiliteit en tijdswaarde — op datzelfde indexniveau staat de put dan ver boven de ontvangen premie en sta je onder water terwijl de regel zegt van niet. Een exitregel waar je op een slechte dag de verkeerde conclusie uit trekt is erger dan geen exitregel.
+
+Het echte break-even is wél een ask, en het is een getal dat er al was: **de ontvangen premie**. Koop je terug boven dat bedrag, dan kost de tranche geld. Dat geldt op elk moment, ongeacht volatiliteit — het is een aftrekking, geen model. Daarmee staan alle drie de bewakingsregels in dezelfde eenheid, en dat is ook de eenheid die de brug streamt. Het indexniveau blijft bestaan als eigen soort *expiratieniveau* met een eerlijke omschrijving: een referentiepunt, geen bewakingsregel.
+
+**De stroom gaat vóór het rapport (3 okt 2026).** Het scherm *Einde van een tranche* las het laatste Flex-rapport, ook als de brug live was. Daardoor keek je naar een beeld van vanochtend terwijl er net iets gebeurd was — en kreeg elke tranche die ná dat rapport ontstond de vlag *staat niet meer open bij Lynx*. De stand komt nu van de brug zolang die binnen vijf minuten iets van zich liet horen, en anders uit het rapport. Het scherm zegt erbij welke van de twee het is.
+
+Dus wordt het gesplitst. Het feit neemt het systeem over, het verband vraagt het. Bij elke stand die binnenkomt draait `markeer`: per lopende tranche wordt vastgelegd wát er gezien is, en op de cyclus komt een vlag te staan die in de cyclilijst zichtbaar is. Daarnaast levert `verweesd` de contracten die bij Lynx openstaan en die geen enkele tranche kent, mét de tranches die net iets deden als mogelijke herkomst. Eén handeling legt het verband: `neemOver` sluit de oude tranche als doorgerold met het echte resultaat en maakt de nieuwe aan met de echte fill-prijs, op *publiceren naar leden* — of maakt er een losse tranche van als er geen voorganger is. De vlag gaat uit zodra de tranche is afgehandeld; een vlag die blijft staan leert je hem te negeren.
+
+Beide wegen komen dus op hetzelfde uit — een tranche met echte prijzen die klaarstaat om te publiceren. Het verschil zit alleen in wanneer de mens aan zet is: vooraf bij een aankondiging, achteraf bij een noodhandeling.
+
+Het matchen draait op elke stand die binnenkomt — bij elke push van de brug, en bij het nachtelijke rapport. Bron doet er niet toe: `pasVoornemensToe` krijgt posities en uitvoeringen, en `worker/brug.js` giet de stroom in diezelfde vorm. Mislukt het matchen, dan laat het de zending niet falen; de volgende push probeert het opnieuw.
+
+Drie grenzen die erbij horen. **Zonder fill-prijs geen publicatie:** komt de uitvoering binnen zonder prijs, dan ontstaat de nieuwe tranche wel maar blijft ze op *uitvoering ophalen* staan tot de prijs er is — liever een minuut later publiceren dan een geschatte premie naar de leden. **Wat niet past, valt terug op duiding:** een andere strike dan aangekondigd, een deelvulling, of een sluiting zonder aankondiging zet het voornemen op *wijkt af* met daarbij wat er wél geopend werd, en dan neemt het scherm *Einde van een tranche* het over. Dat blijft het vangnet, niet de hoofdweg. **En een voornemen is een aantekening van jou:** de cockpit plaatst nooit een order en stelt nooit voor om te rollen (hard uitgangspunt 1).
+
+Hieruit volgt één openstaande beslissing bij de broker: **Read-Only API moet uit**, anders komt orderinformatie niet door en zie je de positie wel naar nul gaan maar niet tegen welke prijs. Dat verzwakt één van de drie sloten; de andere twee blijven — het verkeer gaat één kant op, en in de brug staat geen aanroep die een order kan plaatsen.
+
+**Voorwaarden en exitregels blijven uit elkaar (3 okt 2026).** Ze lijken op elkaar en doen iets anders. Een voorwaarde is een *waarneming*: je kijkt, je schrijft op wat je zag, je zet er een kleur bij, en daarna gebeurt er niets meer mee. Een exitregel is een *afspraak met een drempel die blijft lopen*: ze kan geraakt worden, ze mag nooit verruimd worden, ze wordt herberekend als de ontvangen premie wijzigt, en de herkenning aan het einde van een tranche leest haar om een terugkoop te duiden als *exitplan uitgevoerd* in plaats van *vervroegd teruggekocht*. Ze hangen ook aan iets anders: een voorwaarde aan de cyclus, een exitregel aan de tranche — rolt een cyclus door, dan krijgt tranche 2 een eigen stoploss tegen een eigen premie (zie 1, premie-referentie). Samenvoegen zou al dat gedrag achter een `if soort = 'stoploss'` zetten: geen vereenvoudiging, maar complexiteit verplaatsen naar waar ze minder zichtbaar is.
+
+Wat wél dubbel was: `voorwaarde.soort = 'uitstap'`, een overblijfsel van vóór het exitplan bestond, waar geen worker en geen scherm iets mee deed. Je kon een uitstapafspraak op twee plekken vastleggen zonder dat iemand wist welke telde. Die keuze staat op niet-actief; bestaande rijen blijven leesbaar. Voorwaarden heten nu *Instapvoorwaarden*, en het exitplan heeft zijn menu-ingang terug — die ging in 0073 weg omdat een exitregel buiten zijn tranche niets zou zeggen, en dat argument vervalt nu de kolom *Tranche* in het overzicht staat.
+
+Daarvoor is één algemene regel bijgekomen in `worker/lijst.js`: **een kolom waarop al op één record gefilterd is, valt uit de lijst.** In het exitplan ónder een tranche hoeft *Tranche* er niet bij te staan, in het overzicht over alle tranches heen juist wel — dezelfde weergave, zonder dat er twee van hoeven te bestaan.
+
+De herkenning is getoetst tegen een nagemaakt Flex-rapport met alle vier de gevallen erin (`scripts/proef/materiaal/afloop.xml`), via `scripts/proef/afloop-gevallen.mjs` voor de redenering en `scripts/proef/afloop-vastleggen.mjs` voor wat er daarna in de database staat. Beide draaien zonder brokerkoppeling. Tegen een écht paper-rapport is het nog niet gedraaid; dat wacht op de activering van het paper account.
+
+**Wat de opzet ons leerde (3 okt 2026).** IBKR antwoordt op drie verschillende problemen met dezelfde zin — *invalid username or password*. Een fout wachtwoord, een onzichtbaar Windows-regeleinde achter `IbPassword=` in `ibc-config.ini`, en een paper account dat nog geen handels- en marktdatatoegang heeft, zijn van buitenaf niet te onderscheiden. Het laatste herken je alleen in de portal, aan de regel *Trading access is unavailable for this user*. Daarom: eerst de portal, dan pas het wachtwoord. Het installatiescript schrijft nu `delta-ibc-schoon`, dat bij elke start de regeleinden weghaalt en weigert te starten zolang de inloggegevens nog op de sjabloonwaarden staan, en `brug/controleer.sh` geeft in één commando de stand van config, diensten, poort 7497 en — als er niets luistert — de tekst die op het scherm van de Gateway staat. Het virtuele scherm staat op 1920×1080, want de brede foutmeldingen van de Gateway vielen op 1024 buiten beeld.
+
+**Het meetingscherm opnieuw ingedeeld (3 okt 2026).** Geen tabbladen meer: alles staat tegelijk op het scherm, want een gesprek waarin iemand eerst iets moet aanklikken om het te zien, is een gesprek waarin niet iedereen naar hetzelfde kijkt. Vijf blokken onder elkaar — de looptijd over de volle breedte met de events op de as en daaronder wat ieder zou schrijven; dan links de events van de cyclus en rechts de instapvoorwaarden, allebei de echte lijst van de applicatie met dezelfde kolommen; dan de technische analyse; dan de uitkomst; dan de portefeuille. De actieknop staat rechtsboven, zoals op elk recordscherm.
+
+**De chartlezing (3 okt 2026).** Per gesprek één regel per chart: een schermafdruk en wat je erin leest. De eerste regel ligt vast — *Moving Average 8, 20, 50* — zodat elk gesprek met dezelfde blik begint en twee cycli naast elkaar te leggen zijn; daaronder voeg je zelf regels toe. De regels bewaren zichzelf zodra je iets wijzigt, want een schermafdruk die je plakte mag niet verloren gaan omdat de uitkomst nog niet is vastgelegd. De afbeelding staat als data-URL in de rij, net als een avatar, na verkleining in de browser tot 1400 pixels breed. Dat is een tussenstation: zodra er een R2-bucket is, verhuizen de afbeeldingen daarheen en blijft hier alleen de verwijzing over. **Herzien dezelfde dag:** de chartlezing hangt aan de **cyclus**, niet aan het gesprek. Het is geen verslag van het overleg maar materiaal dat erbij ligt. De vaste regel staat er dus vanaf het aanmaken van de cyclus, de lezing verschijnt als gerelateerde lijst op het cyclusrecord, en er is een verplichte processtap in de pre-analyse: *Technische analyse gelezen*. Zolang niet elke chart een schermafdruk én een lezing draagt, weigert de worker een blinde inzending — iedereen schrijft blind, maar wel op hetzelfde beeld. De afbeelding past zich aan de rij aan in plaats van andersom; het hele gesprek hoort op één scherm te passen, en binnen de lijsten scrol je naar de rest. Migratie 0082 herbouwt de tabel in plaats van hem uit te breiden: `beoordelingsmoment` stond op NOT NULL, en een chartlezing die bij een cyclus hoort heeft geen gesprek. **Les:** een migratie proefdraaien op een lege database bewijst niets — een insert die nul rijen raakt kan geen NOT NULL breken. Daarom `scripts/proef/migraties.mjs`, dat eerst een cyclus, een gesprek, een event en een voorwaarde zaait en dan de migraties eroverheen draait; met een versienummer als argument zaait het vlak vóór die migratie. In de app heet het geheel **Technische analyse**; `chartlezing` blijft de naam in de database. Het menu-item *Chartanalyses* — een overblijfsel uit de oude cockpit dat naar een tabel wees die nooit is gebouwd — wijst nu naar deze tabel en geeft een overzicht over alle cycli heen.
+
+**De kalender is de bron voor de weging (3 okt 2026).** Een event droeg tot nu toe een eigen zwaarte én een behandeling per cyclus. Daarmee kon dezelfde dag in de kalender en in een cyclus iets anders zeggen, en moest je elk event twee keer wegen. Vanaf nu staat de zwaarte in de eventskalender en neemt een cyclus hem over zoals hij is; de weging per cyclus en de behandeling vervallen, net als de processtap die erom vroeg. Wat erbij komt is *notities* op het event, dat meereist naar de looptijd — beide lijsten tonen dezelfde kolommen en dezelfde inhoud. De kolommen blijven in de database staan: wat is vastgelegd wordt niet gewist.
+
+**Formulieren: alles is een veld (3 okt 2026).** Overgenomen uit het werkmodel van ServiceNow, niet uit het uiterlijk. Een veld dat vastligt blijft een vak — grijs en uitgeschakeld — in plaats van kale tekst; een formulier dat wisselt tussen vakken en tekst legt zijn regels niet meer op één lijn en verzwijgt waarom het ene wel en het andere niet te wijzigen is. Een keuzeveld blijft een keuzelijst, ook als het proces en niet de gebruiker bepaalt wat erin komt: dan zie je welke standen bestaan en waar dit record staat. Een verplicht veld draagt links een streepje, oranje zolang het leeg is en groen zodra het gevuld is, zodat je vóór het opslaan ziet waar het misgaat. Wat uitgeschakeld staat, gaat ook niet mee naar de server. Twee staande regels die hieruit volgen: **een formulier draagt geen sectie 'systeem'** — *aangemaakt op* en *aangemaakt door* zijn boekhouding, ze staan al in de lijst en in de auditlog, en een nieuwe tabel krijgt die sectie dus niet; en **een record dat je vanuit een gerelateerde lijst aanmaakt, brengt je na het bewaren terug naar dat ouderrecord** (`db_table.na_aanmaken = 'ouder'`), want daar ging je mee verder.
 
 **Het rapport wordt aangeleverd, niet opgehaald.** IBKR weigert verzoeken die van Cloudflare komen — *Access denied* vóór het token ook maar bekeken wordt. De worker kan het rapport dus niet zelf halen. Een klein script op een machine met een gewoon IP haalt het op en levert het af op `/api/lynx/rapport`, met een eigen sleutel die los staat van de aanmelding: dit is een script en geen mens. De cockpit bewaart het laatste rapport en leest daaruit. Dat verandert niets aan het uitgangspunt — er gaat alleen informatie van de broker naar ons, nooit andersom — en het maakt zichtbaar hoe oud het beeld is: bij de lijst staat wanneer het rapport binnenkwam.
 
@@ -757,6 +1050,176 @@ De applicatie kent een aantal processen die over meerdere schermen lopen. Waar d
 - Er is **één dashboard**, dat zich aanpast aan de fase van de gekozen cyclus. De fase is een toestand, geen navigatie.
 - Een **tabel** geeft een lijst. Klik je een rij aan, dan krijg je het record met zijn gerelateerde lijsten als tabbladen (10). Verder niets: geen 360-view op een lijstscherm.
 - *Posities* is dus een gewone lijst over alle cycli heen, geen dashboard. De samenhang zit op **In positie**.
+
+### 10.1 Wat het systeem zelf weet, vraagt het niet (migratie 0117)
+
+Een formulier dat opent met een leeg veld dat niemand ooit anders invult, is een vraag die geen vraag is. `db_field.standaard` kent daarvoor drie waarden die de worker invult in plaats van jou: `vandaag`, `nu` en `ik`.
+
+- **`aangemaakt_door` staat overal op `ik`.** Dit veld is alleen-lezen, dus het werd ook nooit met de hand gevuld — het bleef leeg op het formulier, en pas bij het bewaren zette de worker er alsnog iets in. Je zag dus iets anders dan wat er ging gebeuren.
+- **`cyclus.geopend_op` staat op `vandaag`.** De dag waarop een cyclus opengaat is de dag waarop je hem aanmaakt. Is dat een keer niet zo, dan pas je hem aan — maar een formulier hoort naar de regel te staan, niet naar de uitzondering.
+
+De inrichtingsaudit bewaakt allebei: elke `aangemaakt_door` moet `ik` zijn, en elke standaard op een datum-, tijdstip- of verwijzingsveld moet een zijn die de worker kent. `gisteren` zou anders gewoon als tekst in het veld belanden.
+
+### 10.1a Filteren op een kolom met twee waarden
+
+Een zoekvak waarin je moet raden wat er mag staan is geen filter. Kolommen met
+maar twee mogelijke waarden krijgen daarom in de zoekregel een **keuzelijst** in
+plaats van een tekstvak:
+
+- **Actief** (de keerzijde van `archief`): `true` / `false`.
+- Elk veld van het type **ja_nee**: `ja` / `nee`.
+
+De lege stand van zo'n keuzelijst heet `Zoeken` en betekent *allebei*, net als
+een leeg zoekvak. De keuze werkt meteen, zonder de wachttijd van 300 ms die
+typen wel nodig heeft.
+
+Twee dingen die hierbij misgingen en nu vastliggen:
+
+- Een lijst staat standaard op `archief = 0`. Kies je in de kolom **Actief** de
+  waarde `false`, dan gaat die keuze **vóór** de stand van de lijst — anders
+  staan beide voorwaarden er samen in en blijft het scherm leeg, wat leest als
+  een kapot filter.
+- Een `ja_nee`-kolom viel vroeger in de restregel 'bevat', en die zoekt in `1`
+  of `0`. Zoeken op `ja` vond dan niets. De worker vertaalt `ja`/`nee` nu naar
+  `= 1` en `coalesce(…, 0) = 0`.
+
+### 10.1b De werkbank — het scherm waarop je begint (app/src/werkbank.js)
+
+Het dashboard laat zien hoe het ervoor staat; de werkbank zegt wat er nog moet gebeuren. Dat tweede is waarvoor je inlogt, dus de werkbank staat bovenaan in WERKEN (migratie 0108).
+
+Drie lagen, in deze volgorde:
+
+1. **De meter.** Eén regel, en die gaat over de leden en niet over ons: *"De leden lopen 2 dagen achter op 3 dingen."* Daarnaast de barometerstand met, als wij iets weten dat zij niet weten, het merkje **niet gemeld**.
+2. **Acties.** De kaarten uit de wachtrij, dringend bovenaan, binnen één dringendheid het oudste eerst.
+3. **De cyclus.** De stroom van de lopende cyclus, met de naam van de cyclus als kop — niet "Naslag". Hij staat open: hij is er om naast de kaarten te liggen, niet om opengeklikt te worden.
+
+#### Regels waar dit scherm zich aan houdt
+
+- **Knoppen staan alleen op een kaart.** Een scherm vol knoppen is een scherm waarop je moet zoeken wat je moet doen.
+- **Geen uitleg in lopende zinnen.** Een kaart draagt zijn reden in één regel; wie meer wil weten klikt door naar het record.
+- **Eén gekleurd vlak per scherm.** De achterstandsbalk draagt de kleur; de kaarten eronder zijn wit met één gekleurd label. Twee gekleurde vlakken onder elkaar lezen allebei als het belangrijkste.
+- **Prioriteit is rood, amber, grijs.** Nooit groen; de proef controleert dat in de CSS.
+- **De feiten gaan over de volle breedte**, de knoppen eronder rechts, en het vuilbakje rechts van de knoppen zonder omkadering. Een grijs vlak dat per kaart een andere breedte heeft omdat er een knop meer onder staat, leest als slordigheid.
+
+#### Niet elke knop is een antwoord
+
+| Doel | Wat het scherm doet |
+|---|---|
+| `publicatie` | zet een concept klaar en gaat erheen; de kaart gaat pas dicht als het bericht verstuurd is |
+| `scherm` | gaat naar het scherm waar het werk gebeurt; de kaart gaat dicht als dat gedaan is |
+| `afsluiten` / `splitsen` / `terug` | beantwoordt de kaart meteen |
+
+Een knop die om een reden vraagt, krijgt die reden **op de kaart zelf**. Een venster van de browser dat je moet wegklikken is geen plek om iets te schrijven dat straks in de stroom staat.
+
+**Waar een kaartsoort je heen stuurt staat in `werkbank.js`, niet in de definitielaag.** Dat zijn routes van déze app, en een kaartdefinitie hoort niet te weten hoe het adres van een scherm eruitziet. `scripts/proef/werkbankscherm.mjs` bewaakt wel dat élke kaartsoort met `knop1_doel = 'scherm'` ook echt ergens heen kan — een knop die niets doet merk je anders pas als die kaart voor het eerst verschijnt.
+
+**Wat die proef verder doet**, omdat een scherm hier niet getekend kan worden: elke route die het scherm aanroept bestaat in de worker, elke `api.js`-functie die het importeert wordt ook geëxporteerd, en elk veld dat het uitleest wordt door de wachtrij ook echt meegestuurd.
+
+### 10.1c De opsteller — één bericht, één scherm (app/src/opsteller.js)
+
+Route `/bericht/:id`. De volgorde van het scherm is de volgorde van het werk: **wat er gebeurd is, wat wij erover schrijven, en dan pas de deur.**
+
+De feiten staan boven de tekst en liggen vast. Ze zijn vastgelegd zoals ze waren toen het bericht werd klaargezet — verandert de positie later, dan verandert een verstuurd bericht niet mee. Alleen gevulde feiten komen erin; een regel `Strike —` maakt een bericht niet duidelijker.
+
+**De knoppen hangen van de stand af, en het scherm biedt niets aan wat de worker zou weigeren.** Een knop tonen die niet mag en hem dan laten mislukken is erger dan hem weglaten: je had al bedacht dat je erop ging drukken.
+
+| Stand | Wat het scherm aanbiedt |
+|---|---|
+| `concept` / `klaar` | bewaren, nalezen vragen, versturen |
+| `nalezen`, en jij bent de lezer | vrijgeven, terugsturen (met reden) |
+| `nalezen`, en jij bent het niet | niets — en één regel die zegt bij wie het ligt |
+| `verstuurd` | niets; alleen wanneer en door wie |
+
+Drie dingen die hier bewust zo zijn:
+
+- **Elke handeling bewaart eerst.** Anders verdwijnt de laatste zin die je net typte op het moment dat je op versturen drukt, en dat is de zin waar je het langst over hebt gedaan.
+- **"Nalezen vragen" gaat pas aan als er iemand gekozen is.** Een knop die alvast aanklikbaar is en dan zegt "kies eerst iemand" is een knop die liegt.
+- **Er is geen wisknop.** Een bericht dat niet weg moet, laat je staan; de kaart waar het uit kwam heeft een prullenbak die zegt "gezien, en we doen niets".
+
+### 10.1d Het barometerscherm (app/src/barometerscherm.js)
+
+Route `/barometer/:cyclus`. Twee vragen naast elkaar in plaats van in één meter — zie §3.2g voor waarom.
+
+**Bovenaan staat wat wij weten en wat de leden zien.** Zijn ze gelijk, dan één blok; lopen ze uiteen, dan twee, want dán is dat het nieuws en krijgt het eerste blok de nadruk.
+
+**Het scherm kent geen enkele standnaam.** Het bouwt de schaal uit wat de API teruggeeft, en die komt uit `db_choice`. De proef controleert dat letterlijk: geen van de vijf namen mag in `barometerscherm.js` voorkomen. Hernoem je ze in beheer, dan verandert het scherm mee zonder deploy.
+
+**Het scherm opent op wat er staat**, niet leeg — anders moet je alles opnieuw zeggen om één ding te veranderen. De knop gaat pas aan als er een stand, een venster én een reden is, én de combinatie anders is dan wat er al staat; staat hij hetzelfde, dan zegt de knop dat ("Dit is de huidige stand") in plaats van je erop te laten drukken voor een foutmelding.
+
+**Vastleggen is niet melden.** Na het vastleggen zegt het scherm in één regel dat de leden het nog niet weten en dat daar een bericht bij hoort. Er is met opzet geen tweede knop die dat stilletjes ook doet.
+
+Het verloop eronder komt uit de gewone lijst. Een eigen route erbij zou hetzelfde doen met een tweede stuk code dat achter kan gaan lopen.
+
+### 10.1d-bis Een scherm dat weg is, schrijft niet meer
+
+De werkbank peilt elke tien seconden. Klik je intussen door naar een besluit, dan tikte die klok gewoon door — en tien seconden later tekende hij zichzelf over het scherm waar je inmiddels was.
+
+Dat zag eruit als een omleiding naar de werkbank. Het was erger: op een formulier waar je in zat te typen was je je werk kwijt.
+
+**Elk scherm dat een timer of een luisteraar op het document zet, moet kunnen zeggen of het nog van deze wereld is.** De werkbank heeft daarvoor `leeftNog()`, dat drie dingen controleert: is dit nog het laatste bezoek (twee werkbanken mogen elkaar niet overschrijven), staat de route nog op `/werkbank`, en hangt het element nog in het document.
+
+Die wacht staat op drie plekken, en dat is geen overdaad:
+
+1. **Bij het afgaan van de klok** — je kunt in die tien seconden weg zijn geklikt.
+2. **Na het antwoord van de server** — ook tussen de vraag en het antwoord kun je weg zijn.
+3. **Vóór het tekenen** — het ophalen van de wachtrij duurt even.
+
+De luisteraar op `visibilitychange` verwijdert zichzelf zodra het scherm niet meer leeft. Zonder dat stapelen ze op: na tien keer de werkbank openen peilen er tien tegelijk.
+
+**Een les over de proef zelf.** De eerste versie van deze controle telde of `leeftNog` ergens in het bestand voorkwam. Toen ik het lek opzettelijk terugzette om te kijken of de proef hem ving, bleef hij groen — er stonden nog zes andere vóórkomens. De proef controleert nu dat de wacht de **eerste regel** is van de klok en van de afhandeling van het antwoord, en dat is wel aangetoond door het lek twee keer terug te zetten.
+
+### 10.1e De werkbank werkt live bij (migraties 0114, 0115)
+
+**Een kaart hoort er te staan voordat jij kijkt, niet een uur later.**
+
+De brug duwt elke verandering van de TWS-verbinding meteen door, dus de gebeurtenis bestaat binnen een seconde. Wat ontbrak was de stap daarna: de kaart ontstond pas als de cron toevallig langskwam. `neemStand()` draait nu zelf een ronde (`aanleiding: 'brug'`), en die ronde weegt alleen — de klok en de toestandsvragen horen bij een rondgang over de dag, niet bij een melding van de broker, en de brug duwt bij elke tik.
+
+#### Er is geen cron. De brug is de klok. (migratie 0116)
+
+De motor draaide eerst op een uurcron. Dat betekende dat een kaart die uit een toestand komt — *jouw stem ontbreekt*, *de charts zijn niet gelezen* — tot negenenvijftig minuten op zich kon laten wachten. Voor een go/no-go die nú begint is dat onbruikbaar.
+
+Maar er draait al een klok: **de brug stuurt elke tien seconden een hartslag vanaf de VPS**, dag en nacht, ook als er niets gebeurt. Dat is precies wat de cron deed, alleen tweehonderdveertig keer zo fijn — en het is één ding minder dat stil kan vallen zonder dat iemand het merkt.
+
+| Waarom | Wat de ronde doet | Hoe snel |
+|---|---|---|
+| `brug` — elke hartslag | wegen altijd; de rondgang langs kalender en toestanden hoogstens elke `motor_rondgang_seconden` | 10 seconden |
+| `mens` — een schrijfactie die een toestand kan maken | toestanden en weging, zonder de kalender | meteen |
+| `scherm` — een openstaande werkbank peilt toch al | zelfde als `brug` | 10 seconden |
+| `cron` | alles | **staat uit** |
+
+**`motor_rondgang_seconden` staat op 10**, gelijk aan de hartslag, dus in de praktijk gebeurt alles meteen. Hoger zetten is de knop om aan te draaien als de database het te druk krijgt — niet eerder. Een handeling van een mens doorbreekt die grens altijd: die is er juist voor het geval dat het nú moet.
+
+**Een volledige rondgang legt altijd een `motorronde` vast**, ook als hij niets vond. Anders weet de volgende tik niet wanneer de vorige was en draait hij elke tien seconden opnieuw alles. Een kale weegronde laat alleen een spoor na als hij iets vond.
+
+**Het vangnet is het scherm.** De brug is de klok, maar een klok die stilstaat moet iemand merken — en als jij naar de werkbank kijkt, ben jij die iemand. De peiling van `/api/wachtrij/stand` draait zelf een ronde, dus een openstaande werkbank houdt de motor draaiend ook als de brug eruit ligt.
+
+**Wat we daarmee opgeven:** ligt álles stil — geen brug, niemand ingelogd — dan gebeurt er niets. Dat is geen verlies. Een kaart die niemand kan zien hoeft niet te bestaan, en zodra er iemand kijkt staat hij er. Het enige dat hier wél een echte klok voor nodig zal hebben is de dagelijkse mail, en die bestaat nog niet.
+
+De `scheduled`-handler blijft in `worker/index.js` staan. Blijkt de brug ooit geen betrouwbare klok, dan is één regel in `wrangler.jsonc` genoeg om de cron weer aan te zetten.
+
+**Zolang de brug nog niet bestaat** — het live handelsaccount is nog niet actief — is het scherm de enige klok. Alles wat uit een handeling komt werkt gewoon; wat uit de kalender komt (de week-update, het maandverslag) verschijnt pas zodra iemand de werkbank openzet. Dat is voor nu precies goed: er zijn nog geen leden die op een week-update wachten. Zodra de brug draait, draait de klok mee.
+
+**Een toestand wacht niet op het uur.** Zet je een beoordelingsmoment op `blind inzenden` omdat het gesprek nú begint, dan hoort de kaart "jouw stem ontbreekt" er een seconde later te staan — niet over negenenvijftig minuten. Elke geslaagde schrijfactie (`PATCH`, nieuw record, samen, archiveren, en de go/no-go-knoppen) hangt daarom een korte ronde in `ctx.waitUntil`: het scherm wacht er niet op, de kaart staat er wel.
+
+**Welke tabellen ertoe doen staat niet in de code.** `raaktEenAanleiding()` kijkt of een ingerichte `aanleiding` de gewijzigde tabel noemt. Richt iemand morgen een aanleiding in over een andere tabel, dan werkt dit vanzelf mee. Weet hij het niet zeker, dan draait hij liever een ronde te veel dan een kaart te laat: een ronde is goedkoop, een gemiste go/no-go niet.
+
+**Het scherm peilt, het haalt niet op.** `GET /api/wachtrij/stand` geeft één merk terug: een tekst die verandert zodra er iets te zien is. Het scherm vraagt dat elke tien seconden en haalt de volle wachtrij alleen op als het merk anders is. De hele rij elke tien seconden opbouwen — met feiten, sjablonen en verwijzingen — is honderd keer zoveel werk voor een antwoord dat meestal "nee" is. Peilen gebeurt alleen als het tabblad vooraan staat, en bij terugkomst meteen in plaats van na tien seconden.
+
+**De motor laat zien dat hij draait (0114).** Eén rij per ronde in `motorronde`, met wat hij deed en hoe lang hij erover deed. Niet in de stroom: daar hoort te staan wat er in een cyclus gebeurde, niet dat een machine elk uur zijn werk deed. Onderaan de werkbank staat één regel — *"De motor draaide 14 minuten geleden"* — die amber wordt na drie uur stilte of bij een mislukte ronde. **Een wachtrij die te leeg is ziet eruit als rust; dit is het enige waaraan je ziet dat het dat niet was.**
+
+Niet élke ronde laat een spoor na. De brug duwt veel vaker dan er iets gebeurt, en een tabel vol lege rondes maakt juist onzichtbaar wat je zoekt. Een ronde die niets deed en op niets stuitte wordt alleen vastgelegd als de klok hem begon — want juist dán is "er gebeurde niets" het bericht.
+
+### 10.1f Een kaart heeft een eigenaar (migratie 0115)
+
+Alles stond in ieders rij. Voor het meeste klopt dat: wie als eerste tijd heeft, stelt het bericht op. Voor twee soorten niet.
+
+**"Go/no-go: jouw stem ontbreekt" is per persoon.** Pieter zag die van Jacqueline, kon hem wegklikken, en dan was de sleutel bezet en werd zij nooit meer gevraagd — haar stem ontbrak in een besluit dat wél doorging. **Een naleeskaart** ligt bij één iemand; dat de opsteller hem ziet is niet erg, dat hij hem kan beantwoorden wel.
+
+**Waar de eigenaar vandaan komt staat in de definitie** (`processtap.eigenaar_bron`): van ons samen, wie de aanleiding aanwijst, of de nalezer van het bericht. De drie manieren om hem op te zoeken staan in code; de keuze staat in beheer.
+
+**Niemand is een geldig antwoord, en het is de standaard.** Het meeste werk is van ons samen, en een kaart die van niemand is, is van ons allemaal — die staat dus ook onder "van mij". Werk van een ander wegfilteren zou de wachtrij leeg laten lijken.
+
+De werkbank staat standaard op **Van mij**, met **Alles** ernaast; die keuze onthoudt de browser, want het is een voorkeur van wie kijkt. Een kaart van een ander staat er wel — je mag zien wat er bij je collega ligt — maar met zijn naam erop en de knoppen uit. De worker weigert het antwoord ook, want een slot dat alleen op het scherm zit is geen slot.
 
 ### 10.2 Het operationele dashboard
 
@@ -951,12 +1414,98 @@ GET    /api/barometer/:cyclus     afgeleide toestand voor de ledenapp
 
 ---
 
+## 11a. Hoe dit systeem zichzelf bewaakt
+
+`npm run proef` draait zestien proeven. Drie daarvan zijn van een andere soort dan de rest: ze testen geen module maar een afspraak.
+
+### De backtest — drie maanden, dag voor dag
+
+`scripts/proef/backtest.mjs` draait de hele keten negentig dagen achter elkaar: IBKR meldt, de klok tikt, de motor stempelt, wij antwoorden, berichten gaan weg. Na **elke dag** controleert hij dertien uitspraken die het systeem over zichzelf doet — geen twee kaarten met dezelfde sleutel, elke kaart hoort bij een definitie, de achterstand telt precies wat er onverteld is, de barometerstand die de leden zien is echt verstuurd, een beantwoorde kaart komt nooit terug, geen leeg bericht is ooit de deur uit.
+
+Drie dingen maken hem bruikbaar in plaats van decoratief:
+
+- **De dobbelsteen is voorspelbaar.** Het zaad staat vast en is in te stellen (`node scripts/proef/backtest.mjs 7`), dus een fout die één keer op de twintig opduikt is te herhalen.
+- **Elke dag wordt de motor twee keer gedraaid.** Dat is de cron die dubbel vuurt, en de tweede ronde hoort niets te veranderen.
+- **De ijver is in te stellen** (`node scripts/proef/backtest.mjs 7 0`). Bij ijver 0 kijkt niemand ooit naar de rij: ook dan moeten alle uitspraken waar blijven, en hoort de achterstand gewoon op te lopen in plaats van ergens vast te lopen.
+
+### De inrichtingsaudit — staat alles in beheer?
+
+`scripts/proef/inrichting.mjs` kijkt niet of iets werkt maar of het op de goede plek staat. De afspraak dat dit systeem metadatagestuurd is verwatert vanzelf — iemand voegt een kolom toe en vergeet het veld, of zet een lijstje waarden in een worker omdat het even sneller is. Acht controles:
+
+1. Elk veld wijst naar een kolom die bestaat, en elk titelveld ook.
+2. **Elke kolom heeft een veld**, op huishouding na. Een kolom zonder veld wordt wél geschreven en gelezen, maar is nergens te zien of te zetten — staat hij ooit fout, dan is er geen scherm waarop je dat merkt. Uitzonderingen staan in `MET_OPZET_GEEN_VELD`, mét reden: een uitzondering zonder reden is een vergeten kolom met een vrijbrief.
+3. Elke tabel is ergens te bereiken, of er staat vastgelegd dat hij niet meer meedoet.
+4. Elk keuzeveld heeft keuzes.
+5. Elke verwijzing wijst naar een bestaande tabel.
+6. Elk veld staat in een sectie die bestaat.
+7. Elke lijstweergave en elk menu-item wijst naar iets dat er is, en elke menugroep is er een die we kennen.
+8. **De code implementeert, de database verklaart.**
+
+Dat laatste is de kern. Waarden als `hoog/medium/laag`, `open/wacht/dicht` of wat een knop doet bestaan op twee plekken: de code weet wat eraan te doen, de database zegt welke er mogen bestaan. Dat is geen dubbeling maar een werkverdeling — zolang de twee lijsten gelijk blijven. Lopen ze uiteen, dan richt je in beheer iets in dat de code niet kent (de knop doet niets) of kent de code iets dat je nergens kunt kiezen (dode code). De modules **exporteren** hun lijst, zodat de proef hem leest in plaats van uit de tekst te raden.
+
+### Wat de audit vond
+
+| Wat | Waar |
+|---|---|
+| Vier menu-items wezen naar een tabel die niet bestaat — erop klikken gaf een foutmelding | 0109 |
+| Drie tabellen (`gebruiker`, `handelsdag`, `audit`) hadden een scherm maar geen enkel veld; de worker antwoordt dan "heeft nog geen velden" | 0109 |
+| `positie.teruggekocht_pt` stond in een sectie die niet bestaat en kwam dus nergens op het formulier | 0110 |
+| Losse kolommen zonder veld (`processtap.fase`, `afvinkregel`, `uitleg`, `gebeurtenis.sleutel`) | 0110 |
+| `knop1_doel`, `knop2_doel` en `afvinkregel` waren vrije tekst terwijl de code maar een handvol waarden kent | 0111 |
+
+**`gebruiker.wachtwoord_hash` krijgt met opzet geen veld.** Wat niet op een formulier staat, kan ook niet per ongeluk op een scherm komen.
+
+### Wat met opzet in code blijft
+
+Niet alles hoort in beheer. Drie dingen blijven in code, en dat is een keuze:
+
+- **De sleutelbouwers** (`worker/motor.js`). Welke vorm een kaart gebruikt staat in de definitie; hoe die vorm gebouwd wordt is code. Het zijn er acht en ze veranderen niet mee met de inrichting.
+- **De kalenderslagen** (`SLAGEN`). "Er is een week voorbij" is geen melding en geen handeling; er gebeurde juist niets, en dat moet iemand opschrijven.
+- **Waar een kaartsoort je heen stuurt** (`app/src/werkbank.js`). Dat zijn routes van deze app, en een kaartdefinitie hoort niet te weten hoe het adres van een scherm eruitziet.
+
+In alle drie de gevallen geldt dezelfde regel: de code houdt de uitvoering, de database houdt de lijst, en de proef legt ze naast elkaar.
+
+## 11b. Wat een review vond, en wat eraan veranderd is
+
+Twee onafhankelijke reviews van de hele keten (beveiliging en robuustheid; logische correctheid) leverden negen fouten op die alle negen **stil** waren: niets viel om, niemand kreeg een melding, de uitkomst was gewoon verkeerd. Bij zes ervan zouden de leden het als eerste gemerkt hebben. `scripts/proef/hersteld.mjs` legt ze alle negen vast.
+
+| Wat er misging | Gevolg | Reparatie |
+|---|---|---|
+| De unieke index op `gebeurtenis.sleutel` gold over alle rijen | Een sleutel was na één keer voorgoed bezet. Barometer 4 → 5 → terug naar 4 gaf geen kaart; een voorwaarde die rood → groen → rood ging ook niet; na één go/no-go-ronde kreeg niemand ooit nog een kaart | 0113: de index geldt alleen voor **openstaande** kaarten |
+| De go/no-go-aanleiding gebruikte alleen het gebruikersnummer als sleutel | Met twee open momenten kreeg alleen het eerste kaarten | 0113: moment + deelnemer |
+| `meldGepubliceerd()` pakte de nieuwste stand | Een bericht over stand 3 zette het stempel op stand 5. De leden lazen 3, het systeem beweerde 5, en omdat die daarmee "gelijk" stonden werd 5 nooit meer gemeld | de stand wordt gevonden via de kaart waar het bericht uit kwam |
+| `zetConceptKlaar()` zette geen `gebeurtenis` op het concept | De achterstand zag het bericht nooit en bleef voor altijd zeggen dat de leden achterliepen; de kaart ging niet dicht; "Bericht opstellen" maakte een **tweede** bericht voor dezelfde positie | eerst loggen, dan het concept met die gebeurtenis erbij |
+| `stuurTerug()` had geen autorisatie | De opsteller kon zijn eigen bericht terugsturen (stand → `concept`, nalezer eraf) en het daarna zelf versturen. Het vierogenprincipe was één klik waard | alleen de nalezer kan terugsturen |
+| Versturen las de status en schreef zonder voorwaarde | Twee tabbladen tegelijk stuurden het bericht twee keer | de voorwaarde staat nu in de `UPDATE` |
+| `feiten` werd afgekapt op 2000 tekens | Dat maakte van geldige json bijna altijd ongeldige json, die daarna blind geparseerd werd: één te rijk feitenobject legde de **hele tijdlijn van een cyclus** plat | te groot wordt vervangen door een markering; lezen is overal afgeschermd |
+| `tot` bij uitstellen werd niet gecontroleerd | `"nooit"` is nooit kleiner dan een datum, dus zo'n kaart kwam nooit terug — niet beantwoord, nergens te openen, en hij telde wél mee in de achterstand | alleen een echt tijdstip, anders morgenvroeg |
+| De ISO-weekberekening had twee tekens omgedraaid | In tien van dertien jaren was élke dag fout; 29 december 2025 werd "week 2026-00" | de donderdag van week 1 als ijkpunt |
+
+Daarbij nog vijf kleinere: de maandslag liep op 30 dagen in plaats van op kalendermaanden (februari kreeg geen verslag, mei twee), de maandsleutel liet de cyclus weg (twee cycli deelden één kaart), de naleeskaart telde hetzelfde onvertelde bericht een tweede keer in de achterstand, een onbekende prioriteit viel naar grijs-onderaan in plaats van op te vallen, en een vaste nalezer die jijzelf was maakte van nalezen een formaliteit.
+
+### Twee sloten strakker
+
+- **Een `voorwaarde` moet `soort` noemen.** Zonder die eis was `1 = 1` geldig, en dan stempelde één ronde vijfhonderd willekeurige gebeurtenissen tot kaart — onomkeerbaar, want er wordt niets gewist.
+- **Een `aanleiding` mag geen geheimen lezen, en geen `select *`.** De gebruikerstabel zelf blijft toegestaan: de go/no-go heeft de deelnemerslijst echt nodig. Verboden zijn de kolommen met wachtwoorden en brokersleutels, en de sterretjesvorm die ze alsnog meesleept zonder dat iemand ze opschreef.
+
+### Eén plek voor tijd
+
+`worker/tijd.js` is nieuw. Drie plekken lazen een tijdstip met `new Date(s.replace(" ", "T") + "Z")`, elk met hetzelfde randgeval erin: een moment dat zelf al ISO is krijgt een tweede `Z` en wordt `NaN`, waarna de leeftijd van een kaart stil `null` werd en hij nooit opschaalde. Nu één functie, die `null` teruggeeft als ze het niet zeker weet.
+
+### Wat we bewust niet hebben gerepareerd
+
+Twee bevindingen vallen buiten de wachtrij en vragen een beslissing, geen patch:
+
+- **Er is geen rollenmodel.** Elke aangemelde gebruiker mag elke tabel met een scherm aanpassen, `gebruiker` en `processtap` inbegrepen. Iemand kan dus een collega op non-actief zetten of een kaartdefinitie herschrijven. Bij drie mede-oprichters is dat te verdedigen; vanaf de eerste medewerker niet meer.
+- **Blinde inzendingen zijn af te leiden via de lijstfilters.** `blind.js` maskeert de kolommen ná de query, terwijl `lijst.js` in SQL filtert en sorteert op de echte kolommen. `?f.strike=6050` verraadt dus of iemands strike 6050 is, ook vóór het quorum. Dat raakt de kern van het go/no-go-protocol (§5.3) en hoort gerepareerd te worden vóór er iemand bijkomt die niet mede-oprichter is.
+
 ## 12. Techniek en uitrol
 
 - Nieuwe applicatie naast de bestaande Cockpit, gevoed door dezelfde delta-proxy worker. De huidige tabs blijven draaien; de Market Timing-panelen blijven voorlopig in de oude Cockpit.
 - Opslag: Cloudflare D1 naast de bestaande KV.
 - Front-end: Vite. Vier componenten dragen het geheel — schil met navigatie en routing, lijst, formulier, veldrenderer. Alles daarbuiten is configuratie.
 - Eén datalaagje tussen app en worker, één functie per endpoint.
+- **Een tabel herbouwen in D1.** D1 draait met foreign keys aan. Een migratie die een tabel herbouwt — nieuwe tabel, rijen overzetten, oude droppen, hernoemen — faalt daarom zodra er kindrijen onder die tabel hangen: de DROP telt als het wissen van alle ouderrijen. Zo'n migratie begint met `pragma defer_foreign_keys = on;` en eindigt met `off`, zodat de controle pas aan het einde van de transactie gebeurt, als de tabel er weer staat met dezelfde id's. `scripts/proef/migraties.mjs` draait sinds 4 okt 2026 met foreign keys aan en elke migratie in een eigen transactie, met een positie en een exitregel in de zaai — anders gaat zoiets lokaal moeiteloos door en pas op staging stuk.
 - **Uitrol via de repository.** Worker, migraties en front-end in één repo, gekoppeld aan Cloudflare. Elke push is een uitrol. Staging naast productie, met eigen database en eigen sleutels. Geheimen als omgevingsvariabelen, niet in de code. De bestaande `delta-blueprint.html` gaat mee in dezelfde repo.
 
 ---
@@ -991,6 +1540,27 @@ Na etappe 4 is een echte cyclus volledig vast te leggen. Werken op desktop, iPad
 
 ---
 
+## 13a. Het venster — voorbereidingstijd voor een lid (migraties 0121, 0123)
+
+Het venster had drie standen (open / wacht / dicht) en was gebouwd op de verkeerde vraag: *kunnen wij instappen*. Het gaat niet over ons. **Elke maand ligt het instapmoment anders, en wie pas hoort dat we erin zitten als we erin zitten, is mentaal te laat.** Het venster is dus voorbereidingstijd.
+
+Zes standen, als verloop:
+
+| Stand | Wat het zegt |
+|---|---|
+| Gesloten | we kijken, nog niets aan de hand |
+| Besluit loopt | we zijn aan het beslissen |
+| Opent binnenkort | maak je klaar |
+| Open | wij zitten erin, je kunt volgen |
+| In positie | wij zitten erin, instappen kan niet meer |
+| Afgerond | de cyclus is uit |
+
+**Drie standen worden nooit door het systeem gezet, en ook nooit tegengesproken:** *Opent binnenkort* en *Open*. Dat is jullie oordeel over de markt, en juist die twee zijn voor een lid het meeste waard — een systeem dat ze zelf zet, zet ze een keer verkeerd. Staat het venster op een van die twee, dan zwijgt de kaart, ook al zegt het proces iets anders.
+
+**De kaart kijkt naar het verschil, niet naar een trigger.** *"Het proces staat op besluit, de leden zien nog gesloten."* Mis je hem — de motor lag stil, iemand klikte hem weg — dan is het verschil er morgen nog en komt de kaart terug. Hij sluit zichzelf zodra je het venster bijstelt.
+
+**'Venster gemist' is geen venstertoestand** (0123). Het venster zegt hetzelfde tegen alle leden tegelijk; 'gemist' zegt juist iets over één lid: dat hij niet heeft aangegeven de positie gevolgd te hebben toen de stand naar *In positie* ging. Dat hoort op de ledenkant, per lid. Die bestaat nog niet — dit is dus uitgesteld, niet verplaatst.
+
 ## 14. Openstaande punten
 
 *Opgelost in versie 1.0: versiebeheer van de rekenlaag (3.4), blootstelling en sizing op portefeuilleniveau (6.1), de handelskalender als tabel (3.2), het splitsen van voorgenomen en uitgevoerde posities (3.3), registratie van afwijking tussen besluit en uitvoering (6), plus de vier standen met "niet gemeten" (4.4), de chartanalyse volgens de metadata-lijn (4.3b) en aanmelden per persoon (1, 11).*
@@ -1004,3 +1574,5 @@ Na etappe 4 is een echte cyclus volledig vast te leggen. Werken op desktop, iPad
 6. **Brokerkoppeling met Lynx** — besluit plus betaald realtime Eurex-abonnement. Professionele classificatie betekent Eurex Core L2 (€ 67,50) plus STOXX Index Real-Time (€ 19) per maand. Blokkeert etappe 11.
 7. **Marktdata richting leden** — bevestiging van LYNX en IBKR vóór etappe 13.
 8. **Market Timing-panelen** — blijven voorlopig in de oude Cockpit; verhuizing later te bepalen.
+9. **'Venster gemist' per lid** — een melding aan één lid dat hij de positie niet gevolgd heeft toen de stand naar *In positie* ging. Vraagt dat de ledenkant bijhoudt óf iemand gevolgd heeft; die bestaat nog niet. Zie 13a.
+10. **Een positiemelding intrekken** — voor leden die hem nog niet gevolgd hebben, als het venster sluit omdat het niet meer opportuun is. Zelfde afhankelijkheid als 9.

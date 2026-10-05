@@ -108,6 +108,18 @@ export const voorwaardenOvernemen = (cyclus, sleutels) =>
 export const besluitOverzicht = (moment) => haal(`/api/besluit/${moment}`);
 export const besluitUitkomst = (moment, body) =>
   haal(`/api/besluit/${moment}/uitkomst`, { methode: "POST", body });
+export const besluitChart = (moment, regels) =>
+  haal(`/api/besluit/${moment}/chart`, { methode: "POST", body: { regels } });
+
+// Het bericht aan de leden: de concepten, en het versturen ervan.
+export const conceptberichten = () => haal("/api/publicaties/concept");
+export const verstuurBericht = (id) =>
+  haal(`/api/publicaties/${id}/versturen`, { methode: "POST", body: {} });
+
+// De posities die bij geen cyclus horen, en het toewijzen ervan.
+export const onverdeeldePosities = () => haal("/api/posities/onverdeeld");
+export const wijsPositieToe = (positie, body) =>
+  haal(`/api/posities/${positie}/cyclus`, { methode: "POST", body });
 
 // ---- de navigator: favorieten en geschiedenis ----
 export const haalFavorieten = () => haal("/api/favoriet");
@@ -126,3 +138,42 @@ export const brugStand = () => haal("/api/brug");
 export const brugInstelling = (waarden) =>
   haal("/api/brug/instelling", { methode: "PUT", body: { waarden } });
 export const brugFlex = () => haal("/api/brug/flex");
+
+// ---- de werkbank: de wachtrij, de achterstand en de barometer ----
+export const haalWachtrij = (cyclus = null, van = "alles") => {
+  const p = new URLSearchParams();
+  if (cyclus) p.set("cyclus", cyclus);
+  if (van === "mij") p.set("van", "mij");
+  const q = p.toString();
+  return haal(`/api/wachtrij${q ? `?${q}` : ""}`);
+};
+export const beantwoordKaart = (id, body) =>
+  haal(`/api/wachtrij/${id}/antwoord`, { methode: "POST", body });
+export const conceptUitKaart = (id, body = {}) =>
+  haal(`/api/wachtrij/${id}/concept`, { methode: "POST", body });
+
+export const haalAchterstand = (cyclus = null) =>
+  haal(`/api/achterstand${cyclus ? `?cyclus=${cyclus}` : ""}`);
+
+export const haalBarometer = (cyclus) => haal(`/api/cyclus/${cyclus}/barometer`);
+export const zetBarometer = (cyclus, body) =>
+  haal(`/api/cyclus/${cyclus}/barometer`, { methode: "POST", body });
+
+export const vraagNalezen = (publicatie, lezer) =>
+  haal(`/api/publicatie/${publicatie}/nalezen`, { methode: "POST", body: { lezer } });
+export const geefVrij = (publicatie) =>
+  haal(`/api/publicatie/${publicatie}/vrijgeven`, { methode: "POST", body: {} });
+export const stuurTerug = (publicatie, reden) =>
+  haal(`/api/publicatie/${publicatie}/terug`, { methode: "POST", body: { reden } });
+
+export const werkbankCycli = () => haal("/api/werkbank/cycli");
+export const haalStroom = (cyclus, limiet = 40) =>
+  haal(`/api/cyclus/${cyclus}/stroom?limiet=${limiet}`);
+
+// Of er iets veranderd is in de wachtrij. Klein genoeg om elke tien seconden te
+// stellen; de volle rij wordt pas opgehaald als het antwoord anders is.
+export const wachtrijStand = (cyclus = null) =>
+  haal(`/api/wachtrij/stand${cyclus ? `?cyclus=${cyclus}` : ""}`);
+
+// Wat er in deze cyclus nog te doen staat: de processtappen die nog open staan.
+export const haalTedoen = (cyclus) => haal(`/api/cyclus/${cyclus}/tedoen`);

@@ -9,8 +9,9 @@
 // Wat het niet doet: oordelen. Er is geen berekening die go of no-go zegt.
 
 import { schermAf } from "./blind.js";
+import { log } from "./stroom.js";
 import { uitBesluit } from "./positie.js";
-import { beweegFase } from "./proces.js";
+import { beweegFase, openVerplicht } from "./proces.js";
 
 const DEELVELDEN = [
   "positie", "strike", "expiratiedatum", "inzet_pct",
@@ -143,7 +144,7 @@ export async function stand(env, ik, cyclusId) {
   ).bind(cyclusId).all()).results;
 
   const events = (await env.DB.prepare(
-    `select ce.id, ce.behandeling, ce.motivering, ce.zwaarte, ce.zwaarte_reden,
+    `select ce.id, e.zwaarte, e.notities,
             e.datum, e.tijdstip, e.tijdzone, e.naam, e.soort
        from cyclus_event ce join event e on e.id = ce.event
       where ce.cyclus = ? order by e.datum, e.tijdstip`
@@ -197,6 +198,34 @@ export async function versturen(env, ik, cyclusId, body = {}) {
   if (!moment) return { fout: "Er loopt nog geen beoordelingsmoment op deze cyclus.", status: 409 };
   if (moment.status === "uitkomst vastgelegd") {
     return { fout: "De uitkomst van dit moment is al vastgelegd.", status: 409 };
+  }
+
+  // De technische analyse gaat vooraf aan het insturen. Iedereen schrijft
+  // blind, maar wel op hetzelfde beeld: zonder gelezen charts zou de een op een
+  // chart kijken die de ander nooit gezien heeft.
+  const charts = await env.DB.prepare(
+    `select count(*) as alle,
+            sum(case when afbeelding is not null and trim(coalesce(commentaar, '')) <> ''
+                     then 1 else 0 end) as af
+       from chartlezing where cyclus = ? and archief = 0`
+  ).bind(cyclusId).first();
+  if (!charts || !charts.alle || Number(charts.af) !== Number(charts.alle)) {
+    return {
+      fout: "De technische analyse is nog niet rond: elke chart heeft een schermafdruk " +
+            "en een lezing nodig. Dat hoort bij de pre-analyse, vóór het insturen.",
+      status: 409,
+    };
+  }
+
+  // De stappen van de stand waar dit moment nu in staat, moeten af zijn. Anders
+  // schuift het gesprek door terwijl er nog iets open staat — en dat is precies
+  // wat er gebeurde met 'Reden bij alleen beslissen'.
+  const open = await openVerplicht(env, "beoordelingsmoment", moment);
+  if (open.length) {
+    return {
+      fout: `Dit moet eerst nog: ${open.join(", ")}.`,
+      status: 409, stappen: open,
+    };
   }
 
   const bestaand = await env.DB.prepare(
@@ -305,6 +334,14 @@ export async function uitkomst(env, ik, cyclusId, body = {}, momentId = null) {
     };
   }
 
+  // Ook hier: de verplichte stappen van de stand waarin dit moment nu staat,
+  // moeten af zijn. Deze route schrijft de status rechtstreeks en komt dus niet
+  // langs beweegFase, dat die controle wél doet.
+  const nogOpen = await openVerplicht(env, "beoordelingsmoment", moment);
+  if (nogOpen.length) {
+    return { fout: `Dit moet eerst nog: ${nogOpen.join(", ")}.`, status: 409, stappen: nogOpen };
+  }
+
   const keuze = body.uitkomst === "go" || body.uitkomst === "no-go" ? body.uitkomst : null;
   if (!keuze) return { fout: "Leg vast of het een go of een no-go werd.", status: 422, veld: "uitkomst" };
   if (keuze === "go" && (body.strike === null || body.strike === undefined || body.strike === "")) {
@@ -353,6 +390,14 @@ export async function uitkomst(env, ik, cyclusId, body = {}, momentId = null) {
     ).bind(w("volgend_moment"), cyclusId));
   }
   await env.DB.batch(vervolg);
+
+  await log(env, ik, {
+    bron: "mens", soort: "besluit_vastgelegd",
+    titel: keuze === "go" ? "Go" : "No-go",
+    detail: [w("aanwezigen"), w("wat_veranderde")].filter(Boolean).join(" \u00b7 "),
+    cyclus: cyclusId, beoordelingsmoment: moment.id,
+    feiten: { uitkomst: keuze, strike: w("strike"), expiratiedatum: w("expiratiedatum") },
+  });
 
   // Een go laat meteen de eerste tranche ontstaan, met het besluit erin
   // gekopieerd. Overtypen is precies hoe een uitvoering ongemerkt van een

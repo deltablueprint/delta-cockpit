@@ -8,8 +8,13 @@ import { gonogoscherm } from "./gonogo.js";
 import { uitkomstscherm } from "./uitkomst.js";
 import { favorietenscherm } from "./favorieten.js";
 import { koppelingscherm } from "./koppeling.js";
+import { onverdeeldscherm } from "./onverdeeld.js";
+import { berichtenscherm } from "./berichten.js";
 import { zetBezoek } from "./api.js";
 import { stopLive } from "./live.js";
+import { werkbankscherm } from "./werkbank.js";
+import { opstellerscherm } from "./opsteller.js";
+import { barometerscherm } from "./barometerscherm.js";
 
 let persoon = null;
 let meta = null;
@@ -31,6 +36,9 @@ function soortVanRoute(route) {
     const tabel = (meta && meta.tabellen || []).find((x) => x.naam === t[1]);
     return tabel ? tabel.label : t[1].replace(/_/g, " ");
   }
+  if (route === "/werkbank") return "werkbank";
+  if (route.startsWith("/bericht/")) return "bericht";
+  if (route.startsWith("/barometer/")) return "barometer";
   if (route.startsWith("/uitkomst/")) return "gesprek";
   if (route.startsWith("/gonogo/")) return "go / no-go";
   return null;
@@ -58,6 +66,45 @@ function teken() {
     if (!route || !titel || titel === "Delta Blueprint Cockpit") return;
     zetBezoek({ route, titel, soort: soortVanRoute(route) }).catch(() => {});
   }, 1200);
+
+  if (pad === "/berichten") {
+    huidigeLijst.tabelnaam = null;
+    huidigeLijst.url = null;
+    berichtenscherm(inhoud, kruimel);
+    return;
+  }
+
+  if (pad === "/werkbank") {
+    huidigeLijst.tabelnaam = null;
+    huidigeLijst.url = null;
+    werkbankscherm(inhoud, kruimel);
+    return;
+  }
+
+  // De opsteller: één bericht, één scherm.
+  const berichtRoute = pad.match(/^\/bericht\/(\d+)$/);
+  if (berichtRoute) {
+    huidigeLijst.tabelnaam = null;
+    huidigeLijst.url = null;
+    opstellerscherm(inhoud, kruimel, Number(berichtRoute[1]));
+    return;
+  }
+
+  // De barometer van één cyclus.
+  const baroRoute = pad.match(/^\/barometer\/(\d+)$/);
+  if (baroRoute) {
+    huidigeLijst.tabelnaam = null;
+    huidigeLijst.url = null;
+    barometerscherm(inhoud, kruimel, Number(baroRoute[1]));
+    return;
+  }
+
+  if (pad === "/onverdeeld") {
+    huidigeLijst.tabelnaam = null;
+    huidigeLijst.url = null;
+    onverdeeldscherm(inhoud, kruimel);
+    return;
+  }
 
   if (pad === "/koppeling") {
     huidigeLijst.tabelnaam = null;
@@ -153,13 +200,21 @@ async function binnen() {
   meta = await haalMeta();
   // Alleen opnieuw tekenen als de navigatie érgens anders vandaan komt dan de
   // lijst zelf: anders zou elke sortering of zoekactie het scherm herbouwen.
+  // Eén navigatie mag maar één keer tekenen. Een sprong naar een nieuwe hash
+  // meldt zich bij sommige browsers twee keer — als 'hashchange' én als
+  // 'popstate' — en dan bouwde het scherm zich twee keer op: je zag de lijst
+  // verschijnen, weggaan en opnieuw verschijnen.
+  let laatsteUrl = null;
   const navigatie = () => {
     const url = "#" + location.hash.slice(1);
     if (huidigeLijst.url && url === huidigeLijst.url) return;
+    if (url === laatsteUrl) return;
+    laatsteUrl = url;
     teken();
   };
   addEventListener("hashchange", navigatie);
   addEventListener("popstate", navigatie);
+  laatsteUrl = "#" + location.hash.slice(1);
   teken();
 }
 

@@ -106,14 +106,15 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
       </table>`}
     </div>`;
 
-  const gewogen = data.events.filter((e) => e.behandeling && e.behandeling !== "nog te wegen").length;
+  const zwaar = data.events.filter((e) => e.zwaarte === "zwaar").length;
   const eventsHtml = `
     <div class="feitpaneel">
       <div class="feitkop">Events in de looptijd
-        <span class="feitmeta">behandeling vastgelegd voor ${gewogen} van ${data.events.length}</span></div>
+        <span class="feitmeta">${data.events.length} events, waarvan ${zwaar} zwaar &middot;
+          de weging komt uit de eventskalender</span></div>
       ${data.events.length === 0 ? `<p class="feitleeg">Geen events in deze looptijd.</p>` : `
       <table class="feittabel">
-        <thead><tr><th>Datum</th><th>Tijdstip</th><th>Event</th><th>Zwaarte</th><th>Behandeling</th></tr></thead>
+        <thead><tr><th>Datum</th><th>Tijdstip</th><th>Event</th><th>Soort</th><th>Zwaarte</th><th>Notities</th></tr></thead>
         <tbody>${data.events.map((e) => {
           const om = e.tijdstip ? inBrussel(e.datum, e.tijdstip, e.tijdzone || "Europe/Brussels") : null;
           return `
@@ -121,10 +122,10 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
             <td>${toonDatum(e.datum)}</td>
             <td>${om ? `${om.tijd} <span class="zonetekst">${om.afkorting}</span>` : "—"}</td>
             <td class="feitnaam">${ontsnap(e.naam)}</td>
+            <td>${ontsnap(e.soort || "—")}</td>
             <td>${badge(e.zwaarte || "niet gewogen",
                         e.zwaarte === "zwaar" ? "rood" : e.zwaarte === "middel" ? "oranje" : "grijs")}</td>
-            <td>${e.behandeling === "nog te wegen"
-                  ? `<span class="faint">nog te wegen</span>` : ontsnap(e.behandeling || "—")}</td>
+            <td class="feitnoot">${e.notities ? ontsnap(e.notities) : `<span class="faint">—</span>`}</td>
           </tr>`;
         }).join("")}</tbody>
       </table>`}

@@ -15,11 +15,18 @@ import { stand, startMoment, versturen, uitkomst as gonogoUitkomst } from "./gon
 import { openPosities, haalRapport, neemRapportAan, laatsteRapport } from "./lynx.js";
 import { stappenVoor } from "./proces.js";
 import { sjablonen, importeer as importeerVoorwaarden } from "./voorwaarden.js";
-import { overzicht } from "./besluit.js";
-import { voorstellen } from "./afloop.js";
+import { overzicht, bewaarChartlezing } from "./besluit.js";
+import { onverdeeld, wijsToe, verstuurPublicatie, conceptberichten } from "./spiegel.js";
 import { neemStand, stand as brugstand, zetInstellingen } from "./brug.js";
 import { favorieten, favorietToevoegen, favorietWijzigen, favorietWeg,
          favorietenVolgorde, bezoeken, bezoekBijzetten, bezoekenLeeg } from "./navigator.js";
+import { draai, motorstand, naWijziging } from "./motor.js";
+import { wachtrij, beantwoord, stand as wachtrijstand } from "./wachtrij.js";
+import { conceptUitKaart, vraagNalezen, geefVrij, stuurTerug } from "./bericht.js";
+import { achterstand, inWoorden } from "./achterstand.js";
+import { huidig as barometer, stelVast } from "./barometer.js";
+import { stroom } from "./stroom.js";
+import { tedoen } from "./stappen.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
@@ -122,16 +129,44 @@ async function meta(env) {
 export default {
   async fetch(request, env, ctx) {
     try {
-      return await behandel(request, env);
+      return await behandel(request, env, ctx);
     } catch (fout) {
       // Een onverwachte fout mag nooit als Cloudflare-foutpagina terugkomen:
       // dan weet je niet wat er stuk is.
       return json({ fout: `Er ging iets mis: ${fout.message}` }, 500);
     }
   },
+
+  // De cron. Eén keer per uur draait de motor een ronde: de klok schrijft wat
+  // er niet gebeurde, de weger maakt kaarten van wat er wel gebeurde.
+  //
+  // Dit is het enige dat zonder mens draait, en het doet met opzet maar één
+  // ding: gebeurtenissen stempelen. Er gaat hier niets naar de broker, er wordt
+  // niets verstuurd en er wordt niets gewist. Een kaart is een vraag aan ons;
+  // het antwoord blijft mensenwerk.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil((async () => {
+      try {
+        const verslag = await draai(env, { nu: new Date(event.scheduledTime) });
+        console.log("motor", JSON.stringify(verslag));
+      } catch (fout) {
+        // Een ronde die omvalt mag de volgende niet meenemen. De cron komt
+        // over een uur gewoon terug.
+        console.log("motor mislukt:", fout.message);
+      }
+    })());
+  },
 };
 
-async function behandel(request, env) {
+async function behandel(request, env, ctx) {
+  // Een korte motorronde achter het antwoord aan. Het scherm hoeft er niet op te
+  // wachten, maar als je een beoordelingsmoment op 'blind inzenden' zet omdat het
+  // gesprek nú begint, staat de kaart er een seconde later — niet pas als de
+  // cron langskomt.
+  const naSchrijven = (tabel) => {
+    if (!ctx || typeof ctx.waitUntil !== "function") return;
+    ctx.waitUntil(naWijziging(env, tabel).catch(() => null));
+  };
   {
     const url = new URL(request.url);
     const pad = url.pathname;
@@ -229,6 +264,7 @@ async function behandel(request, env) {
           const body = await request.json().catch(() => ({}));
           const gemaakt = await maakAan(env, ik, lijstPad[1], body);
           if (gemaakt.fout) return json(gemaakt, gemaakt.status || 400);
+          naSchrijven(lijstPad[1]);
           return json(gemaakt, 201);
         }
         if (request.method !== "GET") return json({ fout: "Deze methode bestaat niet." }, 405);
@@ -258,8 +294,162 @@ async function behandel(request, env) {
         return json({ rapport: r || null });
       }
 
-      if (pad === "/api/lynx/afloop" && request.method === "GET") {
-        return json(await voorstellen(env));
+
+      // De wachtrij: wat er nu van ons gevraagd wordt. Zonder cyclus: alles.
+      // Dit is een vraag, geen opgeslagen lijst — de prioriteit en de tekst
+      // worden bij elke aanroep opnieuw afgeleid, omdat ze met de tijd mee
+      // veranderen.
+      if (pad === "/api/wachtrij" && request.method === "GET") {
+        const c = url.searchParams.get("cyclus");
+        return json(await wachtrij(env, ik, {
+          cyclus: c ? Number(c) : null,
+          van: url.searchParams.get("van") === "mij" ? "mij" : "alles",
+        }));
+      }
+
+      // Of er iets veranderd is. Klein genoeg om elke tien seconden te stellen;
+      // het scherm haalt de volle wachtrij pas op als het antwoord anders is.
+      if (pad === "/api/wachtrij/stand" && request.method === "GET") {
+        const c = url.searchParams.get("cyclus");
+        const [rij, motor] = await Promise.all([
+          wachtrijstand(env, ik, { cyclus: c ? Number(c) : null }),
+          motorstand(env),
+        ]);
+
+        // Het vangnet. De brug is de klok, maar een klok die stilstaat moet
+        // iemand merken — en als jij naar de werkbank kijkt, ben jij die
+        // iemand. Deze peiling komt elke tien seconden langs; is de brug stil,
+        // dan houdt een openstaand scherm de motor draaiend.
+        //
+        // Achter het antwoord aan, zodat het scherm er niet op wacht. De ronde
+        // zelf beslist of er iets te doen valt.
+        if (ctx && typeof ctx.waitUntil === "function") {
+          ctx.waitUntil(draai(env, { aanleiding: "brug" }).catch(() => null));
+        }
+
+        return json({ ...rij, motor });
+      }
+
+      // Een kaart beantwoorden. Wegklikken is ook een antwoord: het zegt
+      // "gezien, en we doen niets", en het blijft staan. Er is geen route die
+      // een kaart wist.
+      const kaartAntwoord = pad.match(/^\/api\/wachtrij\/(\d+)\/antwoord$/);
+      if (kaartAntwoord && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const uit = await beantwoord(env, ik, Number(kaartAntwoord[1]), {
+          knop: body.knop ? Number(body.knop) : null,
+          doel: body.doel || null,
+          reden: body.reden || null,
+          tot: body.tot || null,
+        });
+        if (uit.fout) return json(uit, uit.status || 400);
+        return json(uit);
+      }
+
+      // De werkbank opent op één cyclus: de lopende. Welke dat is hoort het
+      // scherm niet zelf te raden uit een lijst.
+      if (pad === "/api/werkbank/cycli" && request.method === "GET") {
+        const cycli = (await env.DB.prepare(
+          `select id, label, status, geopend_op from cyclus
+            where archief = 0 and status not in ('afgesloten', 'geannuleerd')
+            order by geopend_op desc`
+        ).all()).results;
+        return json({ cycli });
+      }
+
+      // Wat er in deze cyclus nog te doen staat: de stappen van het proces die
+      // nog niet af zijn. Geen kaarten — een stap is een toestand die zichzelf
+      // oplost, geen vraag die om een antwoord vraagt. Zie worker/stappen.js.
+      const tedoenRoute = pad.match(/^\/api\/cyclus\/(\d+)\/tedoen$/);
+      if (tedoenRoute && request.method === "GET") {
+        return json(await tedoen(env, Number(tedoenRoute[1])));
+      }
+
+      // De stroom van een cyclus: wat er gebeurde, nieuwste eerst.
+      const stroomRoute = pad.match(/^\/api\/cyclus\/(\d+)\/stroom$/);
+      if (stroomRoute && request.method === "GET") {
+        const n = Number(url.searchParams.get("limiet")) || 40;
+        return json({ stroom: await stroom(env, Number(stroomRoute[1]), Math.min(n, 200)) });
+      }
+
+      // De barometer van een cyclus: wat wij vastgesteld hebben, en wat de leden
+      // ervan weten. Twee velden, met opzet — zolang ze verschillen loopt er
+      // een achterstand, en die hoort niet weggerekend te worden tot één getal.
+      const baro = pad.match(/^\/api\/cyclus\/(\d+)\/barometer$/);
+      if (baro && request.method === "GET") {
+        return json(await barometer(env, Number(baro[1])));
+      }
+      if (baro && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const uit = await stelVast(env, ik, {
+          cyclus: Number(baro[1]),
+          stand: body.stand, venster: body.venster, reden: body.reden,
+          gebeurtenis: body.gebeurtenis ? Number(body.gebeurtenis) : null,
+        });
+        if (uit.fout) return json(uit, uit.status || 400);
+        return json(uit);
+      }
+
+      // De achterstand: hoe lang weten wij iets dat de leden niet weten. De ene
+      // blijvende meter van de werkbank, en de enige maat waarin de leden
+      // voorkomen. Afgeleid, nooit bijgehouden.
+      if (pad === "/api/achterstand" && request.method === "GET") {
+        const c = url.searchParams.get("cyclus");
+        const a = await achterstand(env, { cyclus: c ? Number(c) : null });
+        return json({ ...a, zin: inWoorden(a) });
+      }
+
+      // Van kaart naar concept. Het sjabloon staat in beheer, niet in de code.
+      // Twee keer drukken levert hetzelfde concept op, geen tweede.
+      const kaartConcept = pad.match(/^\/api\/wachtrij\/(\d+)\/concept$/);
+      if (kaartConcept && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const uit = await conceptUitKaart(env, ik, Number(kaartConcept[1]), body.sjabloon || null);
+        if (uit.fout) return json(uit, uit.status || 400);
+        return json(uit);
+      }
+
+      // Nalezen: de vraag gaat als kaart naar de wachtrij van de lezer. Er is
+      // geen aparte postbus — er is één rij, en dit staat erin.
+      const bericht = pad.match(/^\/api\/publicatie\/(\d+)\/(nalezen|vrijgeven|terug)$/);
+      if (bericht && request.method === "POST") {
+        const id = Number(bericht[1]);
+        const body = await request.json().catch(() => ({}));
+        const uit = bericht[2] === "nalezen" ? await vraagNalezen(env, ik, id, body.lezer)
+                  : bericht[2] === "vrijgeven" ? await geefVrij(env, ik, id)
+                  : await stuurTerug(env, ik, id, body.reden);
+        if (uit.fout) return json(uit, uit.status || 400);
+        return json(uit);
+      }
+
+      // De posities die bij geen cyclus horen, en het toewijzen ervan. Dat is
+      // het enige wat een mens nog doet aan de brokerkant: zeggen waar een
+      // contract bij hoort, of dat het er niet bij hoort.
+      if (pad === "/api/posities/onverdeeld" && request.method === "GET") {
+        const cycli = (await env.DB.prepare(
+          `select id, label, status from cyclus
+            where archief = 0 and status <> 'afgesloten' order by geopend_op desc`
+        ).all()).results;
+        return json({ posities: await onverdeeld(env), cycli });
+      }
+      const toewijzen = pad.match(/^\/api\/posities\/(\d+)\/cyclus$/);
+      if (toewijzen && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const uit = await wijsToe(env, ik, Number(toewijzen[1]), body.cyclus, Boolean(body.buiten));
+        if (uit.fout) return json(uit, uit.status || 400);
+        return json(uit);
+      }
+
+      // Het bericht aan de leden. Versturen is onomkeerbaar, dus het is een
+      // eigen handeling met een eigen knop — geen gevolg van een gevuld veld.
+      if (pad === "/api/publicaties/concept" && request.method === "GET") {
+        return json({ berichten: await conceptberichten(env) });
+      }
+      const versturen = pad.match(/^\/api\/publicaties\/(\d+)\/versturen$/);
+      if (versturen && request.method === "POST") {
+        const uit = await verstuurPublicatie(env, ik, Number(versturen[1]));
+        if (uit.fout) return json(uit, uit.status || 400);
+        return json(uit);
       }
 
       // Favorieten en geschiedenis: de twee tabbladen van de navigator. Altijd
@@ -379,12 +569,18 @@ async function behandel(request, env) {
       }
 
       // Het materiaal voor het gesprek, en de uitkomst die eruit volgt.
-      const besluitPad = pad.match(/^\/api\/besluit\/(\d+)(?:\/(uitkomst))?$/);
+      const besluitPad = pad.match(/^\/api\/besluit\/(\d+)(?:\/(uitkomst|chart))?$/);
       if (besluitPad) {
         const momentId = Number(besluitPad[1]);
         if (!besluitPad[2] && request.method === "GET") {
           const uit = await overzicht(env, ik, momentId);
           if (uit.fout) return json({ fout: uit.fout }, uit.status || 400);
+          return json(uit);
+        }
+        if (besluitPad[2] === "chart" && request.method === "POST") {
+          const body = await request.json().catch(() => ({}));
+          const uit = await bewaarChartlezing(env, ik, momentId, body);
+          if (uit.fout) return json(uit, uit.status || 400);
           return json(uit);
         }
         if (besluitPad[2] === "uitkomst" && request.method === "POST") {
@@ -394,6 +590,7 @@ async function behandel(request, env) {
           if (!m) return json({ fout: "Geen besluit met dat nummer." }, 404);
           const uit = await gonogoUitkomst(env, ik, m.cyclus, body, momentId);
           if (uit.fout) return json(uit, uit.status || 400);
+          naSchrijven("beoordelingsmoment");
           return json(uit);
         }
         return json({ fout: "Deze methode bestaat niet." }, 405);
@@ -416,6 +613,8 @@ async function behandel(request, env) {
           const doen = wat === "moment" ? startMoment : wat === "versturen" ? versturen : gonogoUitkomst;
           const uitkomst = await doen(env, ik, cyclusId, body);
           if (uitkomst.fout) return json(uitkomst, uitkomst.status || 400);
+          // Het gesprek begint nu: de kaarten horen er nu te staan.
+          naSchrijven("beoordelingsmoment");
           return json(uitkomst);
         }
         return json({ fout: "Deze methode bestaat niet." }, 405);
@@ -432,6 +631,7 @@ async function behandel(request, env) {
         const body = await request.json().catch(() => ({}));
         const uitkomst = await wijzig(env, ik, recordPad[1], Number(recordPad[2]), body);
         if (uitkomst.fout) return json(uitkomst, uitkomst.status || 400);
+        naSchrijven(recordPad[1]);
         return json(uitkomst);
       }
 
@@ -441,6 +641,7 @@ async function behandel(request, env) {
         const body = await request.json().catch(() => ({}));
         const uit = await samen(env, ik, samenPad[1], body.ids || [], body.velden || {}, body.revisies || {});
         if (uit.fout) return json(uit, uit.status || 400);
+        naSchrijven(samenPad[1]);
         return json(uit);
       }
 
@@ -452,6 +653,7 @@ async function behandel(request, env) {
         if (!ids.length) return json({ fout: "Geen records opgegeven." }, 400);
         const uitkomst = await archiveer(env, ik, archiefPad[1], ids, body.reden);
         if (uitkomst.fout) return json({ fout: uitkomst.fout }, uitkomst.status || 400);
+        naSchrijven(archiefPad[1]);
         return json(uitkomst);
       }
 

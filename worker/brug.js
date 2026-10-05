@@ -4,6 +4,9 @@
 // meteen hierheen. Dit bestand neemt dat aan, bewaart het, en vertelt de
 // schermen hoe vers het is. Eén kant op: er gaat niets terug naar de broker.
 
+import { spiegel } from "./spiegel.js";
+import { draai } from "./motor.js";
+
 const getal = (w) => (Number.isFinite(Number(w)) ? Number(w) : null);
 const kort = (w, n = 200) => (w === null || w === undefined ? null : String(w).slice(0, n));
 
@@ -122,14 +125,82 @@ export async function neemStand(env, pakket = {}) {
   }
 
   await env.DB.batch(werk);
+
+  // Elke stand die binnenkomt wordt meteen naast de aangekondigde voornemens
+  // gelegd. Dáár zit het verschil met wachten tot iemand een scherm opent: je
+  // rolt bij Lynx, en een seconde later staat de nieuwe tranche in de cockpit
+  // klaar om te publiceren. Mislukt het, dan mag dat de zending niet laten
+  // falen — de brug moet door, en de volgende push probeert het opnieuw.
+  // De cockpit spiegelt wat er binnenkomt: wat opent bestaat, wat verdwijnt
+  // gaat dicht, met de prijzen uit de uitvoeringen. Er valt niets te duiden en
+  // niemand hoeft iets te bevestigen. Mislukt het, dan mag dat de zending niet
+  // laten falen — de volgende push haalt het in.
+  let gespiegeld = null;
+  try {
+    gespiegeld = await spiegel(env, { id: null },
+      await brugPosities(env), await brugUitvoeringen(env));
+  } catch { /* de stand is binnen; spiegelen kan bij de volgende push */ }
+
+  // En meteen de motor. Dit is de klok van het systeem geworden: er is geen
+  // cron meer, de hartslag van de brug komt elke tien seconden langs en dat is
+  // tweehonderdveertig keer zo fijn als een uurronde.
+  //
+  // Wegen gebeurt bij elke tik — dat is goedkoop. De rondgang langs de kalender
+  // en alle toestandsvragen hoogstens elke 'motor_rondgang_seconden'; de ronde
+  // beslist dat zelf. Mislukken mag de zending nooit laten falen: de brug moet
+  // door, en de volgende tik haalt het in.
+  try {
+    await draai(env, { aanleiding: "brug" });
+  } catch { /* de volgende push of de cron haalt het in */ }
+
   // Het antwoord draagt de instellingen: zo haalt de brug ze op zonder dat er
   // ooit iets naar hem toe gestuurd hoeft te worden.
   return {
     ok: true,
     posities: posities.length,
     gebeurtenissen: gebeurtenissen.length,
+    gespiegeld,
     instellingen: alsKaart(await instellingen(env)),
   };
+}
+
+// ---------------------------------------------------------------------------
+// De stroom in dezelfde vorm als het rapport.
+//
+// De herkenning en het voornemen hoeven niet te weten of ze naar de brug of
+// naar een Flex-rapport kijken: ze krijgen posities en uitvoeringen. Wat de
+// brug stuurt wordt hier in die vorm gegoten. Strike en expiratie staan niet op
+// een uitvoering maar wél op de positie die eruit ontstond; die worden er dus
+// bij gezocht op contractnummer.
+
+export async function brugPosities(env) {
+  const r = await env.DB.prepare(
+    `select conid, contract, onderliggend, strike, expiratiedatum, aantal
+       from brokerpositie where aantal <> 0`
+  ).all();
+  return r.results.map((p) => ({
+    conid: p.conid, contract: p.contract, onderliggend: p.onderliggend,
+    strike: p.strike, expiratiedatum: p.expiratiedatum,
+    aantal: Math.abs(Number(p.aantal) || 0) || null,
+  }));
+}
+
+export async function brugUitvoeringen(env) {
+  const r = await env.DB.prepare(
+    `select g.conid, g.contract, g.richting, g.aantal, g.prijs, g.moment,
+            p.strike, p.expiratiedatum, p.onderliggend
+       from brokergebeurtenis g
+       left join brokerpositie p on p.conid = g.conid
+      where g.richting in ('koop', 'verkoop')
+      order by g.moment, g.id`
+  ).all();
+  return r.results.map((g) => ({
+    conid: g.conid, contract: g.contract, onderliggend: g.onderliggend,
+    richting: g.richting, soort: null,
+    aantal: Math.abs(Number(g.aantal) || 0) || null,
+    prijs_pt: g.prijs, strike: g.strike, expiratiedatum: g.expiratiedatum,
+    moment: g.moment, datum: String(g.moment || "").slice(0, 10) || null,
+  }));
 }
 
 // Wat de schermen lezen: de stand én hoe vers hij is. Die twee horen bij

@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werkbank — mockup 2</title>
+<style>
+:root {
+  --navbg: #0B425F;  --navbg2: #08293D; --navact: #136289;
+  --navtxt: #CFE0EA; --navdim: #7FA6BC;
+  --cream: #F7F6F3;  --b1: #E8E6E1;     --b2: #F0EEEA;
+  --head: #F2F0EC;   --soft: #FAF9F6;
+  --ink: #0F0E0D;    --ink2: #3A3835;   --ink3: #4A4845;
+  --mut: #6E6C68;    --dim: #8A8884;    --faint: #A5A29C;
+  --blue: #136289;   --bluebg: #E6EEF3;
+  --grn: #1F5E45;    --grnbg: #DCEBE2;
+  --amb: #8A5A12;    --ambbg: #F7E7C6;
+  --red: #9A3227;    --redbg: #F7E0DC;
+  /* De vijf standen. Fel, want dit is de meter die in één oogopslag moet
+     kloppen — de rest van het scherm blijft gedempt. */
+  --s1: #D7261E;  --s2: #F26A21;  --s3: #FBC02D;  --s4: #8DC63F;  --s5: #0A9D4E;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; }
+body { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 13px; color: var(--ink); background: var(--cream); }
+#app { display: flex; flex-direction: column; min-height: 100vh; }
+
+.appbar { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; background: var(--navbg2); color: #fff; }
+.appbar .merk { font-size: 14px; font-weight: 700; }
+.appbar .sub { font-size: 12px; color: var(--navdim); }
+.appbar .rechts { margin-left: auto; display: flex; align-items: center; gap: 9px; font-size: 12.5px; }
+.bol { width: 24px; height: 24px; border-radius: 50%; background: var(--navact); display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700; }
+
+.romp { display: flex; flex-grow: 1; min-height: 0; }
+.menu { width: 230px; flex-shrink: 0; background: var(--navbg); padding-top: 10px; }
+.navkop { padding: 10px 10px 8px 14px; font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--navdim); }
+.navregel { display: block; padding: 8px 14px; color: var(--navtxt); text-decoration: none; font-size: 13.5px; }
+.navregel.actief { background: var(--navact); color: #fff; }
+.inhoud { flex: 1 1 auto; min-width: 0; }
+
+.knop { box-sizing: border-box; height: 30px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 14px; border-radius: 2px; font-family: inherit; font-size: 12.5px; font-weight: 600; line-height: 1; cursor: pointer; color: #fff; background: var(--blue); border: 1px solid var(--blue); }
+.knop.tweede { color: var(--ink2); background: #fff; border-color: #D8D5CE; font-weight: 400; }
+.knop.tweede:hover { border-color: var(--blue); color: var(--blue); }
+.knop[disabled] { opacity: .45; cursor: default; }
+
+.werkbank { padding: 18px 20px 48px; max-width: 1020px; display: flex; flex-direction: column; gap: 16px; }
+.wbtop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cycluskies { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 10px; border: 1px solid #D8D5CE; background: #fff; border-radius: 2px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.cycluskies .pijl { color: var(--dim); font-size: 11px; }
+.achter { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+.achter .stip { width: 9px; height: 9px; border-radius: 50%; background: var(--grn); }
+.achter.wacht { color: var(--amb); } .achter.wacht .stip { background: var(--amb); }
+.achter.bij { color: var(--grn); }
+
+.paneel { background: #fff; border: 1px solid var(--b1); border-radius: 4px; }
+.paneelkop { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--b2); font-size: 13px; font-weight: 700; }
+.paneelkop .meta { margin-left: auto; font-size: 11.5px; font-weight: 400; color: var(--mut); }
+.paneelbody { padding: 14px; }
+
+/* ── suggestie-banner ── */
+.suggestie { display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: var(--ambbg); border-bottom: 1px solid #E6D3A8; font-size: 12.5px; color: var(--amb); font-weight: 600; }
+.suggestie .vk { width: 13px; height: 13px; border: 2px dashed currentColor; border-radius: 2px; flex-shrink: 0; }
+
+/* ── venster: zes rechthoekjes ── */
+.vensterrij { display: flex; gap: 6px; }
+.vhok {
+  flex: 1 1 0; min-width: 0; border: 1px solid var(--b1); background: var(--soft);
+  border-radius: 3px; padding: 11px 10px 12px; cursor: pointer; text-align: left;
+  font-family: inherit; display: flex; flex-direction: column; gap: 3px;
+}
+.vhok .nm { font-size: 12px; font-weight: 600; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vhok .wn { font-size: 10.5px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vhok.gehad { background: #fff; } .vhok.gehad .nm { color: var(--mut); }
+.vhok.nu { background: var(--navbg); border-color: var(--navbg); }
+.vhok.nu .nm { color: #fff; font-weight: 700; } .vhok.nu .wn { color: var(--navdim); }
+.vhok.tip { border: 2px dashed var(--amb); background: #fff; }
+.vhok.tip .nm { color: var(--amb); }
+.vhok.gekozen { border: 2px solid var(--blue); background: var(--bluebg); }
+.vhok.gekozen .nm { color: var(--blue); font-weight: 700; } .vhok.gekozen .wn { color: var(--blue); }
+.vhok:hover { border-color: var(--blue); }
+
+/* ── onderrand van een meterpaneel: wat we van een lid vragen + publiceren ── */
+.meterfoot { display: flex; align-items: center; gap: 12px; margin-top: 13px; padding-top: 12px; border-top: 1px solid var(--b2); flex-wrap: wrap; }
+.vraag { flex: 1 1 260px; min-width: 0; font-size: 12.5px; color: var(--ink3); line-height: 1.45; }
+.vraag .lbl { display: block; font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin-bottom: 2px; }
+.gepub { font-size: 11.5px; color: var(--mut); }
+
+/* ── barometer ── */
+.meterrij { display: grid; grid-template-columns: 310px 1fr; gap: 18px; align-items: center; }
+.gauge { position: relative; }
+.gauge svg { display: block; width: 100%; height: auto; }
+.gauge .seg { cursor: pointer; }
+.gauge .seg:hover { opacity: .82; }
+.gaugetekst { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; }
+.gaugenaam { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.gaugeonder { font-size: 11px; color: var(--mut); }
+.legenda { display: flex; flex-direction: column; gap: 5px; }
+.lreg { display: flex; align-items: center; gap: 9px; padding: 5px 8px; border-radius: 3px; border: 1px solid transparent; cursor: pointer; font-size: 12.5px; color: var(--ink2); }
+.lreg:hover { background: var(--soft); }
+.lreg .vlak { width: 15px; height: 15px; border-radius: 3px; flex-shrink: 0; }
+.lreg .nm { font-weight: 600; min-width: 108px; }
+.lreg .om { color: var(--mut); font-size: 12px; }
+.lreg.nu { background: var(--b2); }
+.lreg.tip { border-color: var(--amb); border-style: dashed; }
+.lreg.gekozen { border-color: var(--blue); border-style: solid; background: var(--bluebg); }
+
+/* ── één vak voor venster en barometer ── */
+.deel { padding-bottom: 16px; }
+.deel + .deel { padding-top: 16px; border-top: 1px solid var(--b2); }
+.deel:last-child { padding-bottom: 0; }
+.deelkop { display: flex; align-items: baseline; gap: 9px; margin-bottom: 10px; }
+.dtitel { font-size: 13px; font-weight: 700; }
+.dmeta { font-size: 11.5px; color: var(--mut); }
+.dkent { margin-left: auto; font-size: 11.5px; color: var(--mut); }
+.deelvraag { margin: 11px 0 0; font-size: 12.5px; color: var(--ink3); line-height: 1.45; }
+.deelvraag::before { content: "Leden horen: "; font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+
+/* De barometer slaapt tot wij in positie zitten. Niet verborgen — je moet
+   kunnen zien dat hij bestaat en waarom hij nog niets zegt. */
+.slaapt { display: none; font-size: 12.5px; color: var(--mut); background: var(--soft); border: 1px solid var(--b1); border-radius: 3px; padding: 9px 12px; margin-bottom: 10px; }
+.deel.uit .slaapt { display: block; }
+.deel.uit .meterrij { opacity: .32; filter: grayscale(1); pointer-events: none; }
+.deel.uit .deelvraag, .deel.uit .dkent { display: none; }
+
+.publiceerbalk { display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: var(--soft); border-top: 1px solid var(--b1); }
+.pubtekst { flex: 1 1 auto; min-width: 0; font-size: 12.5px; color: var(--mut); }
+.pubtekst b { color: var(--ink); font-weight: 600; }
+
+/* ── posities ── */
+.posnaam { font-size: 13px; font-weight: 600; }
+.posonder { font-size: 11px; color: var(--mut); font-variant-numeric: tabular-nums; }
+.spoorbalk { position: relative; height: 22px; border-radius: 3px; overflow: visible; display: flex; gap: 0; }
+.spoorbalk .z { flex: 1 1 0; }
+.spoorbalk .z:first-child { border-radius: 3px 0 0 3px; } .spoorbalk .z:last-child { border-radius: 0 3px 3px 0; }
+.merker { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--ink); border-radius: 2px; box-shadow: 0 0 0 2px #fff; }
+.merkerlab { position: absolute; top: -20px; transform: translateX(-50%); font-size: 10.5px; font-weight: 700; white-space: nowrap; color: var(--ink); }
+.posstand { text-align: right; }
+.badge { display: inline-flex; align-items: center; height: 19px; padding: 0 8px; border-radius: 3px; font-size: 10.5px; font-weight: 700; color: #fff; white-space: nowrap; }
+.posdicht { opacity: .4; }
+.schaalrij { display: grid; grid-template-columns: 210px 1fr 92px; gap: 14px; padding: 2px 14px 10px; }
+.schaal { display: flex; justify-content: space-between; font-size: 10px; color: var(--faint); grid-column: 2; }
+.zwakste { padding: 10px 14px; border-top: 1px solid var(--b2); font-size: 12.5px; color: var(--ink3); background: var(--soft); }
+.zwakste b { font-weight: 600; }
+
+/* ── het detail onder een positie ── */
+.posblok { border-bottom: 1px solid var(--b2); }
+.posblok:last-child { border-bottom: none; }
+.posblok.uitgeklapt { background: var(--soft); }
+.pos { width: 100%; border: 0; background: none; font-family: inherit; text-align: left; cursor: pointer; }
+.pos { display: grid; grid-template-columns: 210px 1fr 92px; gap: 14px; align-items: center; padding: 12px 14px; border-bottom: none; }
+.pos:hover { background: var(--soft); }
+.poslinks { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.chev { color: var(--dim); font-size: 11px; width: 10px; flex-shrink: 0; }
+
+.detail { padding: 2px 14px 16px 36px; }
+.dkolommen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--b1); border: 1px solid var(--b1); border-radius: 4px; overflow: hidden; }
+.dvak { background: #fff; padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.dkop { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+.dfeiten { display: grid; grid-template-columns: 1fr 1fr; gap: 11px 16px; }
+.dfeiten.dkolom { grid-template-columns: 1fr; gap: 8px; }
+.dfeit { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.dlab { font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); }
+.dwaarde { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.dnoot { font-size: 11px; color: var(--mut); }
+.dtekst { font-size: 13px; font-weight: 600; color: var(--ink); }
+
+.dbalkrij { display: grid; grid-template-columns: 86px 1fr 34px; gap: 9px; align-items: center; }
+.dbalklab { font-size: 11px; color: var(--mut); }
+.dbalk { height: 7px; border-radius: 4px; background: var(--b2); overflow: hidden; }
+.dbalk i { display: block; height: 100%; border-radius: 4px; }
+.dbalkpct { font-size: 11px; color: var(--ink2); text-align: right; font-variant-numeric: tabular-nums; }
+
+.duitleg { margin: 0; font-size: 12px; color: var(--ink3); line-height: 1.5; }
+.duitleg b { font-weight: 600; }
+.dgrens { padding-top: 9px; border-top: 1px solid var(--b2); color: var(--mut); }
+.dlet { color: var(--amb); }
+.dmerk { font-size: 11.5px; color: var(--mut); background: var(--soft); border: 1px solid var(--b1); border-radius: 3px; padding: 6px 9px; line-height: 1.4; }
+.dmerk.dlet { color: var(--amb); background: var(--ambbg); border-color: #E6D3A8; }
+.dmerk.dblauw { color: var(--blue); background: var(--bluebg); border-color: #CFE0EA; }
+
+.dregels { display: flex; flex-direction: column; gap: 5px; margin-top: 2px; padding-top: 9px; border-top: 1px solid var(--b2); }
+.dregel { display: flex; gap: 9px; font-size: 11.5px; color: var(--ink2); line-height: 1.4; }
+.dtijd { flex-shrink: 0; width: 76px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.dregel.dmist { color: var(--amb); } .dregel.dmist .dtijd { color: var(--amb); font-weight: 600; }
+.dknoppen { display: flex; gap: 8px; margin-top: auto; padding-top: 4px; }
+
+@media (max-width: 1180px) { .dkolommen { grid-template-columns: 1fr; } .detail { padding-left: 14px; } }
+
+/* ── kaarten + verstuurd, één kader, twee kolommen ── */
+.tweekolom { display: grid; grid-template-columns: 1fr 1fr; }
+.kolkop { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: var(--head); border-bottom: 1px solid var(--b1); font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mut); }
+.kolkop .n { margin-left: auto; font-weight: 600; color: var(--dim); letter-spacing: 0; text-transform: none; font-size: 11px; }
+.kol { border-right: 1px solid var(--b1); }
+.kol:last-child { border-right: none; }
+.koplinks { border-right: 1px solid var(--b1); }
+
+.kaart { padding: 12px 14px; border-bottom: 1px solid var(--b2); display: flex; flex-direction: column; gap: 8px; }
+.kaart:last-child { border-bottom: none; }
+.kaartkop { display: flex; align-items: center; gap: 8px; }
+.kaartkop h4 { margin: 0; font-size: 13.5px; font-weight: 600; flex: 1 1 auto; min-width: 0; }
+.pt { font-size: 9.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; white-space: nowrap; }
+.p-hoog { color: var(--red); background: var(--redbg); }
+.p-med { color: var(--amb); background: var(--ambbg); }
+.p-laag { color: var(--mut); background: var(--b2); }
+.kaart p { margin: 0; font-size: 12.5px; color: var(--mut); line-height: 1.45; }
+.feiten { display: flex; flex-wrap: wrap; gap: 3px 20px; background: var(--soft); border: 1px solid var(--b1); border-radius: 3px; padding: 8px 11px; }
+.feit { display: flex; flex-direction: column; gap: 1px; }
+.flab { font-size: 9.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.fwaarde { font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.kaartknoppen { display: flex; justify-content: flex-end; gap: 8px; }
+.omgezet { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--blue); background: var(--bluebg); border-radius: 3px; padding: 6px 9px; }
+
+.vreg { display: flex; align-items: flex-start; gap: 9px; padding: 10px 14px; border-bottom: 1px solid var(--b2); font-size: 12.5px; }
+.vreg:last-child { border-bottom: none; }
+.vreg .vink { color: var(--grn); font-weight: 700; line-height: 1.4; }
+.vreg .kern { flex: 1 1 auto; min-width: 0; }
+.vreg .kern b { display: block; font-weight: 600; color: var(--ink); font-size: 13px; }
+.vreg .kern span { color: var(--mut); }
+.vreg .tijd { font-size: 11px; color: var(--faint); white-space: nowrap; }
+.leeg { margin: 0; padding: 16px 14px; font-size: 12.5px; color: var(--mut); line-height: 1.5; }
+
+.noot { font-size: 11.5px; color: var(--mut); line-height: 1.55; margin: 0 2px; }
+.mockbalk { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 9px 20px; background: var(--head); border-bottom: 1px solid var(--b1); font-size: 12px; color: var(--mut); }
+.mockbalk strong { color: var(--ink2); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; }
+.mockknop { height: 26px; padding: 0 10px; border: 1px solid #D8D5CE; background: #fff; border-radius: 2px; font-family: inherit; font-size: 12px; cursor: pointer; color: var(--ink2); }
+.mockknop.aan { background: var(--navbg); border-color: var(--navbg); color: #fff; font-weight: 600; }
+
+@media (max-width: 980px) {
+  .menu { display: none; }
+  .meterrij { grid-template-columns: 1fr; }
+  .tweekolom { grid-template-columns: 1fr; }
+  .kol { border-right: none; border-bottom: 1px solid var(--b1); }
+  .pos, .schaalrij { grid-template-columns: 1fr; }
+  .schaal { grid-column: 1; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="appbar">
+    <span class="merk">Delta Blueprint</span><span class="sub">Cockpit</span>
+    <span class="rechts"><span>Simon</span><span class="bol">SD</span></span>
+  </div>
+
+  <div class="mockbalk">
+    <strong>Mockup</strong>
+    <button class="mockknop aan" data-scene="suggestie">Systeem stelt iets voor</button>
+    <button class="mockknop" data-scene="rustig">Alles bij</button>
+    <span style="margin-left:8px">Klik in de meter of op een venstervakje om zelf te kiezen.</span>
+  </div>
+
+  <div class="romp">
+    <nav class="menu">
+      <div class="navkop">Cyclus</div>
+      <a class="navregel actief" href="#">Werkbank</a>
+      <a class="navregel" href="#">Cycli</a>
+      <a class="navregel" href="#">Posities</a>
+      <a class="navregel" href="#">Besluiten</a>
+      <div class="navkop">Leden</div>
+      <a class="navregel" href="#">Berichten</a>
+    </nav>
+
+    <main class="inhoud">
+      <div class="werkbank">
+
+        <div class="wbtop">
+          <button class="cycluskies">OESX okt 2026 <span class="pijl">▾</span></button>
+          <span class="achter" id="achter"><span class="stip"></span><span>…</span></span>
+        </div>
+
+        <!-- ─────────── wat de leden te zien krijgen: venster + barometer ─────────── -->
+        <section class="paneel">
+          <div class="paneelkop">Stand naar de leden<span class="meta">venster en barometer</span></div>
+
+          <div class="suggestie" id="vsug" hidden><span class="vk"></span><span id="vsugtekst"></span></div>
+          <div class="suggestie" id="bsug" hidden><span class="vk"></span><span id="bsugtekst"></span></div>
+
+          <div class="paneelbody">
+            <!-- venster bovenaan -->
+            <div class="deel">
+              <div class="deelkop"><span class="dtitel">Venster</span><span class="dmeta">voorbereidingstijd voor de leden</span><span class="dkent" id="vgepub"></span></div>
+              <div class="vensterrij" id="vensterrij"></div>
+              <p class="deelvraag" id="vvraag">—</p>
+            </div>
+
+            <!-- barometer eronder, pas actief als wij in positie zitten -->
+            <div class="deel" id="barodeel">
+              <div class="deelkop"><span class="dtitel">Barometer</span><span class="dmeta">wat wij van een lid vragen</span><span class="dkent" id="bgepub"></span></div>
+              <div class="slaapt" id="baroslaapt">Slaapt tot het venster op <b>In positie</b> staat — zolang wij er niet in zitten, vragen we de leden niets.</div>
+              <div class="meterrij" id="meterrij">
+                <div class="gauge">
+                  <svg viewBox="0 0 320 212" id="gauge" aria-label="Barometer"></svg>
+                  <div class="gaugetekst">
+                    <div class="gaugenaam" id="gnaam">—</div>
+                    <div class="gaugeonder" id="gonder">—</div>
+                  </div>
+                </div>
+                <div class="legenda" id="legenda"></div>
+              </div>
+              <p class="deelvraag" id="bvraag">—</p>
+            </div>
+          </div>
+
+          <div class="publiceerbalk">
+            <span class="pubtekst" id="pubtekst">Niets gekozen — de leden weten wat ze moeten weten.</span>
+            <button class="knop" id="pub" disabled>Publiceren</button>
+          </div>
+        </section>
+
+        <!-- ─────────── posities ─────────── -->
+        <section class="paneel">
+          <div class="paneelkop">Posities<span class="meta">spot 5 412 · 14:28 · de zwakste bepaalt de barometer</span></div>
+          <div id="posities"></div>
+          <div class="schaalrij"><span class="schaal"><span>onder de strike</span><span>+2 %</span><span>+4 %</span><span>+6 %</span><span>ruim</span></span></div>
+          <div class="zwakste" id="zwakste"></div>
+        </section>
+
+        <!-- ─────────── kaarten + verstuurd ─────────── -->
+        <section class="paneel">
+          <div class="paneelkop">Ledencommunicatie<span class="meta">wat er gebeurde, en wat de leden ervan weten</span></div>
+          <div class="tweekolom">
+            <div class="kol">
+              <div class="kolkop">Kaarten · veranderingen in een positie <span class="n" id="kaarttel"></span></div>
+              <div id="kaarten"></div>
+            </div>
+            <div class="kol">
+              <div class="kolkop">Verstuurd naar de leden <span class="n">deze cyclus</span></div>
+              <div id="verstuurd"></div>
+            </div>
+          </div>
+        </section>
+
+        <p class="noot">Een kaart ontstaat alleen uit een positie die opent, sluit of doorrolt. Barometer en venster maken geen kaarten — die verander je hierboven en publiceer je direct; ze verschijnen dan alleen rechts. Werk aan de cyclus gebeurt op het cyclusrecord en in de related lists, niet hier.</p>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+/* ───────────────────────── de vijf standen ─────────────────────────
+   Links rood, rechts groen — zoals een meter hoort te lopen. De stand is
+   afgeleid uit de afstand tot de strike van de zwakste open positie. */
+const STANDEN = [
+  { w: "onder",       nm: "Onder de strike", kl: "var(--s1)", om: "spot < strike",
+    vraag: "Paraat zijn. Er komt mogelijk een doorrol of een toewijzing." },
+  { w: "krap",        nm: "Krap",            kl: "var(--s2)", om: "< 2 % boven",
+    vraag: "Bereikbaar zijn. Geen nieuwe verplichtingen aangaan deze week." },
+  { w: "letop",       nm: "Let op",          kl: "var(--s3)", om: "2 – 4 % boven",
+    vraag: "Meelezen. De positie komt dichter bij de strike." },
+  { w: "comfortabel", nm: "Comfortabel",     kl: "var(--s4)", om: "4 – 6 % boven",
+    vraag: "Niets doen. Wij volgen het." },
+  { w: "ruim",        nm: "Ruim",            kl: "var(--s5)", om: "> 6 % boven",
+    vraag: "Niets. Deze maand hoeft er niets te gebeuren." },
+];
+
+const VENSTERS = [
+  { w: "pre_analyse",      nm: "Pre-analyse",      wn: "chart nog te lezen", vraag: "Niets. De leden horen hier nog niets van." },
+  { w: "besluit",          nm: "Besluit loopt",    wn: "beoordeling bezig",  vraag: "Niets. Wij kijken; er is nog geen instapmoment." },
+  { w: "opent_binnenkort", nm: "Opent binnenkort", wn: "deze week",          vraag: "Zorg dat er ruimte op de rekening staat — deze week mogelijk een instap." },
+  { w: "open",             nm: "Open",             wn: "instapmoment nu",    vraag: "Het instapmoment is nu. Volg je mee, dan is dit het moment." },
+  { w: "in_positie",       nm: "In positie",       wn: "wij zitten erin",    vraag: "Wij zitten erin. Vanaf hier zegt de barometer wat er van je gevraagd wordt." },
+  { w: "afgerond",         nm: "Afgerond",         wn: "niets meer te doen", vraag: "De cyclus is uit. Eén slotbericht over wat het opbracht." },
+];
+
+/* ── de posities. afstand in % van spot tot de strike ── */
+const SPOT = 5412;
+const POSITIES = [
+  { nm: "OESX 16OCT26 P5300", strike: 5300, afstand: 1.4, dagen: 11, looptijd: 45, premie: 38.5, nu: 21.0, ask: 21.0, bod: 20.2, iv: 18.4, ivOpen: 15.1,
+    aantal: 1, open: true, geopend: "30 sep 15:12", expiratie: "16 okt 2026", delta: -0.31,
+    stoploss: 77.0, eventregel: "Geen handeling rond de ECB van 9 okt — die stond in het besluit.",
+    wieVolgt: "Simon", besluit: "Besluit 2026-10 · tranche 1", afwijking: null,
+    gemeld: "4 okt 14:10 — “Wij zitten erin, 1 contract P5300.”" },
+  { nm: "OESX 16OCT26 P5150", strike: 5150, afstand: 4.8, dagen: 11, looptijd: 32, premie: 19.0, nu: 4.5,  ask: 4.5,  bod: 4.0,  iv: 16.9, ivOpen: 16.2,
+    aantal: 1, open: true, geopend: "4 okt 14:02", expiratie: "16 okt 2026", delta: -0.14,
+    stoploss: 38.0, eventregel: "Geen handeling rond de ECB van 9 okt.",
+    wieVolgt: "Simon", besluit: "Besluit 2026-10 · tranche 2", afwijking: 1, afwijkingKort: "slechtere fill, 19,0 i.p.v. 20,5",
+    gemeld: null },
+  { nm: "OESX 16OCT26 P5000", strike: 5000, afstand: 7.6, dagen: 11, looptijd: 32, premie: 11.0, nu: 1.5,  ask: 1.5,  bod: 1.1,  iv: 15.8, ivOpen: 15.8,
+    aantal: 1, open: true, geopend: "4 okt 14:08", expiratie: "16 okt 2026", delta: -0.06,
+    stoploss: 22.0, eventregel: "Geen handeling rond de ECB van 9 okt.",
+    wieVolgt: "Simon", besluit: "Doorrol uit P5100", afwijking: null, doorrolUit: "OESX 16OCT26 P5100 · −14,5",
+    gemeld: null },
+  { nm: "OESX 18SEP26 P5050", strike: 5050, afstand: null, dagen: 0, looptijd: 44, premie: 22.0, nu: 0.0,  ask: 0.0,  bod: 0.0,  iv: 0,    ivOpen: 14.4,
+    aantal: 1, open: false, geopend: "5 aug 10:30", expiratie: "18 sep 2026", delta: 0,
+    stoploss: 44.0, eventregel: "—", wieVolgt: "Simon", besluit: "Besluit 2026-09 · tranche 1",
+    afwijking: null, uitkomst: "Waardeloos geëxpireerd", gemeld: "18 sep 17:40 — “P5050 liep uit, +22,0 punten.”" },
+];
+
+// Welke stand hoort bij een afstand. De drempels staan straks in Instellingen,
+// niet in de code — hier even hard, want het is een mockup.
+function standVan(a) {
+  if (a === null) return null;
+  if (a < 0) return 0;
+  if (a < 2) return 1;
+  if (a < 4) return 2;
+  if (a < 6) return 3;
+  return 4;
+}
+const kom = (n) => n.toFixed(1).replace(".", ",");
+const zwakste = Math.min(...POSITIES.filter((p) => p.open).map((p) => standVan(p.afstand)));
+const zwakstePos = POSITIES.filter((p) => p.open).find((p) => standVan(p.afstand) === zwakste);
+
+/* ── de staat van het scherm ── */
+const S = {
+  baro:   { gepubliceerd: 4, nu: 4, tip: zwakste, gekozen: null },   // leden kennen 'Ruim'
+  venster:{ gepubliceerd: 4, nu: 4, tip: null,    gekozen: null },   // 'In positie' is gemeld
+};
+
+/* ───────────────────────── de meter ───────────────────────── */
+const CX = 160, CY = 158, RO = 132, RI = 74;
+const punt = (hoek, r) => {
+  const t = (hoek * Math.PI) / 180;
+  return [CX + r * Math.cos(t), CY - r * Math.sin(t)];
+};
+function sector(a0, a1, ro, ri) {
+  const [x1, y1] = punt(a0, ro), [x2, y2] = punt(a1, ro);
+  const [x3, y3] = punt(a1, ri), [x4, y4] = punt(a0, ri);
+  return `M${x1} ${y1}A${ro} ${ro} 0 0 1 ${x2} ${y2}L${x3} ${y3}A${ri} ${ri} 0 0 0 ${x4} ${y4}Z`;
+}
+
+// De barometer zegt pas iets zodra wij in positie zitten. Daarvoor is er geen
+// positie om een stand over te hebben, en daarna is de cyclus uit.
+const INPOSITIE = 4, AFGEROND = 5;
+const baroWakker = () => S.venster.nu === INPOSITIE;
+
+function tekenMeter() {
+  const wakker = baroWakker();
+  const deel = document.getElementById("barodeel");
+  deel.classList.toggle("uit", !wakker);
+  document.getElementById("baroslaapt").innerHTML = S.venster.nu > INPOSITIE
+    ? "De cyclus is afgerond. Er is geen positie meer om een stand over te hebben."
+    : "Slaapt tot het venster op <b>In positie</b> staat — zolang wij er niet in zitten, vragen we de leden niets.";
+
+  const toon = S.baro.gekozen ?? S.baro.nu;
+  let svg = "";
+  STANDEN.forEach((st, i) => {
+    const a0 = 180 - i * 36, a1 = a0 - 36;
+    const geselecteerd = S.baro.gekozen === i;
+    const voorgesteld = wakker && S.baro.tip === i && S.baro.gekozen === null && S.baro.tip !== S.baro.nu;
+    svg += `<path class="seg" data-stand="${i}" d="${sector(a0 - 1, a1 + 1, RO, RI)}" fill="${st.kl}"
+             opacity="${geselecteerd || voorgesteld || (S.baro.gekozen === null && i === toon) ? 1 : .72}"></path>`;
+    if (voorgesteld) svg += `<path d="${sector(a0 - 1, a1 + 1, RO + 5, RI - 5)}" fill="none" stroke="#8A5A12" stroke-width="2.5" stroke-dasharray="6 4"></path>`;
+    if (geselecteerd) svg += `<path d="${sector(a0 - 1, a1 + 1, RO + 5, RI - 5)}" fill="none" stroke="#136289" stroke-width="3"></path>`;
+  });
+  const h = 180 - (S.baro.nu + 0.5) * 36;
+  const [nx, ny] = punt(h, RO - 14);
+  const [bx, by] = punt(h + 90, 9), [cx2, cy2] = punt(h - 90, 9);
+  svg += `<path d="M${bx} ${by}L${nx} ${ny}L${cx2} ${cy2}Z" fill="#0F0E0D"></path>`;
+  svg += `<circle cx="${CX}" cy="${CY}" r="11" fill="#0F0E0D"></circle><circle cx="${CX}" cy="${CY}" r="4.5" fill="#fff"></circle>`;
+  document.getElementById("gauge").innerHTML = svg;
+
+  document.getElementById("gnaam").textContent = STANDEN[toon].nm;
+  document.getElementById("gonder").textContent =
+    !wakker ? "nog niet van toepassing"
+    : S.baro.gekozen !== null ? "gekozen — nog niet gepubliceerd"
+    : S.baro.nu === S.baro.gepubliceerd ? "de leden weten dit" : "nog niet gepubliceerd";
+
+  document.getElementById("legenda").innerHTML = STANDEN.map((st, i) => {
+    const kl = [
+      i === S.baro.nu ? "nu" : "",
+      wakker && S.baro.tip === i && S.baro.gekozen === null && S.baro.tip !== S.baro.nu ? "tip" : "",
+      S.baro.gekozen === i ? "gekozen" : "",
+    ].filter(Boolean).join(" ");
+    return `<button class="lreg ${kl}" data-stand="${i}">
+      <span class="vlak" style="background:${st.kl}"></span>
+      <span class="nm">${st.nm}</span><span class="om">${st.om}</span></button>`;
+  }).join("");
+
+  document.getElementById("bvraag").textContent = STANDEN[toon].vraag;
+  document.getElementById("bgepub").textContent = "Leden kennen: " + STANDEN[S.baro.gepubliceerd].nm;
+
+  const tip = wakker && S.baro.tip !== null && S.baro.tip !== S.baro.nu;
+  document.getElementById("bsug").hidden = !tip || S.baro.gekozen !== null;
+  if (tip) {
+    const pz = POSITIES.filter((x) => x.open).find((x) => standVan(x.afstand) === S.baro.tip);
+    document.getElementById("bsugtekst").innerHTML =
+      `Barometer: het systeem stelt <b>${STANDEN[S.baro.tip].nm}</b> voor — ${pz.nm} staat op ${kom(pz.afstand)} % van de strike. Klik de omstippelde stand en publiceer.`;
+  }
+}
+
+/* ───────────────────────── het venster ───────────────────────── */
+function tekenVenster() {
+  const toon = S.venster.gekozen ?? S.venster.nu;
+  document.getElementById("vensterrij").innerHTML = VENSTERS.map((v, i) => {
+    const kl = [
+      i < S.venster.nu ? "gehad" : "",
+      i === S.venster.nu && S.venster.gekozen === null ? "nu" : "",
+      S.venster.tip === i && S.venster.gekozen === null ? "tip" : "",
+      S.venster.gekozen === i ? "gekozen" : "",
+    ].filter(Boolean).join(" ");
+    return `<button class="vhok ${kl}" data-venster="${i}">
+      <span class="nm">${v.nm}</span><span class="wn">${v.wn}</span></button>`;
+  }).join("");
+  document.getElementById("vvraag").textContent = VENSTERS[toon].vraag;
+  document.getElementById("vgepub").textContent = "Leden kennen: " + VENSTERS[S.venster.gepubliceerd].nm;
+
+  const tip = S.venster.tip !== null && S.venster.tip !== S.venster.nu;
+  document.getElementById("vsug").hidden = !tip || S.venster.gekozen !== null;
+  if (tip) document.getElementById("vsugtekst").innerHTML =
+    `Venster: het systeem stelt <b>${VENSTERS[S.venster.tip].nm}</b> voor. Klik het omstippelde vakje en publiceer.`;
+}
+
+/* ── één knop voor allebei ──
+   Je kunt in dezelfde beweging het venster én de barometer verzetten; dan
+   gaat er één bericht uit over allebei. Dat is precies wat we willen. */
+function tekenPubliceer() {
+  const v = S.venster.gekozen, b = S.baro.gekozen;
+  const stukken = [];
+  if (v !== null) stukken.push(`venster naar <b>${VENSTERS[v].nm}</b>`);
+  if (b !== null) stukken.push(`barometer naar <b>${STANDEN[b].nm}</b>`);
+  document.getElementById("pubtekst").innerHTML = stukken.length
+    ? "Klaar om te publiceren: " + stukken.join(" en ") + "."
+    : "Klik een stand aan om hem te veranderen.";
+  document.getElementById("pub").disabled = stukken.length === 0;
+}
+
+function publiceer() {
+  if (S.venster.gekozen !== null) {
+    S.venster.nu = S.venster.gepubliceerd = S.venster.gekozen;
+    S.venster.gekozen = null; S.venster.tip = null;
+    VERSTUURD.unshift({ t: "Venster " + VENSTERS[S.venster.nu].nm.toLowerCase(), s: "\u201C" + VENSTERS[S.venster.nu].vraag + "\u201D", d: "zojuist" });
+    // Zodra wij in positie gaan, wordt de barometer wakker en stelt het
+    // systeem meteen de stand van de zwakste positie voor.
+    if (S.venster.nu === INPOSITIE) S.baro.tip = zwakste;
+  }
+  if (S.baro.gekozen !== null) {
+    S.baro.nu = S.baro.gepubliceerd = S.baro.gekozen;
+    S.baro.gekozen = null; S.baro.tip = S.baro.nu;
+    VERSTUURD.unshift({ t: "Barometer op " + STANDEN[S.baro.nu].nm, s: "\u201C" + STANDEN[S.baro.nu].vraag + "\u201D", d: "zojuist" });
+  }
+  teken();
+}
+
+/* ───────────────────────── het detail van een positie ─────────────────────────
+   Alles wat de cockpit over deze ene positie weet, op één plek. Geen nieuwe
+   gegevens: dit staat al in het record, de brug en het besluit — hier staat
+   het naast elkaar, zodat je het verband ziet zonder vier schermen open te
+   hebben. */
+const OPEN = new Set(["OESX 16OCT26 P5300"]);
+
+function detail(p) {
+  const resultaat = p.premie - p.ask;
+  const binnen = (resultaat / p.premie) * 100;
+  const verstreken = ((p.looptijd - p.dagen) / p.looptijd) * 100;
+  const breakeven = p.strike - p.premie;
+  const buffer = ((SPOT - breakeven) / SPOT) * 100;
+  const euro = (pt) => "€ " + Math.round(pt * 10 * p.aantal).toLocaleString("nl-BE");
+  const getal = (n) => n.toLocaleString("nl-BE");
+
+  const m = (l, w, n) => `<span class="dfeit"><span class="dlab">${l}</span><span class="dwaarde">${w}</span>${n ? `<span class="dnoot">${n}</span>` : ""}</span>`;
+  const t = (l, w) => `<span class="dfeit"><span class="dlab">${l}</span><span class="dtekst">${w}</span></span>`;
+  const balk = (lab, pct, kl, rechts) => `
+    <div class="dbalkrij"><span class="dbalklab">${lab}</span>
+      <span class="dbalk"><i style="width:${Math.max(0, Math.min(100, pct))}%;background:${kl}"></i></span>
+      <span class="dbalkpct">${rechts}</span></div>`;
+
+  return `<div class="detail">
+    <div class="dkolommen">
+
+      <div class="dvak">
+        <div class="dkop">Geld</div>
+        <div class="dfeiten">
+          ${m("Premie ontvangen", kom(p.premie), euro(p.premie))}
+          ${m("Ask nu", kom(p.ask), euro(p.ask))}
+          ${m("Bod", kom(p.bod), "spread " + kom(p.ask - p.bod))}
+          ${m("Open resultaat", (resultaat >= 0 ? "+" : "\u2212") + kom(Math.abs(resultaat)), euro(resultaat))}
+        </div>
+        ${balk("Looptijd om", verstreken, "var(--blue)", Math.round(verstreken) + " %")}
+        ${balk("Premie binnen", binnen, binnen >= verstreken ? "var(--s5)" : "var(--s2)", Math.round(binnen) + " %")}
+      </div>
+
+      <div class="dvak">
+        <div class="dkop">Markt</div>
+        <div class="dfeiten">
+          ${m("Strike", getal(p.strike), p.aantal + " contract" + (p.aantal > 1 ? "en" : ""))}
+          ${m("Spot", getal(SPOT), p.afstand === null ? "" : "+" + getal(Math.round(SPOT - p.strike)) + " pt")}
+          ${m("Afstand", p.afstand === null ? "—" : kom(p.afstand) + " %", STANDEN[standVan(p.afstand) ?? 4].nm)}
+          ${m("Delta", String(p.delta).replace("-", "\u2212").replace(".", ","), Math.round(Math.abs(p.delta) * 100) + " % toewijzing")}
+          ${m("Break-even", getal(Math.round(breakeven)), "strike \u2212 premie")}
+          ${m("Buffer", kom(buffer) + " %", "tot break-even")}
+          ${m("Dagen", String(p.dagen), "expireert " + p.expiratie)}
+          ${m("IV", kom(p.iv) + " %", "bij opening " + kom(p.ivOpen) + " %")}
+        </div>
+      </div>
+
+      <div class="dvak">
+        <div class="dkop">Afspraak en leden</div>
+        <div class="dfeiten">
+          ${m("Stoploss", kom(p.stoploss), "2× premie")}
+          ${m("Tot stoploss", kom(p.stoploss - p.ask), "op ask")}
+          ${t("Wie volgt", p.wieVolgt)}
+          ${t("Uit", p.besluit)}
+          ${t("Geopend", p.geopend)}
+          ${t("Gemeld", p.gemeld ? p.gemeld.split(" \u2014 ")[0] : "nee")}
+        </div>
+        ${p.afwijking ? `<div class="dmerk dlet">Afwijking · ${p.afwijkingKort}</div>` : ""}
+        ${p.doorrolUit ? `<div class="dmerk dblauw">Doorrol uit ${p.doorrolUit}</div>` : ""}
+        <div class="dknoppen">
+          <a class="knop tweede" href="#">Positierecord</a>
+          ${p.gemeld ? "" : `<button class="knop">Bericht opstellen</button>`}
+        </div>
+      </div>
+
+    </div>
+  </div>`;
+}
+
+/* ───────────────────────── de posities ───────────────────────── */
+// De balk loopt van −2 % (links, onder de strike) tot +10 % (rechts, ruim).
+const LINKS = -2, RECHTS = 10;
+function tekenPosities() {
+  document.getElementById("posities").innerHTML = POSITIES.map((p) => {
+    const st = standVan(p.afstand);
+    const zones = STANDEN.map((s) => `<span class="z" style="background:${s.kl};opacity:${p.open ? .9 : .5}"></span>`).join("");
+    const pct = p.afstand === null ? null : Math.max(2, Math.min(98, ((p.afstand - LINKS) / (RECHTS - LINKS)) * 100));
+    const merker = pct === null ? "" :
+      `<span class="merkerlab" style="left:${pct}%">${kom(p.afstand)} %</span><span class="merker" style="left:calc(${pct}% - 1.5px)"></span>`;
+    const uit = OPEN.has(p.nm);
+    return `<div class="posblok ${uit ? "uitgeklapt" : ""}">
+      <button class="pos ${p.open ? "" : "posdicht"}" data-pos="${p.nm}">
+        <span class="poslinks"><span class="chev">${uit ? "▾" : "▸"}</span><span>
+          <span class="posnaam">${p.nm}</span><br>
+          <span class="posonder">${p.open ? p.dagen + " dagen · premie " + kom(p.premie) + " · nu " + kom(p.nu) : "geëxpireerd · +" + kom(p.premie)}</span></span></span>
+        <span class="spoorbalk">${zones}${merker}</span>
+        <span class="posstand">${p.open ? `<span class="badge" style="background:${STANDEN[st].kl}">${STANDEN[st].nm}</span>` : `<span class="badge" style="background:var(--dim)">Afgerond</span>`}</span>
+      </button>
+      ${uit ? detail(p) : ""}
+    </div>`;
+  }).join("");
+  const p = POSITIES.filter((x) => x.open).find((x) => standVan(x.afstand) === zwakste);
+  document.getElementById("zwakste").innerHTML =
+    `<b>${p.nm}</b> is de zwakste en bepaalt de barometer: ${kom(p.afstand)} % boven de strike — <b>${STANDEN[zwakste].nm}</b>.`;
+}
+
+/* ───────────────────────── kaarten en verstuurd ─────────────────────────
+   Een kaart komt alleen uit een positie. De doorrol is er één die van vorm
+   veranderd is: de kaart van de gesloten positie, nadat de brug kort daarna
+   een nieuwe positie zag. */
+const KAARTEN = [
+  {
+    titel: "Doorrol herkend", prio: "p-hoog", prioN: "doorrol",
+    tekst: "P5100 werd met verlies gesloten en 6 minuten later ging P5000 open. Het systeem herkende dit als één doorrol en heeft de kaart van de sluiting omgezet.",
+    omgezet: "Was: Positie gesloten met verlies · omgezet 14:08",
+    feiten: [["Uit", "P5100 · −14,5"], ["In", "P5000 · +11,0"], ["Netto", "−3,5"], ["Sjabloon", "Doorrol"]],
+    knop: "Bericht opstellen",
+  },
+  {
+    titel: "Positie geopend", prio: "p-laag", prioN: "nieuw",
+    tekst: "Tranche 2 uitgevoerd: P5150, 1 contract voor 19,0.",
+    feiten: [["Contract", "16OCT26 P5150"], ["Premie", "19,0"], ["Sjabloon", "Nieuwe positie"]],
+    knop: "Bericht opstellen",
+  },
+];
+
+const VERSTUURD = [
+  { t: "Barometer op Ruim", s: "“Niets te doen deze maand.”", d: "3 okt 09:12" },
+  { t: "Venster open", s: "“Instapmoment vandaag.”", d: "4 okt 10:05" },
+  { t: "Venster in positie", s: "“Wij zitten erin — 1 contract P5300.”", d: "4 okt 14:10" },
+  { t: "Positie waardeloos geëxpireerd", s: "“P5050 liep uit, +22,0 punten.”", d: "18 sep 17:40" },
+];
+
+function tekenOnder() {
+  document.getElementById("kaarttel").textContent = KAARTEN.length + " open";
+  document.getElementById("kaarten").innerHTML = KAARTEN.length === 0
+    ? `<p class="leeg">Geen openstaande kaarten. Er is geen positie veranderd.</p>`
+    : KAARTEN.map((k) => `<div class="kaart">
+        <div class="kaartkop"><h4>${k.titel}</h4><span class="pt ${k.prio}">${k.prioN}</span></div>
+        ${k.omgezet ? `<div class="omgezet">↻ ${k.omgezet}</div>` : ""}
+        <p>${k.tekst}</p>
+        <div class="feiten">${k.feiten.map(([l, w]) => `<span class="feit"><span class="flab">${l}</span><span class="fwaarde">${w}</span></span>`).join("")}</div>
+        <div class="kaartknoppen"><button class="knop tweede">Later</button><button class="knop">${k.knop}</button></div>
+      </div>`).join("");
+
+  document.getElementById("verstuurd").innerHTML = VERSTUURD.map((v) =>
+    `<div class="vreg"><span class="vink">✓</span><span class="kern"><b>${v.t}</b><span>${v.s}</span></span><span class="tijd">${v.d}</span></div>`
+  ).join("");
+}
+
+/* ───────────────────────── samen ───────────────────────── */
+function teken() {
+  tekenVenster(); tekenMeter(); tekenPubliceer(); tekenPosities(); tekenOnder();
+  const achter = S.baro.nu !== S.baro.gepubliceerd || S.venster.nu !== S.venster.gepubliceerd
+    || S.baro.tip !== S.baro.nu || KAARTEN.length > 0;
+  const a = document.getElementById("achter");
+  a.className = "achter " + (achter ? "wacht" : "bij");
+  a.lastElementChild.textContent = achter ? "Er wacht iets op de leden" : "De leden zijn bij";
+}
+
+document.addEventListener("click", (e) => {
+  const rij = e.target.closest("[data-pos]");
+  if (rij) { const n = rij.dataset.pos; OPEN.has(n) ? OPEN.delete(n) : OPEN.add(n); return teken(); }
+  const seg = e.target.closest("[data-stand]");
+  if (seg && baroWakker()) { const i = +seg.dataset.stand; S.baro.gekozen = S.baro.gekozen === i ? null : i; return teken(); }
+  const vh = e.target.closest("[data-venster]");
+  if (vh) { const i = +vh.dataset.venster; S.venster.gekozen = S.venster.gekozen === i ? null : i; return teken(); }
+  if (e.target.id === "pub") return publiceer();
+  const m = e.target.closest(".mockknop");
+  if (m) {
+    document.querySelectorAll(".mockknop").forEach((k) => k.classList.toggle("aan", k === m));
+    if (m.dataset.scene === "suggestie") {
+      S.baro.nu = 4; S.baro.gepubliceerd = 4; S.baro.tip = zwakste; S.baro.gekozen = null;
+      S.venster.nu = 4; S.venster.gepubliceerd = 4; S.venster.tip = null; S.venster.gekozen = null;
+    } else {
+      S.baro.nu = S.baro.gepubliceerd = zwakste; S.baro.tip = zwakste; S.baro.gekozen = null;
+      S.venster.nu = S.venster.gepubliceerd = 4; S.venster.tip = null; S.venster.gekozen = null;
+      KAARTEN.length = 0;
+    }
+    return teken();
+  }
+});
+
+teken();
+</script>
+</body>
+</html>

@@ -65,10 +65,17 @@ export async function wisselFavoriet(route, label) {
 export const STERTJE = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
   stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg>`;
 
+// Het tabblad 'alles' draagt een archiefdoos in plaats van een hamburger. Een
+// hamburger zegt 'hier zit een menu achter'; deze drie tabbladen zijn het menu
+// al. Een doos zegt wat erin zit: alles wat er is, tegenover wat je zelf
+// markeerde (ster) en waar je was (klok).
+const DOOS = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+  stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.5h18v4H3z"/><path d="M5 9.5h14V19H5z"/><path d="M10 13h4"/></svg>`;
+
 export function navtabsHtml() {
   return `
     <div class="navtabs" role="tablist">
-      <button class="navtab actief" data-tab="alles" title="Alle modules" aria-label="Alle modules">${ICOON.menu}</button>
+      <button class="navtab actief" data-tab="alles" title="Alle modules" aria-label="Alle modules">${DOOS}</button>
       <button class="navtab" data-tab="favoriet" title="Favorieten" aria-label="Favorieten">${ICOON.ster}</button>
       <button class="navtab" data-tab="geschiedenis" title="Geschiedenis" aria-label="Geschiedenis">${ICOON.klok}</button>
     </div>`;

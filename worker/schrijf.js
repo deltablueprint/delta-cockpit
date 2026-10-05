@@ -34,6 +34,30 @@ async function kolominfo(env, tabelnaam) {
 // Standaardwaarden uit de definitielaag. Twee woorden hebben een betekenis in
 // plaats van een waarde: 'vandaag' en 'nu'. Een datum die vandaag is, hoef je
 // niet in te typen.
+// Of een veld te zien is, gegeven de waarden van het record. Dezelfde grammatica
+// als op het scherm (db_field.toon_als): 'uitkomst = go' vergelijkt een waarde,
+// 'aantal(aanwezigen_ids) = 1' telt een lijstje.
+//
+// Dit staat hier én in app/src/record.js. Dat is dubbel, maar het alternatief is
+// erger: een scherm dat een veld verbergt terwijl de server het eist.
+export function zichtbaar(veld, waarden) {
+  const u = String(veld.toon_als || "").trim();
+  if (!u) return true;
+  const w = (kolom) => {
+    const x = waarden ? waarden[kolom] : null;
+    return x === null || x === undefined ? "" : String(x);
+  };
+  const t = /^aantal\(\s*(\w+)\s*\)\s*(=|!=|>|<)\s*(\d+)$/.exec(u);
+  if (t) {
+    const n = w(t[1]).split(",").map((x) => x.trim()).filter(Boolean).length;
+    const d = Number(t[3]);
+    return t[2] === "=" ? n === d : t[2] === "!=" ? n !== d : t[2] === ">" ? n > d : n < d;
+  }
+  const m = /^(\S+)\s*(=|!=)\s*(.+?)$/.exec(u);
+  if (!m) return true;
+  return m[2] === "=" ? w(m[1]) === m[3] : w(m[1]) !== m[3];
+}
+
 function standaardwaarde(w, ik) {
   if (w === "vandaag") return new Date().toISOString().slice(0, 10);
   if (w === "nu") return new Date().toISOString().slice(0, 16).replace("T", " ");
@@ -90,13 +114,32 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
     const veld = velden.find((v) => v.kolom === kolom);
     if (!veld) return { fout: `Onbekend veld: ${kolom}`, status: 400 };
     if (veld.alleen_lezen) return { fout: `Veld ${veld.label} is alleen-lezen.`, status: 400 };
-    if (veld.verplicht && (nieuweWaarde === null || nieuweWaarde === "")) {
+    // Verplicht geldt alleen als het veld ook te zien is. 'Waarom alleen
+    // besloten' is verplicht bij één aanwezige en niet van toepassing bij drie;
+    // zonder deze regel zou je een besluit met zijn drieën niet kunnen bewaren.
+    if (veld.verplicht && zichtbaar(veld, { ...huidig, ...(body.velden || {}) })
+        && (nieuweWaarde === null || nieuweWaarde === "")) {
       return { fout: `${veld.label} is verplicht.`, status: 400 };
     }
     if (String(huidig[kolom] ?? "") !== String(nieuweWaarde ?? "")) {
       teSchrijven.push({ veld, nieuweWaarde, oudeWaarde: huidig[kolom] });
     }
   }
+  // Een gemeten waarde zonder oordeel is geen meting. 2,4 % zegt niets tegen wie
+  // er bij het gesprek naar kijkt; pas 'groen' of 'rood' maakt er iets van. Zonder
+  // deze regel vul je de waarde in, blijft de status op 'niet gemeten' staan, en
+  // zie je de processtap openstaan zonder te begrijpen waarom.
+  if (tabelnaam === "voorwaarde") {
+    const straksNu = { ...huidig, ...(body.velden || {}) };
+    const heeftWaarde = String(straksNu.gemeten_waarde ?? "").trim() !== "";
+    if (heeftWaarde && (!straksNu.status || straksNu.status === "niet gemeten")) {
+      return {
+        fout: "Zet er ook bij of deze voorwaarde groen, oranje of rood staat. Een waarde zonder oordeel helpt het gesprek niet.",
+        veld: "status", status: 422,
+      };
+    }
+  }
+
   if (!teSchrijven.length) return { ongewijzigd: true, id, revisie: huidig.revisie };
 
   // Validatie uit db_rule, tegen het record zoals het ná opslaan zou zijn.
@@ -233,12 +276,15 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
     await herberekenExitplan(env, id, straks);
   }
 
-  // Verschuift de datum van een event, dan verschuift hij mee in de
-  // behandelingen: anders staan ze in de lijst op een dag waarop ze niet meer
-  // vallen.
-  if (tabelnaam === "event" && teSchrijven.some((t) => t.veld.kolom === "datum")) {
-    await env.DB.prepare("update cyclus_event set datum = ? where event = ?")
-      .bind(straks.datum, id).run();
+  // De kalender is de bron: datum, soort, zwaarte en notities staan daar, en
+  // een cyclus toont ze zoals ze daar staan. Verandert er iets aan het event,
+  // dan reist dat mee naar elke looptijd waar hij in valt — anders zegt
+  // dezelfde dag op twee schermen iets anders.
+  if (tabelnaam === "event" &&
+      teSchrijven.some((t) => ["datum", "soort", "zwaarte", "notities"].includes(t.veld.kolom))) {
+    await env.DB.prepare(
+      "update cyclus_event set datum = ?, soort = ?, zwaarte = ?, notities = ? where event = ?"
+    ).bind(straks.datum, straks.soort, straks.zwaarte, straks.notities ?? null, id).run();
   }
 
   // De fase volgt uit wat er gebeurd is: elk record schuift op zodra de
@@ -257,6 +303,22 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
     }
     if (teSchrijven.some((t) => t.veld.kolom === "gepubliceerd") && Number(straks.gepubliceerd) === 1) {
       await env.DB.prepare("update positie set gepubliceerd_op = datetime('now') where id = ? and gepubliceerd_op is null").bind(id).run();
+    }
+  }
+
+  // Een meting draagt wie hem deed en wanneer. Dat hoeft niemand in te vullen:
+  // wie het opschrijft is degene die gekeken heeft, en 'nu' is nu. Bij een
+  // instapvoorwaarde is dat geen bijzaak — het besluit steunt erop.
+  if (tabelnaam === "voorwaarde"
+      && teSchrijven.some((t) => ["gemeten_waarde", "status"].includes(t.veld.kolom))) {
+    const heeftWaarde = String(straks.gemeten_waarde ?? "").trim() !== "";
+    const beoordeeld = straks.status && straks.status !== "niet gemeten";
+    if (heeftWaarde || beoordeeld) {
+      await env.DB.prepare(
+        `update voorwaarde
+            set gemeten_door = coalesce(gemeten_door, ?), gemeten_op = coalesce(gemeten_op, datetime('now'))
+          where id = ?`
+      ).bind(ik && ik.id ? ik.id : null, id).run();
     }
   }
 
@@ -441,6 +503,7 @@ export async function maakAan(env, ik, tabelnaam, body) {
   for (const veld of velden.filter((v) => v.verplicht)) {
     const leeg = nieuw[veld.kolom] === undefined || nieuw[veld.kolom] === null || nieuw[veld.kolom] === "";
     if (!leeg) continue;
+    if (!zichtbaar(veld, nieuw)) continue;
     if (veld.standaard) { nieuw[veld.kolom] = standaardwaarde(veld.standaard, ik); continue; }
 
     const kolom = info[veld.kolom];
@@ -513,7 +576,28 @@ export async function maakAan(env, ik, tabelnaam, body) {
       await beweegFase(env, "beoordelingsmoment", Number(nieuw.beoordelingsmoment), ik);
     }
   }
-  if (tabelnaam === "cyclus") await vulEventsBij(env, rij.id);
+  if (tabelnaam === "positie" && rij.expiratiedatum && rij.cyclus) {
+    const { rekOpDoelexpiratie } = await import("./positie.js");
+    await rekOpDoelexpiratie(env, rij.cyclus, rij.expiratiedatum).catch(() => null);
+  }
+  if (tabelnaam === "cyclus") {
+    await vulEventsBij(env, rij.id);
+    // Een cyclus begint altijd op pre-analyse: rustig, en het instapmoment moet
+    // nog bepaald worden. Zonder deze rij heeft de barometer geen stand, en dan
+    // moet elk scherm zelf gokken wat 'nog niets' betekent.
+    await env.DB.prepare(
+      `insert into barometerstand (cyclus, stand, venster, reden, herkomst, vastgesteld_door)
+       select ?, 1, 'pre_analyse', 'Cyclus geopend.', 'mens', ?
+        where not exists (select 1 from barometerstand where cyclus = ?)`
+    ).bind(rij.id, ik.id, rij.id).run();
+    // Elke cyclus begint met dezelfde blik op de chart. De regel staat er dus
+    // vanaf het aanmaken, en niet pas als iemand hem toevallig toevoegt.
+    await env.DB.prepare(
+      `insert into chartlezing (cyclus, onderwerp, vast, volgorde, aangemaakt_door)
+       select ?, 'Moving Average 8, 20, 50', 1, 10, ?
+        where not exists (select 1 from chartlezing where cyclus = ? and vast = 1)`
+    ).bind(rij.id, ik.id, rij.id).run();
+  }
   if (tabelnaam === "event") await vulCyclitBij(env, rij.id);
   return { id: rij.id, waarschuwingen: uitslag.waarschuwingen };
 }

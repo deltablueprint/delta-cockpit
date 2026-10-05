@@ -31,7 +31,20 @@ const REGELS = {
     const open = await tel(env,
       "select count(*) as n from cyclus_event where cyclus = ? and behandeling = 'nog te wegen'", rij.id);
     const alle = await tel(env, "select count(*) as n from cyclus_event where cyclus = ?", rij.id);
-    return { gedaan: alle > 0 && open === 0, stand: alle ? `${alle - open} van ${alle}` : "geen events" };
+    return { gedaan: alle > 0 && open === 0, stand: alle ? `${alle - open} van ${alle} behandeld` : "geen events" };
+  },
+
+  // De technische analyse is af als elke chart een schermafdruk draagt én er
+  // staat wat je erin leest. Een plaatje zonder lezing zegt niets tegen iemand
+  // die er later naar kijkt; een lezing zonder plaatje is niet na te gaan.
+  async chartlezing_gedaan(env, rij) {
+    const alle = await tel(env,
+      "select count(*) as n from chartlezing where cyclus = ? and archief = 0", rij.id);
+    const af = await tel(env,
+      `select count(*) as n from chartlezing
+        where cyclus = ? and archief = 0
+          and afbeelding is not null and trim(coalesce(commentaar, '')) <> ''`, rij.id);
+    return { gedaan: alle > 0 && af === alle, stand: alle ? `${af} van ${alle} gelezen` : "geen charts" };
   },
 
   async voorwaarden_ingevuld(env, rij) {
@@ -39,7 +52,12 @@ const REGELS = {
       "select count(*) as n from voorwaarde where cyclus = ? and archief = 0", rij.id);
     const open = await tel(env,
       "select count(*) as n from voorwaarde where cyclus = ? and archief = 0 and (status = 'niet gemeten' or gemeten_waarde is null)", rij.id);
-    return { gedaan: alle > 0 && open === 0, stand: alle ? `${alle - open} van ${alle}` : "nog geen voorwaarden" };
+    // 'van de 3' alleen is dubbelzinnig: je hebt er drie aangemaakt en ziet
+    // '0 van 3' staan. Wat er geteld wordt, moet erbij.
+    return {
+      gedaan: alle > 0 && open === 0,
+      stand: alle ? `${alle - open} van ${alle} gemeten` : "nog geen voorwaarden",
+    };
   },
 
   async analysemoment_geprikt(env, rij) {
@@ -73,7 +91,7 @@ const REGELS = {
     const alle = await tel(env, "select count(*) as n from positie where cyclus = ? and archief = 0", rij.id);
     const open = await tel(env,
       "select count(*) as n from positie where cyclus = ? and archief = 0 and status <> 'gesloten'", rij.id);
-    return { gedaan: alle > 0 && open === 0, stand: alle ? `${alle - open} van ${alle}` : "" };
+    return { gedaan: alle > 0 && open === 0, stand: alle ? `${alle - open} van ${alle} gesloten` : "" };
   },
 
   async postanalyse_gedaan(env, rij) {
@@ -97,7 +115,7 @@ const REGELS = {
     const binnen = await tel(env,
       `select count(*) as n from inzending
         where beoordelingsmoment = ? and archief = 0 and status = 'verstuurd'`, rij.id);
-    return { gedaan: nodig > 0 && binnen >= nodig, stand: nodig ? `${binnen} van ${nodig}` : "" };
+    return { gedaan: nodig > 0 && binnen >= nodig, stand: nodig ? `${binnen} van ${nodig} ingezonden` : "" };
   },
 
   async gesprek_vastgelegd(env, rij) {
@@ -171,6 +189,25 @@ export async function stappenVoor(env, tabelnaam, rij) {
     });
   }
   return uit;
+}
+
+// Welke verplichte stappen van de huidige stand nog openstaan.
+//
+// De stappenbalk toont ze al, maar tonen is niet tegenhouden: een actieknop
+// schoof het record gewoon door, en dan stond er een verplichte stap open bij
+// een stand die allang voorbij was. Een verplichte stap die je kunt overslaan is
+// geen verplichte stap maar een suggestie.
+export async function openVerplicht(env, tabelnaam, rij, stand = null) {
+  const nu = stand || rij.status || null;
+  let stappen = [];
+  try {
+    stappen = await stappenVoor(env, tabelnaam, rij);
+  } catch {
+    return [];   // kunnen we het niet nagaan, dan houden we niets tegen
+  }
+  return stappen
+    .filter((s) => s.verplicht && !s.gedaan && (!nu || !s.fase || s.fase === nu))
+    .map((s) => s.naam);
 }
 
 // --------------------------------------------------- de fase laten opschuiven

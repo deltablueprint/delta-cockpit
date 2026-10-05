@@ -10,7 +10,10 @@
 
 import { record as haalRecord, bewaar, maakAan, nieuwSjabloon, lynxPosities } from "./api.js";
 import { lijstscherm } from "./lijst.js";
-import { lees, invoer, ontsnap, toonDatum } from "./veld.js";
+import { lees, invoer, ontsnap, toonDatum, vastVeld } from "./veld.js";
+import { verkleinChart, uitKlembord, toonGroot } from "./afbeelding.js";
+import { kijkvenster, sluitKijkvenster } from "./kijkvenster.js";
+import { opzoeken, sluitOpzoeken } from "./opzoeken.js";
 
 // Het merkteken van Delta Blueprint, voor de koppelanimatie.
 const LOGO = `<svg viewBox="0 0 296.1 251.9" width="15" height="13" aria-hidden="true">
@@ -25,6 +28,7 @@ import { voorwaardeSjablonen, voorwaardenOvernemen, stappenVan } from "./api.js"
 const ICOON = {
   bijlage: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M21 11l-8.5 8.5a5 5 0 01-7-7L14 4a3.5 3.5 0 015 5l-8.5 8.5a2 2 0 01-3-3L15 6"/></svg>`,
   vink: `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12l4 4 10-10"/></svg>`,
+  info: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r="1" fill="currentColor" stroke="none"/></svg>`,
 };
 
 // De klikluisteraar van het overnemen hangt aan het werkvlak, niet aan het
@@ -63,7 +67,11 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   const kruimels = [];
   if (data.ouder) {
     kruimels.push(`<a href="#/t/${data.ouder.tabel}">${ontsnap(data.ouder.label_mv)}</a>`);
-    kruimels.push(`<a href="#/t/${data.ouder.tabel}/${data.ouder.id}">${ontsnap(data.ouder.titel)}</a>`);
+    // De kruimel naar het ouderrecord draagt mee uit welke gerelateerde lijst
+    // je kwam. Klik je terug, dan staat dat tabblad open in plaats van het
+    // eerste — je gaat verder waar je gebleven was.
+    kruimels.push(`<a href="#/t/${data.ouder.tabel}/${data.ouder.id}?tab=${
+      ontsnap(tabelnaam)}">${ontsnap(data.ouder.titel)}</a>`);
   }
   // Kom je via een cyclus bij een voorwaarde, dan hoort 'Voorwaarden' in de
   // breadcrumb de voorwaarden van díé cyclus te tonen — niet die van alle
@@ -166,6 +174,14 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       const bij = String(sectie.standen).split(",").map((w) => w.trim());
       if (isNieuw || !bij.includes(String(standNu))) return false;
     }
+    // Een tranche die uit een handeling is ontstaan — doorgerold, of
+    // overgenomen uit de brokerstand — heeft nooit een besluitproces doorlopen.
+    // Het blok 'Het besluit' zou dan vragen om iets te kiezen dat er niet is,
+    // en de drie regels 'wat het besluit zei' zouden leeg blijven. Dat is geen
+    // informatie maar een uitnodiging tot verwarring.
+    if (tabelnaam === "positie" && sectie.naam === "besluit"
+        && !isNieuw && !data.waarden.beoordelingsmoment) return false;
+
     const eigen = velden.filter((v) => (v.sectie || "algemeen") === sectie.naam);
     if (!eigen.length) return false;
     const allesLeegEnVast = eigen.every(
@@ -177,20 +193,29 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   const veldHtml = (v) => `
     <label class="veldlabel" data-veld="${v.kolom}" for="veld-${v.kolom}">${
       v.verplicht ? '<span class="ster">*</span> ' : ""}${ontsnap(v.label)}</label>
-    <div class="veldwaarde" data-veld="${v.kolom}"${v.live ? ` data-live="${tabelnaam}.${id}.${v.kolom}"` : ""}>${
+    <div class="veldwaarde${v.verplicht && !v.alleen_lezen ? " vereist" : ""}" data-veld="${v.kolom}"${
+      v.live ? ` data-live="${tabelnaam}.${id}.${v.kolom}"` : ""}>${
       v.alleen_lezen
-        ? `<span class="alleenlezen livewaarde" data-toon="${v.kolom}">${
-            lees(v, data.waarden[v.kolom], meta, data.verwijzingen, data.waarden, "formulier")}</span>`
+        ? vastVeld(v, data.waarden[v.kolom], meta, data.verwijzingen, data.waarden)
         : invoer(v, data.waarden[v.kolom], meta, "",
                  data.verwijzingen ? data.verwijzingen[v.kolom] : null,
                  data.opties ? data.opties[v.kolom] : null)
+    }${v.type === "verwijzing" && v.verwijst_naar && v.verwijst_naar !== "gebruiker" && data.waarden[v.kolom]
+        ? `<button type="button" class="refknop" data-ref-tabel="${ontsnap(v.verwijst_naar)}"
+              data-ref-id="${ontsnap(String(data.waarden[v.kolom]))}"
+              title="Bekijken zonder dit scherm te verlaten"
+              aria-label="Bekijken zonder dit scherm te verlaten">${ICOON.info}</button>`
+        : ""
     }${v.live ? `<span class="hartje-vak" title="loopt live mee">${HARTSLAG}</span>` : ""}</div>`;
 
   const sectieHtml = secties.map((sectie) => {
     const eigen = velden.filter((v) => (v.sectie || "algemeen") === sectie.naam);
     if (!eigen.length) return "";
-    const breed = eigen.filter((v) => v.type === "lang");
-    let smal = eigen.filter((v) => v.type !== "lang");
+    // Een lange tekst en een afbeelding zijn breed: ze passen niet in een
+    // kolom van 280 pixels zonder dat je erin moet turen.
+    const BREED = ["lang", "bestand"];
+    const breed = eigen.filter((v) => BREED.includes(v.type));
+    let smal = eigen.filter((v) => !BREED.includes(v.type));
 
     // Waar een veld staat, zegt de definitielaag: db_field.kolom_rechts. Dat
     // geldt voor de hele tabel en niet per sectie — anders viel een sectie
@@ -232,9 +257,20 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   // ---- gerelateerde lijsten ----
   const relaties = data.relaties || [];
   const tabbladen = data.tabel.related_weergave !== "onder_elkaar";
-  const actiefTab = opties.tab && relaties.some((r) => r.tabel === opties.tab)
-    ? opties.tab
+  // Welk tabblad open staat, is in volgorde: wat de link zegt, anders wat je
+  // hier de vorige keer open had, anders het eerste. Zo kom je altijd terug
+  // waar je gebleven was — via de breadcrumb, via de knop terug van de
+  // browser, of na het aanmaken van een regel.
+  const tabsleutel = `tab:${tabelnaam}:${id}`;
+  const onthouden = (() => {
+    try { return sessionStorage.getItem(tabsleutel); } catch { return null; }
+  })();
+  const bruikbaar = (t) => t && relaties.some((r) => r.tabel === t);
+  const actiefTab = bruikbaar(opties.tab) ? opties.tab
+    : bruikbaar(onthouden) ? onthouden
     : relaties.length ? relaties[0].tabel : null;
+  const onthoud = (t) => { try { sessionStorage.setItem(tabsleutel, t); } catch { /* privémodus */ } };
+  if (actiefTab) onthoud(actiefTab);
 
   // De pagina staat meteen op de hoogte van de grootste lijst. Anders groeit ze
   // als je van een kort tabblad naar een lang wisselt, en moet je scrollen naar
@@ -323,6 +359,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         if (!r) return;
         inhoud.querySelectorAll(".tab").forEach((t) => t.classList.toggle("actief", t === tab));
         history.replaceState(null, "", `#/t/${tabelnaam}/${id}?tab=${r.tabel}`);
+        onthoud(r.tabel);
         toonRelatie(r);
       });
     });
@@ -374,22 +411,23 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     paneel.className = "overnemen";
     paneel.innerHTML = !lijst.length
       ? `<p class="brokerleeg">Er zijn geen voorwaarden uit eerdere cycli die hier nog niet staan.
-         <button class="knop klein tweede" data-sluit>Sluiten</button></p>`
+         <button class="knop tweede" data-sluit>Sluiten</button></p>`
       : `<div class="stappenkop">Overnemen uit een eerdere cyclus<span class="stappenmeta">
            de vraag gaat mee, de gemeten waarde niet</span></div>
          ${kiezerHtml({
            id: "voorwaardekiezer",
            linkskop: "Eerder gebruikt",
            rechtskop: "Overnemen naar deze cyclus",
+           // Alleen de naam. Waar het vandaan komt en hoe vaak het eerder
+           // gebruikt is, hielp niet bij het kiezen en maakte van elke regel
+           // drie regels — dan zie je er vijf in plaats van vijftien.
            links: lijst.map((v) => ({
              id: v.sleutel,
-             html: `<span class="koppelnaam">${ontsnap(v.naam)}</span>
-                    <span class="faint">${ontsnap(v.soort)}${v.bron ? ` · ${ontsnap(v.bron)}` : ""}</span>
-                    <span class="stapstand">${v.keer}×</span>`,
+             html: `<span class="koppelnaam">${ontsnap(v.naam)}</span>`,
            })),
            rechts: [],
          })}
-         <div class="knoprij" style="padding:0 16px 14px">
+         <div class="knoprij overnemenknoppen">
            <button class="knop" data-overnemen disabled>Overnemen</button>
            <button class="knop tweede" data-sluit>Annuleren</button>
          </div>`;
@@ -434,7 +472,18 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       return w === null || w === undefined ? "" : String(w);
     };
 
+    // 'uitkomst = go' vergelijkt een waarde. 'aantal(aanwezigen_ids) = 1' telt
+    // hoeveel er in een lijstje staan — want 'waarom alleen besloten' hoort
+    // alleen te verschijnen als er werkelijk één iemand aanwezig was, en dat is
+    // geen waarde maar een aantal.
     const voldoet = (uitdrukking) => {
+      const t = /^\s*aantal\(\s*(\w+)\s*\)\s*(=|!=|>|<)\s*(\d+)\s*$/.exec(String(uitdrukking));
+      if (t) {
+        const [, kolom, op, verwacht] = t;
+        const n = String(huidigeWaarde(kolom)).split(",").map((x) => x.trim()).filter(Boolean).length;
+        const d = Number(verwacht);
+        return op === "=" ? n === d : op === "!=" ? n !== d : op === ">" ? n > d : n < d;
+      }
       const m = /^\s*(\S+)\s*(=|!=)\s*(.+?)\s*$/.exec(String(uitdrukking));
       if (!m) return true;
       const [, kolom, op, verwacht] = m;
@@ -454,7 +503,11 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       });
     };
 
-    const sturend = [...new Set(voorwaardelijk.map((v) => /^\s*(\S+)/.exec(v.toon_als)[1]))];
+    const sturendeKolom = (uitdrukking) => {
+      const t = /^\s*aantal\(\s*(\w+)\s*\)/.exec(String(uitdrukking));
+      return t ? t[1] : /^\s*(\S+)/.exec(String(uitdrukking))[1];
+    };
+    const sturend = [...new Set(voorwaardelijk.map((v) => sturendeKolom(v.toon_als)))];
     for (const kolom of sturend) {
       const el = inhoud.querySelector(`.veldwaarde [data-kolom="${kolom}"]`);
       if (el) el.addEventListener("change", bijwerken);
@@ -518,8 +571,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       lynxPosities().then((uit) => {
       if (!vak) return;
       const handmatigKnop = `<p class="brokerleeg">
-        <button class="knop klein tweede" id="opnieuw">Opnieuw ophalen</button>
-        ${verborgen.length ? `<button class="knop klein tweede" id="handmatig">De tranche met de hand invullen</button>` : ""}
+        <button class="knop tweede" id="opnieuw">Opnieuw ophalen</button>
+        ${verborgen.length ? `<button class="knop tweede" id="handmatig">De tranche met de hand invullen</button>` : ""}
       </p>`;
       if (!uit.koppeling) {
         vak.innerHTML = `<p class="brokerleeg">${ontsnap(uit.reden || "Geen koppeling met Lynx.")}</p>${handmatigKnop}`;
@@ -541,7 +594,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         const el = inhoud.querySelector(`.veldwaarde [data-kolom="${kolom}"]`);
         if (el) return el.value;
         const toon = inhoud.querySelector(`.veldwaarde [data-toon="${kolom}"]`);
-        return toon ? toon.textContent.trim() : "";
+        if (!toon) return "";
+        return "value" in toon ? String(toon.value).trim() : toon.textContent.trim();
       };
       const besluitStrike = Number(data.waarden.besluit_strike ?? leesVeld("besluit_strike"));
       const besluitExpiratie = String(data.waarden.besluit_expiratiedatum || "");
@@ -561,7 +615,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
                  : `€ ${euro(p.premie_eur)}${p.premie_pt ? ` <span class="faint">· ${punten(p.premie_pt)} pt</span>` : ""}${
                      p.premie_bron === "positie" ? ` <span class="faint" title="Komt van de positie zelf: dat is de kostprijs ná commissie, iets lager dan de prijs waartegen geschreven is.">na kosten</span>` : ""}`}</td>
             <td>${ontsnap(p.uitvoering_op || p.rapportdatum || "—")}</td>
-            <td><button class="knop klein" data-kies="${i}">Deze nemen</button></td></tr>`).join("")}
+            <td><button class="knop" data-kies="${i}">Deze nemen</button></td></tr>`).join("")}
         </tbody></table>`;
       if (treffers.length === 1) {
         vak.insertAdjacentHTML("afterbegin",
@@ -610,6 +664,29 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     ophalen();
   }
 
+  // De loep naast een verwijzing opent het opzoekvenster met de records die
+  // hier gekozen mogen worden. Wat je kiest belandt in het verborgen veld, en
+  // dat meldt zich als 'change' — zo blijft alles eronder werken alsof je uit
+  // een keuzelijst koos.
+  sluitOpzoeken();
+  inhoud.querySelectorAll(".refkies").forEach((knop) => {
+    const kolom = knop.dataset.kies;
+    const lijst = (data.opties || {})[kolom];
+    if (!Array.isArray(lijst)) return;
+    const vak = knop.closest(".refveld");
+    const waarde = vak.querySelector('input[type="hidden"]');
+    const titelvak = vak.querySelector(".reftitel");
+    const veld = (data.velden || []).find((v) => v.kolom === kolom);
+    knop.addEventListener("click", (e) => {
+      e.preventDefault();
+      opzoeken(knop, lijst, waarde.value, (gekozen) => {
+        waarde.value = gekozen ? gekozen.id : "";
+        titelvak.value = gekozen ? gekozen.titel : "";
+        waarde.dispatchEvent(new Event("change", { bubbles: true }));
+      }, veld ? veld.label : "Opzoeken");
+    });
+  });
+
   // ---- een andere keuze, andere gegevens ----
   // Kies je een ander besluit onder deze tranche, dan hoort het formulier
   // meteen te laten zien wat dát besluit zei. Bij het opslaan doet de worker
@@ -630,7 +707,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         const el = inhoud.querySelector(`.veldwaarde [data-kolom="${veld}"]`);
         if (el) el.value = waarde ?? "";
         const toon = inhoud.querySelector(`.veldwaarde [data-toon="${veld}"]`);
-        if (toon) toon.textContent = waarde === null || waarde === undefined || waarde === "" ? "—" : waarde;
+        if (toon && "value" in toon) toon.value = waarde ?? "";
+        else if (toon) toon.textContent = waarde === null || waarde === undefined || waarde === "" ? "—" : waarde;
       }
     });
   }
@@ -645,9 +723,77 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     setTimeout(() => { melding.textContent = ""; }, 3000);
   });
 
+
+  // De i naast een verwijzing opent het record in een kijkvenster. Je blijft
+  // waar je bent — een verwijzing volgen zou je anders je plek kosten midden in
+  // het invullen.
+  sluitKijkvenster();
+  inhoud.querySelectorAll(".refknop[data-ref-tabel]").forEach((knop) => {
+    knop.addEventListener("click", (e) => {
+      e.preventDefault();
+      kijkvenster(knop, knop.dataset.refTabel, knop.dataset.refId, meta);
+    });
+  });
+
+  // Een afbeeldingsveld: plakken of een bestand kiezen. De verkleinde
+  // data-URL belandt in het verborgen veld, en dat is wat er opgeslagen wordt.
+  inhoud.querySelectorAll(".beeldveld").forEach((vak) => {
+    const waarde = vak.querySelector('input[type="hidden"]');
+    const beeld = vak.querySelector(".beeldvak");
+    const kiezer = vak.querySelector(".beeldkiezer");
+    if (!waarde || !beeld || !kiezer) return;
+    const zet = async (bestand) => {
+      if (!bestand) return;
+      try {
+        const data = await verkleinChart(bestand);
+        waarde.value = data;
+        beeld.classList.add("gevuld");
+        beeld.innerHTML = `<img src="${data}" alt="">`;
+        vervang.textContent = "Vervangen";
+      } catch (fout) {
+        melding.textContent = fout.message;
+        melding.className = "recordmelding fouttekst";
+      }
+    };
+    // Een gevuld vak vergroot bij een klik; een leeg vak vraagt om een bestand.
+    // Vervangen gaat met de knop ernaast, zodat vergroten geen bestandsvenster
+    // opent op het moment dat je alleen wilde kijken.
+    beeld.addEventListener("click", () => {
+      const img = beeld.querySelector("img");
+      if (img) toonGroot(img.src);
+      else kiezer.click();
+    });
+    const vervang = document.createElement("button");
+    vervang.type = "button";
+    vervang.className = "knop tweede";
+    vervang.textContent = waarde.value ? "Vervangen" : "Kies een bestand";
+    vervang.addEventListener("click", () => kiezer.click());
+    vak.appendChild(vervang);
+    beeld.addEventListener("paste", (e) => {
+      const b = uitKlembord(e);
+      if (b) { e.preventDefault(); zet(b); }
+    });
+    kiezer.addEventListener("change", () => zet(kiezer.files[0]));
+  });
+
+  // Het streepje bij een verplicht veld volgt wat erin staat: oranje zolang het
+  // leeg is, groen zodra het gevuld is. Zo zie je vóór het opslaan waar het
+  // misgaat, in plaats van erna uit een foutmelding.
+  inhoud.querySelectorAll(".veldwaarde.vereist").forEach((vak) => {
+    const el = vak.querySelector("input, select, textarea");
+    if (!el) return;
+    const kijk = () => vak.classList.toggle("gevuld", String(el.value || "").trim() !== "");
+    el.addEventListener("input", kijk);
+    el.addEventListener("change", kijk);
+    kijk();
+  });
+
   function verzamel() {
     const v = {};
     inhoud.querySelectorAll(".veldwaarde [data-kolom]").forEach((el) => {
+      // Een veld dat vastligt staat uitgeschakeld op het scherm en gaat ook
+      // niet mee naar de server: wat vastligt kan niet per ongeluk wijzigen.
+      if (el.disabled) return;
       v[el.dataset.kolom] = el.value === "" ? null : el.value;
     });
     return v;
@@ -665,8 +811,11 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         // Waar je na het aanmaken heen gaat, hangt af van wat je deed: een
         // inzending verstuur je en dan ga je terug naar het besluit, want daar
         // gaat het verder.
+        // Terug naar de ouder betekent: terug naar de lijst waar je vandaan
+        // kwam, met je nieuwe regel erin. Zonder het tabblad erbij land je op
+        // het eerste tabblad en moet je zelf terugzoeken wat je net deed.
         location.hash = data.tabel.na_aanmaken === "ouder" && data.ouder
-          ? `/t/${data.ouder.tabel}/${data.ouder.id}`
+          ? `/t/${data.ouder.tabel}/${data.ouder.id}?tab=${tabelnaam}`
           : `/t/${tabelnaam}/${gemaakt.id}`;
       } else {
         const uitkomst = await bewaar(tabelnaam, id, verzamel(), data.waarden.revisie);

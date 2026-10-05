@@ -1,11 +1,17 @@
+// Eén record ophalen zoals het scherm het krijgt.
+//
+//   node scripts/proef/record.mjs                 een verse database
+//   node scripts/proef/record.mjs positie 9       een andere tabel
+//   node scripts/proef/record.mjs cyclus 7 /pad/naar.sqlite   een bestaande
 import { maakDB } from "./d1.mjs";
+import { verseDB, CYCLUS } from "./db.mjs";
 import { record } from "../../worker/record.js";
 import { stappenVoor } from "../../worker/proces.js";
 
-const env = { DB: maakDB(process.argv[2] || "/tmp/proef.db") };
+const tabel = process.argv[2] || "cyclus";
+const id = Number(process.argv[3] || CYCLUS);
+const env = { DB: process.argv[4] ? maakDB(process.argv[4]) : verseDB() };
 const ik = { id: "simon" };
-const tabel = process.argv[3] || "cyclus";
-const id = Number(process.argv[4] || 7);
 
 try {
   const uit = await record(env, tabel, id, ik);

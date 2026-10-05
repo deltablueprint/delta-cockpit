@@ -164,9 +164,23 @@ export function exitplanVoor(rij) {
       omschrijving: "Terugkopen bij 70 % van de ontvangen premie — dat is een laatprijs van 30 %",
       niveau: heeftPremie ? Math.round(premie * 0.3 * 10) / 10 : null,
     },
+    // Break-even is een ask, en het is de ontvangen premie zelf: koop je terug
+    // boven dat bedrag, dan kost de tranche geld. Dat geldt op elke dag,
+    // ongeacht volatiliteit of tijdswaarde — het is een aftrekking, geen model.
+    //
+    // Het oude break-even rekende strike min premie en noemde dat een
+    // indexniveau. Dat klopt alleen op de expiratiedag: eerder staat de optie
+    // op dat indexniveau veel hoger dan de premie, en sta je onder water
+    // terwijl de regel zegt dat je break-even bent. Dat getal is een
+    // referentiepunt en geen bewakingsregel, en staat daarom apart.
     {
-      volgorde: 30, soort: "break-even", eenheid: "punten",
-      omschrijving: "Onder dit niveau van de index kost de tranche geld",
+      volgorde: 30, soort: "break-even", eenheid: "ask",
+      omschrijving: "Terugkopen boven deze prijs kost de tranche geld",
+      niveau: heeftPremie ? Math.round(premie * 10) / 10 : null,
+    },
+    {
+      volgorde: 35, soort: "expiratieniveau", eenheid: "indexstand",
+      omschrijving: "Staat de index op de expiratiedag hieronder, dan kost de tranche geld",
       niveau: Number.isFinite(strike) && heeftPremie ? Math.round((strike - premie) * 10) / 10 : null,
     },
     {
@@ -228,7 +242,7 @@ export async function exitplanCompleet(env, positieId) {
 export async function herberekenExitplan(env, positieId, rij) {
   try {
     for (const r of exitplanVoor(rij)) {
-      if (r.soort !== "winstanker" && r.soort !== "break-even") continue;
+      if (!["winstanker", "break-even", "expiratieniveau"].includes(r.soort)) continue;
       if (r.niveau === null) continue;
       await env.DB.prepare(
         `update exitregel set niveau = ?, revisie = revisie + 1
@@ -326,4 +340,35 @@ export async function premieInPunten(env, rij) {
   const multiplier = inst && inst.multiplier ? Number(inst.multiplier) : 10;
   if (!multiplier) return null;
   return Math.round((eur / multiplier) * 100) / 100;
+}
+
+// Een rol verlengt de boog.
+//
+// Opent er een tranche met een expiratie voorbij de doelexpiratie van de
+// cyclus, dan klopt die doelexpiratie niet meer: de cyclus loopt tot de laatste
+// tranche dicht is. Hem laten staan zou betekenen dat de looptijd op elk scherm
+// korter lijkt dan ze is, en dat de events ná die datum niet meer in de cyclus
+// komen — terwijl je er juist doorheen moet.
+export async function rekOpDoelexpiratie(env, cyclusId, datum) {
+  if (!cyclusId || !datum) return false;
+  const c = await env.DB.prepare("select doelexpiratie from cyclus where id = ?")
+    .bind(cyclusId).first();
+  if (!c) return false;
+  if (c.doelexpiratie && String(c.doelexpiratie) >= String(datum)) return false;
+
+  await env.DB.prepare(
+    "update cyclus set doelexpiratie = ?, revisie = revisie + 1 where id = ?"
+  ).bind(String(datum), cyclusId).run().catch(async () => {
+    // Niet elke omgeving heeft een revisiekolom op de cyclus.
+    await env.DB.prepare("update cyclus set doelexpiratie = ? where id = ?")
+      .bind(String(datum), cyclusId).run();
+  });
+
+  // De events volgen de looptijd: wat na de oude datum viel hoorde er niet bij
+  // en hoort er nu wel bij.
+  try {
+    const { vulEventsBij } = await import("./events.js");
+    await vulEventsBij(env, cyclusId);
+  } catch { /* zonder eventskalender gebeurt er niets */ }
+  return true;
 }

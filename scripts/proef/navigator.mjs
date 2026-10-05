@@ -1,11 +1,11 @@
 // Favorieten en geschiedenis tegen een echte database.
-import { maakDB } from "./d1.mjs";
+import { verseDB } from "./db.mjs";
 import {
   favorieten, favorietToevoegen, favorietWijzigen, favorietWeg, favorietenVolgorde,
   bezoeken, bezoekBijzetten, bezoekenLeeg,
 } from "../../worker/navigator.js";
 
-const env = { DB: maakDB(process.argv[2] || "/tmp/proef.db") };
+const env = { DB: verseDB() };
 const ik = { id: "simon" };
 const toon = (w, x) => console.log(w, JSON.stringify(x));
 
@@ -32,7 +32,6 @@ toon("bezoeken    ", (await bezoeken(env, ik)).bezoeken.map((b) => `${b.titel} (
 
 for (let i = 0; i < 40; i++) await bezoekBijzetten(env, ik, { route: `/t/event/${i}`, titel: `Event ${i}` });
 toon("afgekapt op ", (await bezoeken(env, ik)).bezoeken.length);
-const alles = env.DB.prepare ? null : null;
 
 await bezoekenLeeg(env, ik);
 toon("na wissen   ", (await bezoeken(env, ik)).bezoeken.length);

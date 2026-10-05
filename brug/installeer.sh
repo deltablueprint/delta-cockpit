@@ -79,10 +79,28 @@ IB_CLIENT_ID=17
 EOF
 chmod 600 $THUIS/.delta-brug.env"
 cp /opt/ibc/config.ini $THUIS/ibc-config.ini
+
+# Een CR aan het eind van een regel (Windows-regeleinde) telt mee als teken in
+# IbLoginId en IbPassword; IBKR antwoordt dan met "invalid username or password"
+# en je zoekt je blind. Dit script haalt ze weg bij elke start en weigert te
+# starten zolang de inloggegevens nog op de sjabloonwaarden staan.
+cat > /usr/local/bin/delta-ibc-schoon <<SCHOON
+#!/bin/sh
+CFG=$THUIS/ibc-config.ini
+sed -i 's/\r\$//' "\$CFG"
+naam=\$(sed -n 's/^IbLoginId=//p' "\$CFG" | head -1)
+wachtwoord=\$(sed -n 's/^IbPassword=//p' "\$CFG" | head -1)
+case "\$naam" in ''|edemo) echo "IbLoginId staat nog op '\$naam' in \$CFG" >&2; exit 1;; esac
+case "\$wachtwoord" in ''|demouser) echo "IbPassword is niet ingevuld in \$CFG" >&2; exit 1;; esac
+exit 0
+SCHOON
+chmod a+x /usr/local/bin/delta-ibc-schoon
 chown $GEBRUIKER:$GEBRUIKER $THUIS/ibc-config.ini && chmod 600 $THUIS/ibc-config.ini
 echo "   $THUIS/.delta-brug.env   — de sleutel naar de cockpit"
 echo "   $THUIS/ibc-config.ini    — IbLoginId, IbPassword, TradingMode=paper,"
-echo "                              ReadOnlyApi=yes of no, OverrideTwsApiPort=7497"
+echo "                              ReadOnlyApi=no, OverrideTwsApiPort=7497"
+echo "   Read-only staat uit: met read-only aan komt orderinformatie niet door,"
+echo "   en zonder fill-prijs kan een tranche niet gepubliceerd worden."
 
 zeg "7 · de diensten"
 cat > /etc/systemd/system/xvfb.service <<'EOF'
@@ -90,7 +108,7 @@ cat > /etc/systemd/system/xvfb.service <<'EOF'
 Description=Virtueel scherm voor IB Gateway
 
 [Service]
-ExecStart=/usr/bin/Xvfb :1 -screen 0 1024x768x24
+ExecStart=/usr/bin/Xvfb :1 -screen 0 1920x1080x24
 Restart=always
 
 [Install]
@@ -112,6 +130,7 @@ Requires=xvfb.service
 [Service]
 User=$GEBRUIKER
 Environment=DISPLAY=:1
+ExecStartPre=/usr/local/bin/delta-ibc-schoon
 ExecStart=/opt/ibc/scripts/ibcstart.sh $VERSIE --gateway \\
   --mode=paper \\
   --tws-path=$THUIS/Jts \\

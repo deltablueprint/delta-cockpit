@@ -13,7 +13,10 @@
     "dev:app": "vite",
     "dev:api": "wrangler dev",
     "db:voorbeeld:staging": "wrangler d1 execute delta-cockpit-staging --remote --env staging --file scripts/voorbeeld-staging.sql",
-    "db:proef-inzendingen:staging": "wrangler d1 execute delta-cockpit-staging --remote --env staging --file scripts/proef-inzendingen.sql"
+    "db:demo-afloop:staging": "node scripts/proef/demo-afloop.mjs > scripts/demo-afloop.sql && wrangler d1 execute delta-cockpit-staging --remote --env staging --file scripts/demo-afloop.sql",
+    "db:proef-inzendingen:staging": "wrangler d1 execute delta-cockpit-staging --remote --env staging --file scripts/proef-inzendingen.sql",
+    "proef": "node scripts/proef/alles.mjs",
+    "demo:brug": "node scripts/demo-brug.mjs"
   },
   "devDependencies": {
     "wrangler": "^4",

@@ -30,13 +30,31 @@ export async function lijst(env, tabelnaam, params, ik) {
   const waar = [];
   const binden = [];
 
-  if (bestaat("archief") || true) {
-    // archiefkolom bestaat op inhoudelijke tabellen; alleen dan filteren
-    const heeftArchief = await kolomBestaatInDb(env, tabelnaam, "archief");
-    if (heeftArchief && params.get("archief") !== "alles") {
-      waar.push("archief = 0");
-    }
-  }
+  // Gearchiveerde regels horen vindbaar te blijven: er wordt niets gewist, dus
+  // moet je ook kunnen zien wát er is gearchiveerd. Een lijstscherm vraagt
+  // daarom om alles en toont er een kolom 'Actief' bij; een gerelateerde lijst
+  // onder een record toont alleen wat nog loopt.
+  // Een lijstscherm vraagt om de kolom 'Actief' — of het nu alles wil zien of
+  // alleen wat loopt. Standaard staat de lijst op wat actief is: wat
+  // gearchiveerd is heb je bewust weggezet, en dat hoort niet elke dag tussen
+  // je werk te staan. Het filter is wel weg te klikken, en dan zie je alles.
+  const heeftArchief = await kolomBestaatInDb(env, tabelnaam, "archief");
+  const gevraagd = params.get("archief");                 // null | 'actief' | 'alles'
+  const toonArchief = heeftArchief && gevraagd !== null;  // een lijstscherm, geen related list
+  // In de zoekregel van de kolom 'Actief' kies je true of false. Dat is geen
+  // veld uit de definitielaag, dus de gewone filterlus komt er niet aan toe —
+  // en dan lijkt het alsof de lijst je keuze negeert. Hier wel.
+  //
+  // Die keuze gaat vóór de stand van de lijst. Anders staat er naast de
+  // standaard 'archief = 0' ook 'archief = 1' en blijft het scherm leeg, wat
+  // leest als een kapot filter in plaats van als een tegenspraak.
+  const actiefGezocht = (params.get("f.archief") || "").trim().toLowerCase();
+  const wilActief = ["true", "waar", "ja", "actief", "1"].includes(actiefGezocht);
+  const wilArchief = ["false", "onwaar", "nee", "archief", "0"].includes(actiefGezocht);
+
+  if (heeftArchief && wilArchief) waar.push("archief = 1");
+  else if (heeftArchief && wilActief) waar.push("archief = 0");
+  else if (heeftArchief && gevraagd !== "alles") waar.push("archief = 0");
 
   // Filter per kolom:  ?f.status=afgesloten
   // Wat iemand intypt is wat hij op het scherm ziet staan, niet wat er in de
@@ -102,6 +120,16 @@ export async function lijst(env, tabelnaam, params, ik) {
       continue;
     }
 
+    // Een ja/nee-kolom filter je met een keuzelijst, dus wat binnenkomt is 'ja'
+    // of 'nee' — de woorden die op het scherm staan. In de database staat er 1
+    // of 0, en 'bevat' zou daar niets mee vinden.
+    if (veld.type === "ja_nee") {
+      const t = zoekterm.toLowerCase();
+      if (["ja", "true", "waar", "1"].includes(t)) waar.push(`"${kolom}" = 1`);
+      else if (["nee", "false", "onwaar", "0"].includes(t)) waar.push(`coalesce("${kolom}", 0) = 0`);
+      continue;
+    }
+
     if (["tekst", "lang"].includes(veld.type)) {
       waar.push(`"${kolom}" like ?`);
       binden.push(`%${zoekterm}%`);
@@ -138,13 +166,21 @@ export async function lijst(env, tabelnaam, params, ik) {
     }
   }
 
+  // Een kolom waarop al gefilterd is op één record, zegt op elke rij hetzelfde.
+  // In het exitplan ónder een tranche hoeft 'Tranche' er dus niet bij te staan;
+  // in het overzicht over alle tranches heen juist wel. Dezelfde weergave,
+  // zonder dat er twee van hoeven te bestaan.
+  kolommen = kolommen.filter((k) => !idfilters[k]);
+
   const waarSql = waar.length ? "where " + waar.join(" and ") : "";
 
   // ---- sorteren ----
   let sorteer = params.get("sorteer");
   let richting = (params.get("richting") || "").toLowerCase() === "desc" ? "desc" : "asc";
   let orderSql;
-  if (sorteer && bestaat(sorteer)) {
+  if (sorteer === "archief" && toonArchief) {
+    orderSql = `order by "archief" ${richting}, id desc`;
+  } else if (sorteer && bestaat(sorteer)) {
     orderSql = `order by "${sorteer}" ${richting}`;
   } else if (weergave && weergave.sortering) {
     orderSql = `order by ${veiligeSortering(weergave.sortering, bestaat)}`;
@@ -159,7 +195,9 @@ export async function lijst(env, tabelnaam, params, ik) {
   // De revisie gaat mee zodat bewerken in de lijst kan zien of iemand anders
   // het record intussen heeft gewijzigd.
   const heeftRevisie = await kolomBestaatInDb(env, tabelnaam, "revisie");
-  const selectie = ["id", ...(heeftRevisie ? ["revisie"] : []), ...kolommen.filter((k) => k !== "id")]
+  const selectie = ["id", ...(heeftRevisie ? ["revisie"] : []),
+                    ...(toonArchief ? ["archief"] : []),
+                    ...kolommen.filter((k) => k !== "id" && k !== "archief")]
     .map((k) => `"${k}"`).join(", ");
 
   const [rijen, telling] = await Promise.all([
@@ -193,7 +231,16 @@ export async function lijst(env, tabelnaam, params, ik) {
     tabel: { naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv,
              titel_veld: tabel.titel_veld, import_toegestaan: tabel.import_toegestaan,
              nieuw_vanuit_lijst: tabel.nieuw_vanuit_lijst },
-    kolommen: kolommen.map((k) => velden.find((v) => v.kolom === k)),
+    // 'Actief' is geen veld uit de definitielaag maar de keerzijde van
+    // 'archief'. Hij staat achteraan, want hij zegt iets over het record en
+    // niet over de inhoud ervan.
+    kolommen: [
+      ...kolommen.map((k) => velden.find((v) => v.kolom === k)),
+      ...(toonArchief
+        ? [{ tabel: tabelnaam, kolom: "archief", label: "Actief", type: "actief",
+             breedte: "80px", sorteerbaar: 1 }]
+        : []),
+    ],
     rijen: await schermAf(env, ik, tabelnaam, rijen.results),
     totaal: telling.n,
     limiet,

@@ -288,6 +288,14 @@ export async function neemRapportAan(env, xml, bron = "script") {
     env.DB.prepare("delete from lynx_rapport where id not in (select id from lynx_rapport order by id desc limit 3)"),
   ]);
 
+  // Een nieuw rapport is een nieuwe stand: wat erin veranderde, hoort meteen
+  // in de lijsten te staan. Anders zie je een vlag pas nadat je toevallig het
+  // juiste scherm hebt geopend, en dat is geen signaal maar een toeval.
+  try {
+    const { spiegel } = await import("./spiegel.js");
+    await spiegel(env, { id: null }, leesPosities(xml), leesTransacties(xml));
+  } catch { /* het rapport is bewaard; spiegelen kan bij het volgende */ }
+
   return { ok: true, posities: regels };
 }
 

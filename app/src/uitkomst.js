@@ -1,16 +1,23 @@
 // Het gesprek: één scherm waarop alles staat wat op dat moment bekend is.
 //
-// Bovenaan de looptijd: links de events van de cyclus om door te scrollen,
-// rechts diezelfde events op een tijdas met daar vlak onder, op dezelfde as,
-// wat ieder zou schrijven — een balk die eindigt op de expiratie die hij
-// voorstelt. Daaronder de portefeuille als één balk, dan de uitkomst, en
-// onderaan de gerelateerde lijsten waar het materiaal zelf staat. Het systeem
-// rekent hier niets uit en adviseert niets: het legt naast elkaar wat er is,
-// zodat drie mensen naar hetzelfde beeld kijken (BOUWSPEC 5.4).
+// Vijf blokken onder elkaar, en alles is meteen zichtbaar — geen tabbladen waar
+// je iets achter wegklikt:
+//
+//   1. de looptijd over de volle breedte: de events op een tijdas, en daar vlak
+//      onder wat ieder zou schrijven, als balk tot de expiratie die hij voorstelt
+//   2. links de events van de cyclus, rechts de instapvoorwaarden — beide de
+//      echte lijsten van de applicatie, met dezelfde kolommen
+//   3. de technische analyse: per chart een schermafdruk met wat je erin leest
+//   4. de uitkomst van het gesprek
+//   5. de portefeuille
+//
+// Het systeem rekent hier niets uit en adviseert niets: het legt naast elkaar
+// wat er is, zodat drie mensen naar hetzelfde beeld kijken (BOUWSPEC 5.4).
 
-import { besluitOverzicht, besluitUitkomst } from "./api.js";
+import { besluitOverzicht, besluitUitkomst, besluitChart } from "./api.js";
 import { ontsnap, toonDatum } from "./veld.js";
 import { avatar } from "./avatar.js";
+import { verkleinChart, uitKlembord, toonGroot } from "./afbeelding.js";
 import { kiezerHtml, kiezerAansluiten } from "./kiezer.js";
 import { lijstscherm } from "./lijst.js";
 
@@ -138,8 +145,7 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
         e.zwaarte === "zwaar" ? "rood" : e.zwaarte === "middel" ? "oranje" : "grijs")}
         <span class="faint">${ontsnap(e.soort || "")}${
           e.tijdstip ? ` · ${ontsnap(e.tijdstip)}${e.tijdzone ? ` ${ontsnap(e.tijdzone)}` : ""}` : ""}</span></span>
-      <span class="tijdkaartregel">Behandeling: ${ontsnap(e.behandeling || "nog te wegen")}</span>
-      ${e.motivering ? `<span class="tijdkaartnoot">${ontsnap(e.motivering)}</span>` : ""}
+      ${e.notities ? `<span class="tijdkaartnoot">${ontsnap(e.notities)}</span>` : ""}
     </span>`).join("");
 
   const puntenHtml = [...perDag.entries()].map(([datum, lijst]) => {
@@ -187,40 +193,67 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
   const goTellen = data.inzendingen.filter((i) => i.positie === "go").length;
   const nogoTellen = data.inzendingen.filter((i) => i.positie === "no-go").length;
 
-  const eventlijstHtml = `
-    <div class="eventlijstkop">Events van deze cyclus<span>${data.events.length}</span></div>
-    <ul class="eventlijst">
-      ${[...perDag.entries()].map(([datum, lijst]) => lijst.map((e) => `
-        <li data-datum="${ontsnap(datum)}">
-          <span class="evdatum">${ontsnap(kortDatum(datum))}</span>
-          <span class="evbol ${zwaarste([e])}"></span>
-          <span class="evnaam" title="${ontsnap(e.naam)}">${ontsnap(e.naam)}</span>
-          <span class="evbeh">${ontsnap(e.behandeling || "nog te wegen")}</span>
-        </li>`).join("")).join("")}
-    </ul>`;
-
   const tijdlijnHtml = `
     <div class="paneel">
-      <div class="paneelkop">Events in de looptijd
-        <span class="paneelmeta">${data.events.length} events · ${goTellen} go · ${nogoTellen} no-go ·
+      <div class="paneelkop">Looptijd
+        <span class="paneelmeta">${data.events.length} events &middot; ${goTellen} go &middot; ${nogoTellen} no-go &middot;
           van ${toonDatum(cyclus.geopend_op)} tot ${
             cyclus.doelexpiratie ? toonDatum(cyclus.doelexpiratie) : "onbepaald"}</span></div>
-      <div class="looptijd">
-        <div class="eventkolom">${eventlijstHtml}</div>
-        <div class="tijdblok">
-          <div class="tijdrij asrij">
-            <div class="tijdnaam"><span class="faint">Looptijd</span></div>
-            <div class="tijdspoor">
-              ${liniaal.map((k) => `<span class="tijdijk${k.pri === 3 ? " maand" : ""}${rand(k.p)}"
-                style="left:${k.p}%">${ontsnap(kortDatum(k.d))}<i></i></span>`).join("")}
-              <div class="tijdas"></div>
-              <span class="vandaag${rand(vandaagP)}" style="left:${vandaagP}%"></span>
-              ${puntenHtml}
-            </div>
+      <div class="tijdblok breed">
+        <div class="tijdrij asrij">
+          <div class="tijdnaam"></div>
+          <div class="tijdspoor">
+            ${liniaal.map((k) => `<span class="tijdijk${k.pri === 3 ? " maand" : ""}${rand(k.p)}"
+              style="left:${k.p}%">${ontsnap(kortDatum(k.d))}<i></i></span>`).join("")}
+            <div class="tijdas"></div>
+            <span class="vandaag${rand(vandaagP)}" style="left:${vandaagP}%"></span>
+            ${puntenHtml}
           </div>
-          ${data.inzendingen.map(schrijfrij).join("")}
         </div>
+        ${data.inzendingen.map(schrijfrij).join("")}
       </div>
+    </div>`;
+
+  // ---- 2 · links de events, rechts de instapvoorwaarden -----------------
+  // Allebei de echte lijst van de applicatie: zelfde kolommen, zelfde
+  // zoekvensters. Alleen niets dat hier gewijzigd mag worden.
+  const splitHtml = `
+    <div class="gesprekssplit">
+      <div class="relatieinhoud los" id="vak_events"></div>
+      <div class="relatieinhoud los" id="vak_voorwaarden"></div>
+    </div>`;
+
+  // ---- 3 · de technische analyse ----------------------------------------
+  // Eén regel per chart: een schermafdruk en wat je erin leest. De eerste regel
+  // ligt vast, zodat elk gesprek met dezelfde blik begint; daaronder voeg je
+  // zelf toe wat je verder wilt laten zien.
+  const chartregelHtml = (r) => `
+    <div class="chartregel" data-id="${ontsnap(String(r.id ?? ""))}" data-vast="${r.vast ? 1 : 0}">
+      <div class="chartkop">
+        <input class="chartnaam invulbaar" value="${ontsnap(r.onderwerp || "")}"
+               placeholder="Waar kijk je naar?"${vastgelegd ? " disabled" : ""}>
+      </div>
+      <div class="chartbeeld${r.afbeelding ? " gevuld" : ""}" tabindex="0">
+        ${r.afbeelding
+          ? `<img src="${ontsnap(r.afbeelding)}" alt="${ontsnap(r.onderwerp || "chart")}">
+             ${vastgelegd ? "" : `<button class="chartvervang" type="button">Vervangen</button>`}`
+          : `<span class="chartleeg">Plak hier een schermafdruk, of <b>kies een bestand</b></span>`}
+        ${vastgelegd ? "" : `<input type="file" class="chartbestand" accept="image/*" hidden>`}
+      </div>
+      <textarea class="chartcommentaar" placeholder="Wat lees je in deze chart?"${
+        vastgelegd ? " disabled" : ""}>${ontsnap(r.commentaar || "")}</textarea>
+    </div>`;
+
+  const chartHtml = `
+    <div class="paneel" id="chartpaneel">
+      <div class="paneelkop">Technische analyse
+        <span class="paneelmeta" id="chartmelding">een schermafdruk per chart, met wat je erin leest</span></div>
+      <div class="chartrijen" id="chartrijen">
+        ${(data.chartlezingen || []).map(chartregelHtml).join("")}
+      </div>
+      ${vastgelegd ? "" : `<div class="chartvoet">
+        <button class="knop tweede" id="chartbij" type="button">Chart toevoegen</button>
+      </div>`}
     </div>`;
 
   // ---------------------------------------------------------- portefeuille
@@ -329,7 +362,7 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
           </div>
         </div>
         <div class="uitkomstwie">
-          <div class="wiekop"><span class="ster">*</span> Aanwezigen</div>
+          <label class="veldlabel"><span class="ster">*</span> Aanwezigen</label>
           ${kiezerHtml({
             id: "u_aanwezigen",
             linkskop: "Niet bij het gesprek",
@@ -341,30 +374,6 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
       </div>
     </div>`;
 
-  // ------------------------------------------------------ gerelateerde lijsten
-  const relaties = [
-    { sleutel: "instap", label: "Instapvoorwaarden", tabel: "voorwaarde",
-      idfilters: { cyclus: String(cyclus.id) }, filters: { soort: "instap" }, },
-    { sleutel: "uitstap", label: "Uitstapvoorwaarden", tabel: "voorwaarde",
-      idfilters: { cyclus: String(cyclus.id) }, filters: { soort: "uitstap" }, },
-    { sleutel: "chart", label: "Technische analyse", tabel: null },
-    { sleutel: "inzending", label: "Inzendingen", tabel: "inzending",
-      idfilters: { beoordelingsmoment: String(moment.id) }, filters: {}, },
-  ];
-
-  // Elk tabblad krijgt zijn eigen vak en ze worden alle vier meteen gevuld. Dan
-  // staat de pagina op de hoogte van de grootste lijst: van tabblad wisselen
-  // verschuift niets meer, en je hoeft niet te scrollen naar wat er net nog
-  // paste.
-  const relatieHtml = `
-    <div class="relatieblok"><div class="tabbalk">
-      ${relaties.map((r, n) => `<a href="#" data-sleutel="${r.sleutel}" class="tab ${n === 0 ? "actief" : ""}">${
-        ontsnap(r.label)}</a>`).join("")}
-    </div><div class="relatieinhoud" id="relatievak">
-      ${relaties.map((r, n) => `<div class="relatievak" data-sleutel="${r.sleutel}"${
-        n === 0 ? "" : " hidden"}></div>`).join("")}
-    </div></div>`;
-
   inhoud.innerHTML = `
     <div class="recordbalk">
       <span class="recordnaam">${ontsnap(cyclus.label)} — gesprek van ${toonDatum(moment.datum)}</span>
@@ -374,21 +383,32 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
       </span>`}
     </div>
     ${tijdlijnHtml}
-    ${portefeuilleHtml}
+    ${splitHtml}
+    ${chartHtml}
     ${uitkomstHtml}
-    ${relatieHtml}`;
+    ${portefeuilleHtml}`;
+
+  plaatsTijdkaarten(inhoud);
+
+  // De twee lijsten in de split zijn de echte lijsten van de applicatie:
+  // zelfde kolommen, zelfde zoekvensters, alleen niets dat hier nieuw mag.
+  lijstscherm(inhoud.querySelector("#vak_events"), { textContent: "" }, "cyclus_event", meta, {
+    q: "", sorteer: null, richting: "asc", offset: 0,
+    filters: {}, idfilters: { cyclus: String(cyclus.id) },
+    ingebed: { ouder: { tabel: "cyclus", id: cyclus.id }, kolom: "cyclus",
+               label: "Events in de looptijd", magNieuw: false },
+  });
+  // Voorwaarden zijn instapvoorwaarden: wat je gemeten hebt vóór je schrijft.
+  // Het exitplan hoort bij de tranche en staat daar, niet hier — tijdens het
+  // gesprek is er nog geen tranche om een stoploss aan te hangen.
+  lijstscherm(inhoud.querySelector("#vak_voorwaarden"), { textContent: "" }, "voorwaarde", meta, {
+    q: "", sorteer: null, richting: "asc", offset: 0,
+    filters: {}, idfilters: { cyclus: String(cyclus.id) },
+    ingebed: { ouder: { tabel: "cyclus", id: cyclus.id }, kolom: "cyclus",
+               label: "Instapvoorwaarden", magNieuw: false },
+  });
 
   // ---------------------------------------------------------------- gedrag
-  // Een regel in de eventlijst en het punt op de as wijzen naar hetzelfde: wie
-  // de een aanwijst, ziet de ander oplichten.
-  const aanwijzen = (datum, aan) => {
-    inhoud.querySelectorAll(`[data-datum="${CSS.escape(datum)}"]`)
-      .forEach((el) => el.classList.toggle("wijs", aan));
-  };
-  inhoud.querySelectorAll(".eventlijst li, .tijdpunt").forEach((el) => {
-    el.addEventListener("mouseenter", () => aanwijzen(el.dataset.datum, true));
-    el.addEventListener("mouseleave", () => aanwijzen(el.dataset.datum, false));
-  });
 
   const kiezer = inhoud.querySelector("#u_aanwezigen");
   let aanwezigen = () => gekozenAanwezig;
@@ -510,45 +530,172 @@ export async function uitkomstscherm(inhoud, kruimel, momentId, meta) {
     });
   }
 
-  // De lijsten onderaan zijn de echte lijsten van de applicatie: zelfde
-  // kolommen, zelfde zoekvensters, alleen niets dat hier gewijzigd mag worden.
-  function vulRelatie(r) {
-    const vak = inhoud.querySelector(`.relatievak[data-sleutel="${r.sleutel}"]`);
-    if (!vak) return Promise.resolve();
-    if (!r.tabel) {
-      vak.innerHTML = `<div class="lijst"><div class="rlkop"><span class="rltitel">Technische analyse</span></div>
-        <p class="paneelleeg">De chartanalyse is nog niet gebouwd (etappe 11b). Tot dan hoort de lezing van de
-          charts in de motivering van de inzendingen.</p></div>`;
-      return Promise.resolve();
-    }
-    return lijstscherm(vak, { textContent: "" }, r.tabel, meta, {
-      q: "", sorteer: null, richting: "asc", offset: 0,
-      filters: { ...r.filters }, idfilters: { ...r.idfilters },
-      ingebed: { ouder: { tabel: "beoordelingsmoment", id: moment.id },
-                 kolom: Object.keys(r.idfilters)[0], label: r.label,
-                 magNieuw: false },
-    });
-  }
-  // Alle tabbladen zichtbaar vullen, de hoogste hoogte vasthouden, en dan pas
-  // alles behalve het eerste wegklappen. Verborgen meten gaat niet: dan is
-  // alles nul hoog.
-  (async () => {
-    const vakken = [...inhoud.querySelectorAll(".relatievak")];
-    vakken.forEach((v) => { v.hidden = false; });
-    await Promise.all(relaties.map(vulRelatie));
-    const hoogste = Math.max(0, ...vakken.map((v) => v.offsetHeight));
-    const bak = inhoud.querySelector("#relatievak");
-    if (bak && hoogste) bak.style.minHeight = `${hoogste}px`;
-    vakken.forEach((v, n) => { v.hidden = n !== 0; });
-  })();
+  // ------------------------------------------------- de technische analyse
+  // De regels bewaren zichzelf zodra je iets wijzigt. Een schermafdruk die je
+  // plakt en een gesprek dat daarna anders loopt, mag je niet kwijtraken omdat
+  // de uitkomst nog niet is vastgelegd.
+  const rijenvak = inhoud.querySelector("#chartrijen");
+  const chartmelding = inhoud.querySelector("#chartmelding");
+  if (rijenvak && !vastgelegd) {
+    const archief = [];
+    let bezig = false, nogEens = false, wachten = null;
 
-  inhoud.querySelectorAll(".tab").forEach((tab) => {
-    tab.addEventListener("click", (e) => {
-      e.preventDefault();
-      inhoud.querySelectorAll(".tab").forEach((t) => t.classList.toggle("actief", t === tab));
-      inhoud.querySelectorAll(".relatievak").forEach((v) => {
-        v.hidden = v.dataset.sleutel !== tab.dataset.sleutel;
-      });
+    const zegChart = (tekst, soort = "") => {
+      if (!chartmelding) return;
+      chartmelding.textContent = tekst;
+      chartmelding.className = `paneelmeta ${soort}`;
+    };
+
+    const regels = () => [...rijenvak.querySelectorAll(".chartregel")].map((rij, n) => {
+      const beeld = rij.querySelector(".chartbeeld img");
+      const naam = rij.querySelector(".chartnaam");
+      return {
+        id: rij.dataset.id || null,
+        onderwerp: naam ? naam.value : "",
+        afbeelding: beeld ? beeld.src : null,
+        commentaar: rij.querySelector(".chartcommentaar").value,
+        volgorde: (n + 1) * 10,
+      };
+    }).concat(archief.map((id) => ({ id, archief: true })));
+
+    const bewaarChart = async () => {
+      if (bezig) { nogEens = true; return; }
+      bezig = true;
+      zegChart("bewaren…");
+      try {
+        const uit = await besluitChart(momentId, regels());
+        archief.length = 0;
+        // De server kent de nummers van nieuwe regels; zonder dat zou een
+        // tweede keer bewaren dezelfde regel nog eens aanmaken.
+        const rijen = [...rijenvak.querySelectorAll(".chartregel")];
+        (uit.regels || []).forEach((r, n) => { if (rijen[n]) rijen[n].dataset.id = r.id; });
+        zegChart("bewaard");
+      } catch (fout) {
+        zegChart(fout.message, "fouttekst");
+      } finally {
+        bezig = false;
+        if (nogEens) { nogEens = false; bewaarChart(); }
+      }
+    };
+    const straksBewaren = () => { clearTimeout(wachten); wachten = setTimeout(bewaarChart, 700); };
+
+    const zetBeeld = async (rij, bestand) => {
+      if (!bestand) return;
+      const vak = rij.querySelector(".chartbeeld");
+      try {
+        const data = await verkleinChart(bestand);
+        vak.classList.add("gevuld");
+        vak.querySelector("img, .chartleeg").outerHTML =
+          `<img src="${data}" alt="chart">`;
+        if (!vak.querySelector(".chartvervang")) {
+          const knop = document.createElement("button");
+          knop.type = "button";
+          knop.className = "chartvervang";
+          knop.textContent = "Vervangen";
+          vak.appendChild(knop);
+        }
+        bewaarChart();
+      } catch (fout) {
+        zegChart(fout.message, "fouttekst");
+      }
+    };
+
+    const sluitRijAan = (rij) => {
+      const vak = rij.querySelector(".chartbeeld");
+      const bestand = rij.querySelector(".chartbestand");
+      if (vak && bestand) {
+        vak.addEventListener("click", (e) => {
+          if (e.target.classList.contains("chartvervang")) { bestand.click(); return; }
+          const beeld = vak.querySelector("img");
+          if (beeld) toonGroot(beeld.src, rij.querySelector(".chartnaam").value);
+          else bestand.click();
+        });
+        vak.addEventListener("paste", (e) => {
+          const b = uitKlembord(e);
+          if (b) { e.preventDefault(); zetBeeld(rij, b); }
+        });
+        bestand.addEventListener("change", () => zetBeeld(rij, bestand.files[0]));
+      }
+      rij.querySelectorAll(".chartcommentaar, .chartnaam.invulbaar")
+        .forEach((el) => el.addEventListener("input", straksBewaren));
+    };
+    rijenvak.querySelectorAll(".chartregel").forEach(sluitRijAan);
+
+    const erbij = inhoud.querySelector("#chartbij");
+    if (erbij) erbij.addEventListener("click", () => {
+      const rij = document.createElement("div");
+      rij.className = "chartregel";
+      rij.dataset.vast = "0";
+      rij.innerHTML = `
+        <div class="chartkop">
+          <input class="chartnaam invulbaar" placeholder="Waar kijk je naar?">
+        </div>
+        <div class="chartbeeld" tabindex="0">
+          <span class="chartleeg">Plak hier een schermafdruk, of <b>kies een bestand</b></span>
+          <input type="file" class="chartbestand" accept="image/*" hidden>
+        </div>
+        <textarea class="chartcommentaar" placeholder="Wat lees je in deze chart?"></textarea>`;
+      rijenvak.appendChild(rij);
+      sluitRijAan(rij);
+      rij.querySelector(".chartnaam").focus();
     });
-  });
+
+    // Vlak voor het vastleggen gaat de chartlezing nog één keer mee, zodat een
+    // regel die je net typte niet achterblijft in het wachtvenster.
+    const vk = inhoud.querySelector("#vastleggen");
+    if (vk) vk.addEventListener("click", () => { clearTimeout(wachten); bewaarChart(); }, true);
+  }
+}
+
+// De hoverkaart op de tijdlijn zweeft boven alles.
+//
+// Als gewone absolute kaart werd hij geknipt door het paneel waar de tijdlijn in
+// staat, en verdween hij onder de tabellen eronder: bij vijf events zag je er
+// twee. Daarom staat hij op 'fixed' — dan geldt geen enkele ouder meer — en
+// rekent dit uit waar hij komt.
+//
+// Dat kan niet in CSS: 'fixed' rekent vanaf het scherm, en waar een punt op het
+// scherm staat weet je pas op het moment dat je eroverheen gaat.
+function plaatsTijdkaarten(inhoud) {
+  const MARGE = 10;
+
+  const plaats = (punt) => {
+    const kaart = punt.querySelector(".tijdkaart");
+    if (!kaart) return;
+
+    // Even tonen om te kunnen meten; hij is nog doorzichtig voor het oog niet
+    // ziet dat hij heen en weer springt.
+    kaart.style.visibility = "hidden";
+    kaart.style.display = "block";
+    const stip = punt.getBoundingClientRect();
+    const breed = kaart.offsetWidth || 280;
+    const hoog = kaart.offsetHeight;
+
+    // Links/rechts: gecentreerd onder de stip, maar nooit buiten het scherm.
+    let links = stip.left + stip.width / 2 - breed / 2;
+    links = Math.max(MARGE, Math.min(links, window.innerWidth - breed - MARGE));
+
+    // Onder de stip als het past, anders erboven. Past het nergens helemaal,
+    // dan tegen de onderrand — de kaart scrollt dan zelf.
+    const onder = stip.bottom + 8;
+    const boven = stip.top - hoog - 8;
+    let top = onder;
+    if (onder + hoog > window.innerHeight - MARGE) {
+      top = boven >= MARGE ? boven : Math.max(MARGE, window.innerHeight - hoog - MARGE);
+    }
+
+    kaart.style.left = `${Math.round(links)}px`;
+    kaart.style.top = `${Math.round(top)}px`;
+    kaart.style.display = "";
+    kaart.style.visibility = "";
+  };
+
+  for (const punt of inhoud.querySelectorAll(".tijdpunt")) {
+    if (!punt.querySelector(".tijdkaart")) continue;
+    // Met de muis én met het toetsenbord: een tijdlijn die je alleen met een
+    // muis kunt lezen, kun je niet lezen.
+    punt.tabIndex = 0;
+    punt.addEventListener("mouseenter", () => plaats(punt));
+    punt.addEventListener("focus", () => plaats(punt));
+  }
 }
