@@ -1627,9 +1627,11 @@ Die laatste zijn de ene plek waar wél verwijderd wordt, en dat is precies zoals
 
 **Een kaart blijft bestaan, maar alleen voor een positie.** Open, gesloten, doorgerold — dat zijn de enige drie. De doorrol wordt herkend: sluit een positie en gaat er kort daarna een nieuwe open, dan verandert de kaart van de sluiting van vorm en laadt het doorrolsjabloon met beide contracten erin. De mapping staat in code, niet als ingerichte SQL.
 
-## 13c. De nieuwe werkbank (migraties 0128–0133, 5 okt 2026)
+## 13c. Ledencommunicatie — het scherm waarop je begint (migraties 0128–0134, 5 okt 2026)
 
 Het scherm waarop je begint, herbouwd uit `docs/mockup-werkbank.html`. Vier vakken, in deze volgorde, en niets anders.
+
+**Het heet Ledencommunicatie** (0134). 'Werkbank' zei wat het vroeger was: een bank met werk erop. Dat werk is weg (§13b) — wat er staat gaat over de leden: de stand die zij te zien krijgen, de posities waar die stand uit volgt, en wat er verstuurd is. De route blijft `/werkbank`: een adres is geen naam, en favorieten, bladwijzers en de geschiedenis van iedereen wijzen ernaar.
 
 **1. Stand naar de leden.** Het venster boven, de barometer eronder, en **één knop Publiceren voor allebei**. Kies je er twee, dan gaat er één bericht uit over allebei — een lid dat twee berichten krijgt over hetzelfde moment leest het tweede niet meer. De barometer **slaapt** tot het venster op *In positie* staat: daarvoor zitten wij er niet in en vragen we de leden niets, daarna is de cyclus uit. Hij is dan grijs en onklikbaar, met één regel waarom.
 
@@ -1661,7 +1663,7 @@ De balk loopt **van verlies links naar winst rechts** — de ask daalt naar rech
 
 **3. De posities.** Per positie dezelfde balk, met een merkteken op de ask en het resultaat erboven. De vakjes hebben de breedte van hun eigen bereik — even brede vakjes zouden het merkteken in een ander vakje zetten dan het label ernaast. Uitklappen geeft zes cijfers: premie, ask (de laatprijs; ontbreekt die, dan de marktprijs, en dat staat erbij), open resultaat, break-even, stoploss met wat er nog te gaan is, en de dagen met hoe oud de prijs is. Plus een balkje met hoeveel van de premie binnen is.
 
-**4. Ledencommunicatie.** Twee kolommen in één kader: links de kaarten, rechts wat verstuurd is.
+**4. Publicaties.** Twee kolommen in één kader: links de kaarten, rechts wat verstuurd is.
 
 **Een kaart komt alleen uit een positie** — open, gesloten, doorgerold — **en wordt afgeleid, niet weggeschreven.** Er is geen vlag en geen motor: een kaart staat open zolang er geen bericht over verstuurd is en niemand gezegd heeft dat het niet gemeld wordt. Daardoor kán hij niet blijven staan nadat het werk gedaan is; hij verdwijnt doordat het bericht weg is. Dat was de fout die de vorige werkbank maakte.
 

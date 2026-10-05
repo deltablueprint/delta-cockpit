@@ -1,4 +1,9 @@
-// De werkbank: het scherm waarop je begint.
+// Ledencommunicatie: het scherm waarop je begint.
+//
+// Het heette Werkbank, naar wat het vroeger was: een bank met werk erop. Dat
+// werk is weg (BOUWSPEC §13b) — wat er staat gaat over de leden. De route heet
+// nog wel /werkbank, want een adres is geen naam: favorieten en bladwijzers
+// wijzen ernaar.
 //
 // Vier dingen, in deze volgorde, en niets anders:
 //   1. de stand naar de leden — het venster en, zodra wij erin zitten, de
@@ -56,8 +61,8 @@ export async function werkbankscherm(inhoud, kruimel) {
 
   function teken() {
     if (!leeftNog()) return;
-    document.title = "Werkbank · Delta Blueprint Cockpit";
-    kruimel.innerHTML = `<span>Werken</span> <span class="pijlje">&rsaquo;</span> <span>Werkbank</span>`;
+    document.title = "Ledencommunicatie · Delta Blueprint Cockpit";
+    kruimel.innerHTML = `<span>Werken</span> <span class="pijlje">&rsaquo;</span> <span>Ledencommunicatie</span>`;
 
     if (!data.cyclus) {
       inhoud.innerHTML = `<div class="werkbank"><p class="wbleeg">Er loopt geen cyclus. Open er een om te beginnen.</p></div>`;
@@ -363,7 +368,7 @@ export async function werkbankscherm(inhoud, kruimel) {
     </div>`).join("");
 
     return `<section class="paneel">
-      <div class="paneelkop">Ledencommunicatie<span class="meta">wat er gebeurde, en wat de leden ervan weten</span></div>
+      <div class="paneelkop">Publicaties<span class="meta">wat er gebeurde, en wat de leden ervan weten</span></div>
       <div class="tweekolom">
         <div class="kol">
           <div class="kolkop">Kaarten · veranderingen in een positie<span class="n">${data.kaarten.length} open</span></div>
