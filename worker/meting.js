@@ -27,9 +27,9 @@ import { leesMoment } from "./tijd.js";
 export const STANDEN = [1, 2, 3, 4, 5];
 
 const STANDAARD = {
-  barometer_comfortabel_pct: 35,
-  barometer_letop_pct: 60,
-  barometer_krap_pct: 80,
+  stoploss_ask: 60,
+  waarschuwing_ask: 50,
+  winstanker_pct: 70,
   koers_vers_minuten: 20,
   doorrol_minuten: 60,
 };
@@ -39,7 +39,7 @@ export async function drempels(env) {
   try {
     const r = await env.DB.prepare(
       "select sleutel, waarde from instelling where archief = 0 and sleutel in " +
-      "('barometer_krap_pct','barometer_letop_pct','barometer_comfortabel_pct','koers_vers_minuten','doorrol_minuten')"
+      "('stoploss_ask','waarschuwing_ask','winstanker_pct','koers_vers_minuten','doorrol_minuten')"
     ).all();
     for (const rij of r.results) {
       const n = Number(rij.waarde);
@@ -49,53 +49,128 @@ export async function drempels(env) {
     }
   } catch { /* dan de standaard */ }
 
-  // Lopen de grenzen door elkaar, dan is de inrichting fout. Ook dan hoort er
-  // een bruikbare meter uit te komen, en niet een stand die van de volgorde van
-  // drie ifs afhangt.
-  if (!(uit.barometer_comfortabel_pct < uit.barometer_letop_pct
-        && uit.barometer_letop_pct < uit.barometer_krap_pct)) {
-    uit.barometer_comfortabel_pct = STANDAARD.barometer_comfortabel_pct;
-    uit.barometer_letop_pct = STANDAARD.barometer_letop_pct;
-    uit.barometer_krap_pct = STANDAARD.barometer_krap_pct;
+  // De waarschuwing ligt vóór de stoploss, en het winstanker is een deel van de
+  // premie. Klopt dat niet, dan is de inrichting fout — en ook dan hoort er een
+  // bruikbare meter uit te komen in plaats van een stand die van de volgorde van
+  // vier ifs afhangt.
+  if (!(uit.waarschuwing_ask < uit.stoploss_ask)) {
+    uit.stoploss_ask = STANDAARD.stoploss_ask;
+    uit.waarschuwing_ask = STANDAARD.waarschuwing_ask;
+    uit.grenzen_rechtgezet = true;
+  }
+  if (!(uit.winstanker_pct > 0 && uit.winstanker_pct < 100)) {
+    uit.winstanker_pct = STANDAARD.winstanker_pct;
     uit.grenzen_rechtgezet = true;
   }
   return uit;
 }
 
-// Waar de ask staat op de weg van 0 naar de stoploss, in procent. 0 % is
-// waardeloos geëxpireerd, 100 % is eruit volgens het exitplan.
-export function opWeg(ask, stoploss) {
-  // Number(null) is 0 en Number("") ook. Een ask die er niet is zou daarmee
-  // 'waardeloos geëxpireerd' worden, en dat is de rustigste stand die er is.
+// De vijf ijkpunten van een tranche, als ask-niveaus, van verlies naar winst.
+// Alles is een ask, want dat is de prijs waartegen je er werkelijk uit komt en
+// het getal waar de regels tegen toetsen.
+//
+//   stoploss      hier hoort de tranche gesloten te zijn
+//   waarschuwing  aandacht, vóór de harde grens in zicht komt
+//   breakeven     de ask gelijk aan wat je ontving
+//   helft         de helft van de premie binnen
+//   winstanker    het afgesproken deel binnen (70 % → ask op 30 % van de premie)
+export function ijkpunten(premie, stoploss, d) {
+  const p = Number(premie);
+  if (!Number.isFinite(p) || p <= 0) return null;
+  const sl = Number.isFinite(Number(stoploss)) && Number(stoploss) > 0
+    ? Number(stoploss) : d.stoploss_ask;
+
+  // De stoploss moet boven break-even liggen, anders is het geen stoploss maar
+  // een winstdoel: je zou eruit stappen terwijl je nog op winst staat. Dat kan
+  // een bewuste keuze zijn, maar deze balk kan hem niet tonen — en een balk die
+  // iets anders tekent dan er staat is erger dan geen balk.
+  if (!(sl > p)) return null;
+
+  // De waarschuwing ligt tussen de stoploss en break-even. Het vaste niveau uit
+  // de standaardset (ask 50) doet dat bij een premie onder de 50; ligt de premie
+  // hoger, dan valt hij erbuiten en nemen we het midden. Zo houdt de balk zijn
+  // volgorde, wat er ook in de standaardset staat.
+  const vast = d.waarschuwing_ask;
+  const waarschuwing = vast > p && vast < sl ? vast : (sl + p) / 2;
+
+  return {
+    stoploss: sl,
+    waarschuwing,
+    breakeven: p,
+    helft: p * 0.5,
+    winstanker: p * (1 - d.winstanker_pct / 100),
+  };
+}
+
+// De zes vakken van de balk, van links (verlies) naar rechts (winst), met hun
+// vaste plek op het scherm. Vast, zodat twee tranches met verschillende premies
+// dezelfde zonebreedtes tonen en je ze naast elkaar kunt lezen zonder eerst de
+// schaal te ijken. Break-even staat in het midden.
+//
+// stand 0 is geen stand maar het smalle stuk voorbij de grens: daar hoort de
+// tranche gesloten te zijn.
+export const VAKKEN = [
+  { stand: 0, van: 0,  tot: 8,   naam: "voorbij de grens" },
+  { stand: 1, van: 8,  tot: 26,  naam: "onder druk" },
+  { stand: 2, van: 26, tot: 50,  naam: "krap" },
+  { stand: 3, van: 50, tot: 68,  naam: "ruim" },
+  { stand: 4, van: 68, tot: 84,  naam: "comfortabel" },
+  { stand: 5, van: 84, tot: 100, naam: "vrijwel afgerond" },
+];
+
+// Waar een ask op die balk staat, in procent van links naar rechts. Binnen elk
+// vak lineair, zodat de markering vloeiend meebeweegt met de prijs.
+export function plekVan(ask, ijk) {
+  // Number(null) is 0, en 0 is hier 'waardeloos geëxpireerd' — de beste plek op
+  // de balk. Een ask die er niet is mag daar nooit terechtkomen.
   if (ask === null || ask === undefined || String(ask).trim() === "") return null;
-  if (stoploss === null || stoploss === undefined || String(stoploss).trim() === "") return null;
-  const a = Number(ask), s = Number(stoploss);
-  if (!Number.isFinite(a) || a < 0) return null;
-  if (!Number.isFinite(s) || s <= 0) return null;
-  return (a / s) * 100;
-}
+  const a = Number(ask);
+  if (!ijk || !Number.isFinite(a) || a < 0) return null;
 
-// Van die plek naar een stand. Buiten dit bestand wordt deze som niet nog eens
-// gemaakt: twee plekken die hetzelfde rekenen gaan een keer uit elkaar lopen.
-export function standVan(wegPct, d) {
-  if (wegPct === null || wegPct === undefined || !Number.isFinite(wegPct)) return null;
-  if (wegPct >= 100) return 5;                        // op of over de stoploss
-  if (wegPct >= d.barometer_krap_pct) return 4;
-  if (wegPct >= d.barometer_letop_pct) return 3;
-  if (wegPct >= d.barometer_comfortabel_pct) return 2;
-  return 1;
-}
+  // Voorbij de stoploss is één smal stuk zonder schaal: hoe ver eroverheen doet
+  // er niet toe, want de tranche hoort daar gesloten te zijn. De markering
+  // staat in het midden ervan.
+  if (a > ijk.stoploss) return VAKKEN[0].van + (VAKKEN[0].tot - VAKKEN[0].van) * 0.5;
 
-// De grenzen als vijf stukken van de weg, voor de balk en de legende. Eén plek,
-// zodat de balk niet iets anders kan tonen dan de meter rekent.
-export function zones(d) {
-  return [
-    { stand: 1, van: 0, tot: d.barometer_comfortabel_pct },
-    { stand: 2, van: d.barometer_comfortabel_pct, tot: d.barometer_letop_pct },
-    { stand: 3, van: d.barometer_letop_pct, tot: d.barometer_krap_pct },
-    { stand: 4, van: d.barometer_krap_pct, tot: 100 },
-    { stand: 5, van: 100, tot: 120 },                 // over de stoploss
+  // Daarna: van links naar rechts daalt de ask. Elk vak heeft een hoge en een
+  // lage grens, en binnen het vak wordt lineair geïnterpoleerd zodat de
+  // markering vloeiend meebeweegt met de prijs.
+  const grenzen = [
+    [ijk.stoploss,      ijk.waarschuwing],
+    [ijk.waarschuwing,  ijk.breakeven],
+    [ijk.breakeven,     ijk.helft],
+    [ijk.helft,         ijk.winstanker],
+    [ijk.winstanker,    0],
   ];
+
+  for (let i = 0; i < grenzen.length; i++) {
+    const [hoog, laag] = grenzen[i];
+    const vak = VAKKEN[i + 1];
+    if (a < laag && i < grenzen.length - 1) continue;
+    const breedte = hoog - laag;
+    const deel = breedte > 0 ? (hoog - a) / breedte : 0;
+    return vak.van + (vak.tot - vak.van) * Math.max(0, Math.min(1, deel));
+  }
+  return 100;
+}
+
+// Van een ask naar een stand. Dit is dezelfde som als de balk tekent: de stand
+// ís de zone waarin de markering staat, en daarom is er geen apart rekenwerk.
+export function standVan(ask, ijk) {
+  const plek = plekVan(ask, ijk);
+  if (plek === null) return null;
+  const vak = VAKKEN.find((v) => plek >= v.van && (plek < v.tot || v.tot === 100));
+  if (!vak) return null;
+  // Voorbij de grens is geen barometerstand maar een positie die gesloten hoort
+  // te zijn. Voor de barometer telt hij als de zwaarste stand die er is.
+  return vak.stand === 0 ? 1 : vak.stand;
+}
+
+// Staat de tranche voorbij haar stoploss? Dat is geen stand maar een afspraak
+// die geraakt is, en het hoort apart op het scherm te staan.
+export function voorbijDeGrens(ask, ijk) {
+  if (!ijk || !Number.isFinite(Number(ask))) return false;
+  return Number(ask) > ijk.stoploss;
 }
 
 function dagenTot(datum, nu) {
@@ -146,6 +221,7 @@ export async function metingen(env, cyclusId, { nu = null } = {}) {
     const premie = p.ontvangen_premie_pt === null || p.ontvangen_premie_pt === undefined
       || String(p.ontvangen_premie_pt).trim() === "" ? null : Number(p.ontvangen_premie_pt);
     const stoploss = Number(p.stoploss_ask) > 0 ? Number(p.stoploss_ask) : null;
+    const ijk = ijkpunten(premie, stoploss, d);
 
     const resultaat = premie !== null && Number.isFinite(premie) && ask !== null ? premie - ask
       // Een positie die dicht is heeft haar resultaat al vastgelegd; dat staat
@@ -153,7 +229,6 @@ export async function metingen(env, cyclusId, { nu = null } = {}) {
       // meer is.
       : (p.resultaat_pt !== null && Number.isFinite(Number(p.resultaat_pt)) ? Number(p.resultaat_pt) : null);
 
-    const weg = versePrijs ? opWeg(ask, stoploss) : null;
     const dagen = dagenTot(p.expiratiedatum, moment);
 
     return {
@@ -169,12 +244,18 @@ export async function metingen(env, cyclusId, { nu = null } = {}) {
       resultaat_eur: resultaat !== null && Number(p.aantal) > 0
         ? resultaat * (Number(p.multiplier) > 0 ? Number(p.multiplier) : 10) * Number(p.aantal)
         : null,
-      // Break-even op de optie: tot hier koop je terug met winst.
-      breakeven: premie !== null && Number.isFinite(premie) ? premie : null,
-      stoploss,
-      tot_stoploss: ask !== null && stoploss !== null ? stoploss - ask : null,
-      // Hoeveel van de premie al verdiend is. Dit is wat de balk toont.
-      weg,
+      // De ijkpunten van deze tranche, als ask-niveaus. De balk tekent ze op
+      // vaste plekken, zodat twee tranches met verschillende premies naast
+      // elkaar te lezen zijn.
+      ijk,
+      stoploss: ijk ? ijk.stoploss : stoploss,
+      breakeven: ijk ? ijk.breakeven : null,
+      tot_stoploss: ask !== null && ijk ? ijk.stoploss - ask : null,
+      // Waar de markering staat, in procent van links (verlies) naar rechts
+      // (winst). De ask daalt naar rechts: een geschreven optie die goedkoper
+      // wordt is winst.
+      plek: versePrijs ? plekVan(ask, ijk) : null,
+      voorbij_de_grens: versePrijs ? voorbijDeGrens(ask, ijk) : false,
       binnen: premie !== null && ask !== null && premie > 0
         ? Math.max(0, ((premie - ask) / premie) * 100) : null,
       wie_volgt: p.wie_volgt, beoordelingsmoment: p.beoordelingsmoment,
@@ -182,15 +263,16 @@ export async function metingen(env, cyclusId, { nu = null } = {}) {
       afwijking: p.afwijking ? 1 : 0, afwijking_soort: p.afwijking_soort,
       gepubliceerd_op: p.gepubliceerd_op,
       open, uitkomst: p.uitkomst,
-      stand: open ? standVan(weg, d) : null,
+      stand: open && versePrijs ? standVan(ask, ijk) : null,
     };
   });
 
   // De zwakste open positie bepaalt de barometer. Niet het gemiddelde: één
   // positie die tegen haar stoploss aanligt vraagt iets van een lid, ook als de
-  // twee andere waardeloos staan te worden.
+  // twee andere vrijwel afgerond zijn. Zwakste is nu de láágste stand: 1 is
+  // onder druk.
   const gemeten = uit.filter((p) => p.open && p.stand !== null);
-  const zwakste = gemeten.length ? gemeten.reduce((a, b) => (b.stand > a.stand ? b : a)) : null;
+  const zwakste = gemeten.length ? gemeten.reduce((a, b) => (b.stand < a.stand ? b : a)) : null;
 
   // Posities die in de markt staan maar niet gemeten konden worden. Die horen
   // genoemd te worden: een voorstel op de halve portefeuille ziet er precies
@@ -202,7 +284,8 @@ export async function metingen(env, cyclusId, { nu = null } = {}) {
     posities: uit,
     zwakste: zwakste
       ? { id: zwakste.id, contract: zwakste.contract, stand: zwakste.stand,
-          ask: zwakste.ask, stoploss: zwakste.stoploss, weg: zwakste.weg }
+          ask: zwakste.ask, stoploss: zwakste.stoploss, plek: zwakste.plek,
+          breakeven: zwakste.breakeven, voorbij_de_grens: zwakste.voorbij_de_grens }
       : null,
     voorstel: zwakste ? zwakste.stand : null,
     // Waarom er níéts voorgesteld wordt, is net zo belangrijk als het voorstel.
@@ -210,10 +293,12 @@ export async function metingen(env, cyclusId, { nu = null } = {}) {
       : !inDeMarkt.length ? "geen open positie"
       : inDeMarkt.every((p) => p.ask === null) ? "geen prijs van de broker"
       : inDeMarkt.every((p) => !p.verse_prijs) ? "de prijs is te oud"
-      : inDeMarkt.every((p) => !p.stoploss) ? "er staat geen stoploss op de positie"
+      : inDeMarkt.every((p) => !p.ijk) ? "het exitplan is niet te lezen: geen premie, of een stoploss onder break-even"
       : "de posities konden niet gemeten worden",
     ongemeten: ongemeten.map((p) => ({ id: p.id, contract: p.contract })),
-    zones: zones(d),
+    // De vakken gaan mee naar het scherm, zodat de balk niet iets anders kan
+    // tonen dan de meter rekent.
+    vakken: VAKKEN,
     drempels: d,
   };
 }

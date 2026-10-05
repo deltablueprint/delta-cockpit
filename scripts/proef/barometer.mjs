@@ -24,8 +24,11 @@ let nu = await huidig(env, CYCLUS);
 eis("een verse cyclus heeft nog geen stand", nu.wij === null);
 eis("en de leden dus ook niet", nu.leden === null);
 eis("de schaal heeft vijf standen", nu.schaal.length === 5);
-eis("1 is rustig", nu.schaal[0].waarde === "1" && nu.schaal[0].label === "Ruim");
-eis("5 is het drukst", nu.schaal[4].label === "Op de stoploss");
+// De richting staat in BOUWSPEC §10.1 en is op 5 oktober 2026 beslist: 1 is
+// onder druk, 5 is vrijwel afgerond. De stand telt op naarmate de positie
+// veiliger staat.
+eis("1 is onder druk", nu.schaal[0].waarde === "1" && nu.schaal[0].label === "Onder druk");
+eis("5 is het veiligst", nu.schaal[4].label === "Vrijwel afgerond");
 eis("het venster is een verloop van zes standen", nu.vensters.length === 6);
 eis("de namen komen uit beheer, niet uit de code",
     (await q("select count(*) n from db_choice where tabel='barometerstand' and kolom='stand'"))[0].n === 5);
@@ -66,9 +69,8 @@ uit = await stelVast(env, ik, {
 eis("vaststellen lukt", !uit.fout);
 nu = await huidig(env, CYCLUS);
 eis("wij weten de stand", nu.wij.stand.waarde === 1);
-eis("en hij heeft een label uit beheer", nu.wij.stand.label === "Ruim");
-eis("1 mag hier groen zijn — dit is een toestand, geen openstaande kaart",
-    nu.wij.stand.kleur === "groen");
+eis("en hij heeft een label uit beheer", nu.wij.stand.label === "Onder druk");
+eis("1 is rood: de positie staat onder druk", nu.wij.stand.kleur === "rood");
 eis("de leden weten nog niets", nu.leden === null);
 eis("dus wij en zij staan niet gelijk", nu.gelijk === false);
 

@@ -1617,38 +1617,39 @@ Die laatste zijn de ene plek waar wél verwijderd wordt, en dat is precies zoals
 
 **Een kaart blijft bestaan, maar alleen voor een positie.** Open, gesloten, doorgerold — dat zijn de enige drie. De doorrol wordt herkend: sluit een positie en gaat er kort daarna een nieuwe open, dan verandert de kaart van de sluiting van vorm en laadt het doorrolsjabloon met beide contracten erin. De mapping staat in code, niet als ingerichte SQL.
 
-## 13c. De nieuwe werkbank (migraties 0128–0131, 5 okt 2026)
+## 13c. De nieuwe werkbank (migraties 0128–0132, 5 okt 2026)
 
 Het scherm waarop je begint, herbouwd uit `docs/mockup-werkbank.html`. Vier vakken, in deze volgorde, en niets anders.
 
 **1. Stand naar de leden.** Het venster boven, de barometer eronder, en **één knop Publiceren voor allebei**. Kies je er twee, dan gaat er één bericht uit over allebei — een lid dat twee berichten krijgt over hetzelfde moment leest het tweede niet meer. De barometer **slaapt** tot het venster op *In positie* staat: daarvoor zitten wij er niet in en vragen we de leden niets, daarna is de cyclus uit. Hij is dan grijs en onklikbaar, met één regel waarom.
 
-**2. De barometer wordt gemeten — op de ask** (0130). De maat is wat het kost om de positie terug te kopen, en dus precies wat er nog op het spel staat. De schaal loopt van het ene uiterste naar het andere:
+**2. De barometer leest de balk** (0132). De vijf standen zijn de vijf zones van de gezondheidsbalk uit §10.1, en de stand die het systeem voorstelt is de zone waarin de markering van de **zwakste tranche** staat. Er is dus geen apart rekenwerk: iedereen ziet op het scherm waarom.
 
-- **ask = 0** — de optie is waardeloos, de hele premie is binnen
-- **ask = de stoploss** — eruit volgens het exitplan
+De balk loopt **van verlies links naar winst rechts** — de ask daalt naar rechts, want een geschreven optie die goedkoper wordt is winst. Alle ijkpunten zijn **ask-niveaus**, want dat is de prijs waartegen je er werkelijk uit komt:
 
-De vijf treden zijn vijf stukken van die weg, in procent van de stoploss, met grenzen uit beheer:
-
-| Stand | Ask als deel van de stoploss | Grens in beheer |
+| Ijkpunt | Niveau | Waar vandaan |
 |---|---|---|
-| 1 Ruim | < 35 % | `barometer_comfortabel_pct` |
-| 2 Comfortabel | 35 – 60 % | `barometer_letop_pct` |
-| 3 Let op | 60 – 80 % | `barometer_krap_pct` |
-| 4 Krap | 80 – 100 % | — |
-| 5 Op de stoploss | ≥ 100 % | — |
+| stop loss | ask 60,0 | standaardset, per tranche aan te scherpen |
+| waarschuwing | ask 50,0 | standaardset |
+| break-even | ask = de ontvangen premie | per tranche |
+| helft binnen | ask = 50 % van de premie | per tranche |
+| winstanker | ask = 30 % van de premie | winstanker 70 % binnen |
 
-Dat is met opzet **niet** de afstand van de spot tot de strike. Die maat klopt ook, maar hij vraagt de stand van de onderliggende index — een abonnement op Eurex-data en een brug die draait — terwijl het getal dat ertoe doet al binnenkomt bij elke hartslag. Een maat die de helft van de tijd ontbreekt is geen maat. Daarmee vervalt ook de tabel `marktstand` uit 0128: hij blijft staan maar niets leest of schrijft hem nog (0131).
+**De stoploss is géén veelvoud van de premie.** Dat stond hier eerder wel en was verzonnen; hij is een vast niveau uit de standaardset.
 
-De stoploss staat per positie (`positie.stoploss_ask`, standaard 60 = 2× de premie), dus de schaal is per positie anders. Dezelfde ask kan op de ene tranche *Let op* zijn en op de andere *Krap*. Dat is geen inconsistentie maar precies wat het exitplan zegt.
+**De ijkpunten staan op vaste plekken op het scherm**, met break-even in het midden, en binnen elk vak wordt lineair geïnterpoleerd. Zo tonen twee tranches met verschillende premies dezelfde zonebreedtes en kun je ze naast elkaar lezen zonder eerst de schaal te ijken. Links staat een smal, dieprood stuk voor wat voorbij de stoploss staat: hoe ver eroverheen doet er niet toe, want daar hoort de tranche gesloten te zijn.
 
-1 blijft het rustigst; de schaal zelf verandert niet, alleen wat hij betekent en wie hem invult. **De zwakste open positie bepaalt de stand** — niet het gemiddelde: één positie die tegen haar stoploss aanligt vraagt iets van een lid, ook als de twee andere waardeloos staan te worden.
+**De richting van de schaal** staat in §10.1 en liep in 0107 andersom. Beslist op 5 oktober 2026: **1 is onder druk, 5 is vrijwel afgerond** — de stand telt op naarmate de positie veiliger staat. 0132 draait de labels én de al vastgelegde standen om, met een notitie in de reden zodat niemand zich later afvraagt waarom het getal niet bij de tekst past.
 
-**Het systeem stelt voor, een mens publiceert.** Het voorstel staat als stippellijn om de stand; je klikt hem aan en drukt op publiceren. Er wordt niets automatisch vastgesteld.
+**De zwakste open positie bepaalt de stand** — niet het gemiddelde: één tranche die tegen haar stoploss aanligt vraagt iets van een lid, ook als de twee andere vrijwel afgerond zijn.
 
-**Meten kan ook niet lukken, en dan zegt het dat.** Geen prijs van de broker, een prijs ouder dan `koers_vers_minuten`, een prijstijdstip dat onleesbaar is of in de toekomst ligt, of geen stoploss op de positie: dan stelt het systeem **niets** voor en staat op het scherm waarom. Een stand op een prijs van gisteren is erger dan geen stand: hij ziet er even stellig uit.
+**Het systeem stelt voor, een mens publiceert.** Het voorstel staat als stippellijn om de stand; je klikt hem aan en drukt op publiceren.
 
-**3. De posities.** Per positie een balk die loopt van ask 0 tot de stoploss, met een merkteken op de ask. De vakjes hebben de breedte van hun eigen bereik — even brede vakjes zouden het merkteken in een ander vakje zetten dan het label ernaast. Uitklappen geeft zes cijfers: premie, ask (de laatprijs; ontbreekt die, dan de marktprijs, en dat staat erbij), open resultaat, stoploss met wat er nog te gaan is, strike, en de dagen met hoe oud de prijs is. Plus twee balkjes: hoeveel van de premie binnen is, en hoe ver de ask naar de stoploss staat.
+**Meten kan ook niet lukken, en dan zegt het dat.** Geen prijs van de broker, een prijs ouder dan `koers_vers_minuten`, een prijstijdstip dat onleesbaar is of in de toekomst ligt, geen ontvangen premie, of een stoploss ónder break-even — dat laatste is geen stoploss maar een winstdoel, en deze balk kan dat niet tonen. In al die gevallen stelt het systeem **niets** voor en staat op het scherm waarom.
+
+**De spot speelt geen rol.** Niet de afstand tot de strike, maar de ask. Dat scheelt het Eurex-indexabonnement en een tweede ding dat stil kan uitvallen; de tabel `marktstand` uit 0128 is daarmee buiten gebruik (0131).
+
+**3. De posities.** Per positie dezelfde balk, met een merkteken op de ask en het resultaat erboven. De vakjes hebben de breedte van hun eigen bereik — even brede vakjes zouden het merkteken in een ander vakje zetten dan het label ernaast. Uitklappen geeft zes cijfers: premie, ask (de laatprijs; ontbreekt die, dan de marktprijs, en dat staat erbij), open resultaat, break-even, stoploss met wat er nog te gaan is, en de dagen met hoe oud de prijs is. Plus een balkje met hoeveel van de premie binnen is.
 
 **4. Ledencommunicatie.** Twee kolommen in één kader: links de kaarten, rechts wat verstuurd is.
 

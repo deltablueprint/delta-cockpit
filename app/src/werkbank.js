@@ -15,7 +15,10 @@ import { ontsnap } from "./veld.js";
 
 // De vijf treden van de barometer, van rustig naar druk. De labels komen uit
 // beheer; de kleuren staan hier omdat ze de meter tekenen.
-const KLEUR = ["#0A9D4E", "#8DC63F", "#FBC02D", "#F26A21", "#D7261E"];   // stand 1..5
+// Stand 1..5: 1 is onder druk, 5 is vrijwel afgerond (BOUWSPEC §10.1). De balk
+// loopt van verlies links naar winst rechts, dus van rood naar groen.
+const KLEUR = ["#D7261E", "#F26A21", "#FBC02D", "#8DC63F", "#0A9D4E"];
+const DIEPROOD = "#9A1C16";   // het smalle stuk voorbij de stoploss
 
 // Elk bezoek krijgt een nummer. Klik je weg terwijl de peiling loopt, dan tekent
 // het antwoord dat daarna binnenkomt niet meer over het scherm waar je inmiddels
@@ -184,9 +187,10 @@ export async function werkbankscherm(inhoud, kruimel) {
       return `M${x1} ${y1}A${ro} ${ro} 0 0 1 ${x2} ${y2}L${x3} ${y3}A${ri} ${ri} 0 0 0 ${x4} ${y4}Z`;
     };
     let svg = "";
-    // Stand 5 (onder de strike) links, stand 1 (ruim) rechts.
+    // Stand 1 (onder druk) links, stand 5 (vrijwel afgerond) rechts — dezelfde
+    // leesrichting als de balk onder een positie.
     for (let i = 0; i < 5; i++) {
-      const stand = 5 - i;
+      const stand = i + 1;
       const a0 = 180 - i * 36 - LUCHT, a1 = a0 - 36 + 2 * LUCHT;
       const gekozen = kiesStand === stand;
       const voorgesteld = tip === stand && kiesStand === null;
@@ -196,7 +200,7 @@ export async function werkbankscherm(inhoud, kruimel) {
       if (gekozen) svg += `<path d="${sector(a0, a1, RO + 5, RI - 5)}" fill="none" stroke="#136289" stroke-width="3"></path>`;
     }
     if (toon) {
-      const h = 180 - (5 - toon + 0.5) * 36;
+      const h = 180 - (toon - 0.5) * 36;
       const [nx, ny] = punt(h, RO - 14);
       const [bx, by] = punt(h + 90, 9), [cx, cy] = punt(h - 90, 9);
       svg += `<path d="M${bx} ${by}L${nx} ${ny}L${cx} ${cy}Z" fill="#0F0E0D"></path>`;
@@ -206,19 +210,19 @@ export async function werkbankscherm(inhoud, kruimel) {
   }
 
   function legenda(tip) {
-    const d = data.drempels || {};
-    // De grenzen lopen in procent van de stoploss: 0 % is waardeloos, 100 % is
-    // eruit volgens het exitplan.
-    const pctVan = (n) => `${getal(n, 0)} %`;
-    const omschrijving = {
-      1: `ask < ${pctVan(d.barometer_comfortabel_pct)} van de stoploss`,
-      2: `${pctVan(d.barometer_comfortabel_pct)} – ${pctVan(d.barometer_letop_pct)}`,
-      3: `${pctVan(d.barometer_letop_pct)} – ${pctVan(d.barometer_krap_pct)}`,
-      4: `${pctVan(d.barometer_krap_pct)} – 100 %`,
-      5: "op of over de stoploss",
-    };
+    // De grenzen zijn ask-niveaus van de zwakste tranche. Alles is een ask,
+    // want dat is de prijs waartegen je er werkelijk uit komt.
+    const ijk = (data.posities.find((p) => p.ijk && p.open) || {}).ijk || null;
+    const n = (x) => (ijk ? `ask ${getal(x)}` : "—");
+    const omschrijving = ijk ? {
+      1: `${n(ijk.stoploss)} – ${n(ijk.waarschuwing).replace("ask ", "")}`,
+      2: `${n(ijk.waarschuwing)} – ${getal(ijk.breakeven)}`,
+      3: `${n(ijk.breakeven)} – ${getal(ijk.helft)}`,
+      4: `${n(ijk.helft)} – ${getal(ijk.winstanker)}`,
+      5: `onder ask ${getal(ijk.winstanker)}`,
+    } : { 1: "onder druk", 2: "krap", 3: "ruim", 4: "comfortabel", 5: "vrijwel afgerond" };
     const nu = data.barometer.wij ? Number(data.barometer.wij.stand.waarde) : null;
-    return [5, 4, 3, 2, 1].map((stand) => {
+    return [1, 2, 3, 4, 5].map((stand) => {
       const kl = [stand === nu ? "nu" : "", tip === stand && kiesStand === null ? "tip" : "",
                   kiesStand === stand ? "gekozen" : ""].filter(Boolean).join(" ");
       return `<button class="lreg ${kl}" data-stand="${stand}">
@@ -230,24 +234,25 @@ export async function werkbankscherm(inhoud, kruimel) {
 
   // --------------------------------------------------------- de posities
   function positievak() {
-    // De balk loopt van ask 0 tot de stoploss, met een stukje erover zodat een
-    // positie die eroverheen is ook nog ergens staat. De vakjes hebben de
-    // breedte van hun eigen bereik: even brede vakjes zouden het merkteken in
-    // een ander vakje zetten dan het label ernaast.
-    const ZONES = data.zones || [];
-    const RECHTS = ZONES.length ? ZONES[ZONES.length - 1].tot : 120;
+    // De balk loopt van verlies links naar winst rechts; de ask daalt dus naar
+    // rechts — een geschreven optie die goedkoper wordt is winst. De vakken
+    // staan op vaste plekken, met break-even in het midden, zodat twee tranches
+    // met verschillende premies naast elkaar te lezen zijn. Binnen een vak
+    // beweegt de markering lineair mee met de prijs. Zie BOUWSPEC §10.1.
+    const VAKKEN = data.vakken || [];
 
     const regels = data.posities.map((p) => {
       const uit = open.has(p.id);
-      const vakjes = ZONES.map((z) => {
-        const breed = (z.tot - z.van) / RECHTS;
-        return `<span class="z" style="flex:0 0 calc(${(breed * 100).toFixed(2)}% - 4px);background:${
-          KLEUR[z.stand - 1]};opacity:${p.open ? 0.9 : 0.4}"></span>`;
+      const vakjes = VAKKEN.map((v) => {
+        const breed = v.tot - v.van;
+        const kleur = v.stand === 0 ? DIEPROOD : KLEUR[v.stand - 1];
+        return `<span class="z" style="flex:0 0 calc(${breed.toFixed(2)}% - 3px);background:${kleur};opacity:${p.open ? 0.9 : 0.4}"></span>`;
       }).join("");
 
-      const plek = p.weg === null ? null : Math.max(1, Math.min(99, (p.weg / RECHTS) * 100));
-      const merker = plek === null ? ""
-        : `<span class="merkerlab" style="left:${plek}%">${getal(p.ask)}</span><span class="merker" style="left:calc(${plek}% - 1.5px)"></span>`;
+      const merker = p.plek === null ? ""
+        : `<span class="merkerlab" style="left:${Math.max(2, Math.min(98, p.plek))}%">${
+            p.binnen === null ? getal(p.ask) : `${getalMet(p.binnen, 0)} %`}</span><span class="merker" style="left:calc(${
+            Math.max(1, Math.min(99, p.plek))}% - 1.5px)"></span>`;
 
       return `<div class="posblok ${uit ? "uitgeklapt" : ""}">
         <button class="pos ${p.open ? "" : "posdicht"}" data-pos="${p.id}">
@@ -255,33 +260,37 @@ export async function werkbankscherm(inhoud, kruimel) {
             <span class="posnaam">${ontsnap(p.contract || `Tranche ${p.tranche}`)}</span><br>
             <span class="posonder">${ontsnap(onderschrift(p))}</span></span></span>
           <span class="spoorbalk">${vakjes}${merker}</span>
-          <span class="posstand">${p.stand
-            ? `<span class="badge" style="background:${KLEUR[p.stand - 1]}">${ontsnap(labelStand(p.stand))}</span>`
-            : `<span class="badge" style="background:var(--dim)">${p.open ? "niet gemeten" : "Afgerond"}</span>`}</span>
+          <span class="posstand">${p.voorbij_de_grens
+            ? `<span class="badge" style="background:${DIEPROOD}">Voorbij de stoploss</span>`
+            : p.stand
+              ? `<span class="badge" style="background:${KLEUR[p.stand - 1]}">${ontsnap(labelStand(p.stand))}</span>`
+              : `<span class="badge" style="background:var(--dim)">${p.open ? "niet gemeten" : "Afgerond"}</span>`}</span>
         </button>
         ${uit ? detail(p) : ""}
       </div>`;
     }).join("");
 
-    // De schaal eronder staat op dezelfde grenzen als de vakjes, en in punten —
-    // want dat is wat je op het scherm van de broker ziet staan. De stoploss
-    // verschilt per positie, dus de schaal toont die van de zwakste.
-    const maat = data.zwakste && data.zwakste.stoploss
-      ? data.zwakste.stoploss
-      : (data.posities.find((p) => p.stoploss) || {}).stoploss || null;
-    const schaal = ZONES.map((z) => {
-      const breed = (z.tot - z.van) / RECHTS;
-      const bij = maat ? getal((z.van / 100) * maat) : `${getal(z.van, 0)} %`;
-      return `<span style="flex:0 0 calc(${(breed * 100).toFixed(2)}% - 4px)">${
-        z.van === 0 ? "waardeloos" : z.van === 100 ? "stoploss" : bij}</span>`;
+    // De schaal eronder staat op dezelfde plekken als de vakken, met de
+    // ask-niveaus van de zwakste tranche erbij. De namen van de standen staan
+    // er niet nog eens: die staan rechts op elke regel.
+    const ijk = (data.posities.find((p) => p.ijk && p.open) || {}).ijk || null;
+    const grens = ijk ? [null, ijk.stoploss, ijk.waarschuwing, ijk.breakeven, ijk.helft, ijk.winstanker] : [];
+    const schaal = VAKKEN.map((v, i) => {
+      const breed = v.tot - v.van;
+      const label = !ijk ? v.naam
+        : i === 0 ? "voorbij"
+        : `${getal(grens[i])}`;
+      return `<span style="flex:0 0 calc(${breed.toFixed(2)}% - 3px)">${ontsnap(label)}</span>`;
     }).join("");
 
     return `<section class="paneel">
-      <div class="paneelkop">Posities<span class="meta">de ask, van waardeloos tot de stoploss · de zwakste bepaalt de barometer</span></div>
+      <div class="paneelkop">Posities<span class="meta">de ask, van verlies links naar winst rechts${
+        ijk ? ` · break-even ${getal(ijk.breakeven)} in het midden` : ""} · de zwakste bepaalt de barometer</span></div>
       ${data.posities.length ? regels : `<p class="wbleeg">Deze cyclus heeft nog geen positie.</p>`}
       ${data.posities.length ? `<div class="schaalrij"><span class="schaal">${schaal}</span></div>` : ""}
       ${data.zwakste ? `<div class="zwakste"><b>${ontsnap(data.zwakste.contract || "")}</b> is de zwakste en bepaalt de barometer: ask ${
-        getal(data.zwakste.ask)} van een stoploss op ${getal(data.zwakste.stoploss)} — <b>${ontsnap(labelStand(data.zwakste.stand))}</b>.</div>` : ""}
+        getal(data.zwakste.ask)}, break-even op ${getal(data.zwakste.breakeven)}, stoploss op ${
+        getal(data.zwakste.stoploss)} — <b>${ontsnap(labelStand(data.zwakste.stand))}</b>.</div>` : ""}
     </section>`;
   }
 
@@ -308,13 +317,12 @@ export async function werkbankscherm(inhoud, kruimel) {
         ${feit("Premie", getal(p.premie), `${p.aantal ?? "?"} contract${p.aantal === 1 ? "" : "en"}`)}
         ${feit("Ask nu", getal(p.ask), p.ask_is_marktprijs ? "marktprijs" : `bod ${getal(p.bod)}`)}
         ${feit("Open resultaat", getalMet(p.resultaat), p.resultaat_eur === null ? "" : `€ ${getal(p.resultaat_eur, 0)}`)}
+        ${feit("Break-even", getal(p.breakeven), "ask gelijk aan de premie")}
         ${feit("Stoploss", getal(p.stoploss), p.tot_stoploss === null ? "" : `${getal(p.tot_stoploss)} te gaan`)}
-        ${feit("Strike", getal(p.strike, 0), p.expiratiedatum || "")}
         ${feit("Dagen", p.dagen === null ? "—" : String(p.dagen), p.prijs_minuten_oud === null ? "" : `prijs ${p.prijs_minuten_oud} min oud`)}
       </div>
       <div class="dbalken">
         ${balk("Premie binnen", p.binnen, p.binnen !== null && p.binnen >= 50 ? "var(--grn)" : "var(--amb)")}
-        ${balk("Naar de stoploss", p.weg, p.weg !== null && p.weg >= 80 ? "var(--red)" : "var(--blue)")}
       </div>
       <div class="dmerken">
         ${merken.map(([kl, t]) => `<span class="dmerk ${kl}">${ontsnap(t)}</span>`).join("")}
@@ -450,7 +458,7 @@ function getal(n, decimalen = 1) {
   if (!Number.isFinite(x)) return "—";
   return x.toFixed(decimalen).replace(".", ",");
 }
-function getalMet(n) {
+function getalMet(n, decimalen = 1) {
   const x = Number(n);
   if (!Number.isFinite(x)) return "—";
   return `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(x).toFixed(1).replace(".", ",")}`;

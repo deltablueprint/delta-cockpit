@@ -1635,7 +1635,7 @@ body.sleept .lijsttabel { pointer-events: none; }
    Aaneengesloten lezen ze als één verloop; los lezen ze als vijf standen, en
    dat is wat ze zijn. De breedte van een vakje is zijn eigen bereik: even brede
    vakjes zouden het merkteken in een ander vakje zetten dan het label ernaast. */
-.spoorbalk { position: relative; height: 22px; display: flex; gap: 4px; }
+.spoorbalk { position: relative; height: 22px; display: flex; gap: 3px; }
 .spoorbalk .z { border-radius: 3px; }
 .merker { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--ink);
   border-radius: 2px; box-shadow: 0 0 0 2px #fff; }
@@ -1644,7 +1644,8 @@ body.sleept .lijsttabel { pointer-events: none; }
 /* De schaal onder de balken, op dezelfde grenzen als de vakjes. In punten, want
    dat is wat op het scherm van de broker staat. */
 .werkbank .schaalrij { display: grid; grid-template-columns: 210px 1fr 108px; gap: 14px; padding: 0 14px 10px; }
-.werkbank .schaal { grid-column: 2; display: flex; gap: 4px; font-size: 10px; color: var(--faint); }
+.werkbank .schaal { grid-column: 2; display: flex; gap: 3px; font-size: 10px; color: var(--faint); }
+.werkbank .schaal span { text-align: right; }
 .werkbank .schaal span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .zwakste { padding: 10px 14px; border-top: 1px solid var(--b2); font-size: 12.5px;

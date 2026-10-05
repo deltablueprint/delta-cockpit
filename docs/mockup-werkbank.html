@@ -311,7 +311,7 @@ body { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif
 
         <!-- ─────────── posities ─────────── -->
         <section class="paneel">
-          <div class="paneelkop">Posities<span class="meta">de ask, van waardeloos tot de stoploss · de zwakste bepaalt de barometer</span></div>
+          <div class="paneelkop">Posities<span class="meta">de ask · verlies links, winst rechts · break-even in het midden</span></div>
           <div id="posities"></div>
           <div class="schaalrij"><span class="schaal" id="schaal"></span></div>
           <div class="zwakste" id="zwakste"></div>
@@ -342,23 +342,70 @@ body { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif
 /* ───────────────────────── de vijf standen ─────────────────────────
    Links rood, rechts groen — zoals een meter hoort te lopen. De stand is
    afgeleid uit de afstand tot de strike van de zwakste open positie. */
-// De maat is de ask: wat het kost om de positie terug te kopen. De weg loopt
-// van waardeloos (0) tot de stoploss uit het exitplan (hier 60).
-const STOPLOSS = 60;
+// De balk loopt van verlies links naar winst rechts: de ask daalt naar rechts,
+// want een geschreven optie die goedkoper wordt is winst. De ijkpunten zijn
+// allemaal ask-niveaus, en ze staan op vaste plekken zodat twee tranches met
+// verschillende premies naast elkaar te lezen zijn — break-even in het midden.
+// Zie BOUWSPEC §10.1.
+//
+//   stop loss      ask 60,0          vast, uit de standaardset
+//   waarschuwing   ask 50,0          vast, uit de standaardset
+//   break-even     ask = de premie
+//   helft binnen   ask = 50 % van de premie
+//   winstanker     ask = 30 % van de premie   (70 % binnen)
+const STOPLOSS = 60, WAARSCHUWING = 50, WINSTANKER_PCT = 70;
+
 const STANDEN = [
-  { w: "stoploss",    nm: "Op de stoploss",  kl: "var(--s1)", van: 100, tot: 120,
-    vraag: "Paraat zijn. Wij stappen eruit volgens het exitplan." },
-  { w: "krap",        nm: "Krap",            kl: "var(--s2)", van: 80,  tot: 100,
-    vraag: "Bereikbaar zijn. Geen nieuwe verplichtingen aangaan deze week." },
-  { w: "letop",       nm: "Let op",          kl: "var(--s3)", van: 60,  tot: 80,
-    vraag: "Meelezen. De positie loopt op." },
-  { w: "comfortabel", nm: "Comfortabel",     kl: "var(--s4)", van: 35,  tot: 60,
-    vraag: "Niets doen. Wij volgen het." },
-  { w: "ruim",        nm: "Ruim",            kl: "var(--s5)", van: 0,   tot: 35,
-    vraag: "Niets. De premie loopt binnen." },
+  { nr: 1, nm: "Onder druk",       kl: "#D7261E", vraag: "Paraat zijn. Wij stappen eruit volgens het exitplan." },
+  { nr: 2, nm: "Krap",             kl: "#F26A21", vraag: "Bereikbaar zijn. Geen nieuwe verplichtingen aangaan deze week." },
+  { nr: 3, nm: "Ruim",             kl: "#FBC02D", vraag: "Meelezen. De positie staat nog op winst." },
+  { nr: 4, nm: "Comfortabel",      kl: "#8DC63F", vraag: "Niets doen. Wij volgen het." },
+  { nr: 5, nm: "Vrijwel afgerond", kl: "#0A9D4E", vraag: "Niets. De premie is zo goed als binnen." },
 ];
-const omschrijving = (s) => s.van === 100 ? "op of over de stoploss"
-  : `${s.van} – ${s.tot} % van de stoploss`;
+const DIEPROOD = "#9A1C16";
+
+// De zes vakken, met hun vaste plek op het scherm. Vak 0 is het smalle stuk
+// voorbij de stoploss: daar hoort de tranche gesloten te zijn.
+const VAKKEN = [
+  { stand: 0, van: 0,  tot: 8  },
+  { stand: 1, van: 8,  tot: 26 },
+  { stand: 2, van: 26, tot: 50 },
+  { stand: 3, van: 50, tot: 68 },
+  { stand: 4, van: 68, tot: 84 },
+  { stand: 5, van: 84, tot: 100 },
+];
+
+const ijkVan = (p) => ({
+  stoploss: p.stoploss, waarschuwing: Math.min(WAARSCHUWING, (p.stoploss + p.premie) / 2),
+  breakeven: p.premie, helft: p.premie * 0.5, winstanker: p.premie * (1 - WINSTANKER_PCT / 100),
+});
+
+function plekVan(ask, ijk) {
+  if (ask === null || ask === undefined) return null;
+  if (ask > ijk.stoploss) return 4;
+  const g = [[ijk.stoploss, ijk.waarschuwing], [ijk.waarschuwing, ijk.breakeven],
+             [ijk.breakeven, ijk.helft], [ijk.helft, ijk.winstanker], [ijk.winstanker, 0]];
+  for (let i = 0; i < g.length; i++) {
+    const [hoog, laag] = g[i], vak = VAKKEN[i + 1];
+    if (ask < laag && i < g.length - 1) continue;
+    const breedte = hoog - laag;
+    const deel = breedte > 0 ? (hoog - ask) / breedte : 0;
+    return vak.van + (vak.tot - vak.van) * Math.max(0, Math.min(1, deel));
+  }
+  return 100;
+}
+const standVan = (p) => {
+  const plek = plekVan(p.ask, ijkVan(p));
+  const vak = VAKKEN.find((v) => plek >= v.van && (plek < v.tot || v.tot === 100));
+  return vak.stand === 0 ? 1 : vak.stand;
+};
+const omschrijving = (s, ijk) => ijk ? ({
+  1: `ask ${kom(ijk.stoploss)} – ${kom(ijk.waarschuwing)}`,
+  2: `ask ${kom(ijk.waarschuwing)} – ${kom(ijk.breakeven)}`,
+  3: `ask ${kom(ijk.breakeven)} – ${kom(ijk.helft)}`,
+  4: `ask ${kom(ijk.helft)} – ${kom(ijk.winstanker)}`,
+  5: `onder ask ${kom(ijk.winstanker)}`,
+})[s.nr] : "";
 
 const VENSTERS = [
   { w: "pre_analyse",      nm: "Pre-analyse",      wn: "chart nog te lezen", vraag: "Niets. De leden horen hier nog niets van." },
@@ -369,25 +416,24 @@ const VENSTERS = [
   { w: "afgerond",         nm: "Afgerond",         wn: "niets meer te doen", vraag: "De cyclus is uit. Eén slotbericht over wat het opbracht." },
 ];
 
-/* ── de posities. afstand in % van spot tot de strike ── */
 const POSITIES = [
-  { nm: "OESX 16OCT26 P5300", strike: 5300, dagen: 11, looptijd: 45, premie: 38.5,
-    ask: 48.0, bod: 47.2, stoploss: 77.0, aantal: 1, open: true, geopend: "30 sep 15:12",
-    expiratie: "16 okt 2026", besluit: "Besluit 2026-10 · tranche 1", wieVolgt: "Simon",
-    afwijking: null, gemeld: "4 okt 14:10" },
-  { nm: "OESX 16OCT26 P5150", strike: 5150, dagen: 11, looptijd: 32, premie: 19.0,
-    ask: 14.5, bod: 14.0, stoploss: 38.0, aantal: 1, open: true, geopend: "4 okt 14:02",
-    expiratie: "16 okt 2026", besluit: "Besluit 2026-10 · tranche 2", wieVolgt: "Simon",
+  { nm: "OESX 16OCT26 P5300", dagen: 11, premie: 38.5, ask: 52.0, bod: 51.2, stoploss: 60,
+    aantal: 1, open: true, geopend: "30 sep 15:12", expiratie: "16 okt 2026",
+    besluit: "Besluit 2026-10 · tranche 1", wieVolgt: "Simon", afwijking: null, gemeld: "4 okt 14:10" },
+  { nm: "OESX 16OCT26 P5150", dagen: 11, premie: 19.0, ask: 14.5, bod: 14.0, stoploss: 60,
+    aantal: 1, open: true, geopend: "4 okt 14:02", expiratie: "16 okt 2026",
+    besluit: "Besluit 2026-10 · tranche 2", wieVolgt: "Simon",
     afwijking: 1, afwijkingKort: "slechtere fill, 19,0 i.p.v. 20,5", gemeld: null },
-  { nm: "OESX 16OCT26 P5000", strike: 5000, dagen: 11, looptijd: 32, premie: 11.0,
-    ask: 1.5, bod: 1.1, stoploss: 22.0, aantal: 1, open: true, geopend: "4 okt 14:08",
-    expiratie: "16 okt 2026", besluit: "Doorrol uit P5100", wieVolgt: "Simon",
+  { nm: "OESX 16OCT26 P5000", dagen: 11, premie: 11.0, ask: 1.5, bod: 1.1, stoploss: 60,
+    aantal: 1, open: true, geopend: "4 okt 14:08", expiratie: "16 okt 2026",
+    besluit: "Doorrol uit P5100", wieVolgt: "Simon",
     doorrolUit: "OESX 16OCT26 P5100 · −14,5", afwijking: null, gemeld: null },
-  { nm: "OESX 18SEP26 P5050", strike: 5050, dagen: 0, looptijd: 44, premie: 22.0,
-    ask: 0, bod: 0, stoploss: 44.0, aantal: 1, open: false, geopend: "5 aug 10:30",
-    expiratie: "18 sep 2026", besluit: "Besluit 2026-09 · tranche 1", wieVolgt: "Simon",
-    afwijking: null, uitkomst: "Waardeloos geëxpireerd", gemeld: "18 sep 17:40" },
+  { nm: "OESX 18SEP26 P5050", dagen: 0, premie: 22.0, ask: 0, bod: 0, stoploss: 60,
+    aantal: 1, open: false, geopend: "5 aug 10:30", expiratie: "18 sep 2026",
+    besluit: "Besluit 2026-09 · tranche 1", wieVolgt: "Simon", afwijking: null,
+    uitkomst: "Waardeloos geëxpireerd", gemeld: "18 sep 17:40" },
 ];
+
 
 // Waar de ask staat op de weg van waardeloos naar de stoploss, in procent.
 const opWeg = (p) => (p.ask / p.stoploss) * 100;
@@ -395,18 +441,13 @@ const opWeg = (p) => (p.ask / p.stoploss) * 100;
 
 // Welke stand hoort bij een afstand. De drempels staan straks in Instellingen,
 // niet in de code — hier even hard, want het is een mockup.
-// De index in STANDEN (0 = op de stoploss, 4 = ruim) die bij deze weg hoort.
-function standVan(weg) {
-  if (weg === null || !Number.isFinite(weg)) return null;
-  return STANDEN.findIndex((s) => weg >= s.van && (weg < s.tot || s.van === 100));
-}
 const kom = (n) => Number(n).toFixed(1).replace(".", ",");
-const zwakste = Math.min(...POSITIES.filter((p) => p.open).map((p) => standVan(opWeg(p))));
-const zwakstePos = POSITIES.filter((p) => p.open).find((p) => standVan(opWeg(p)) === zwakste);
+const zwakste = Math.min(...POSITIES.filter((p) => p.open).map(standVan));
+const zwakstePos = POSITIES.filter((p) => p.open).find((p) => standVan(p) === zwakste);
 
 /* ── de staat van het scherm ── */
 const S = {
-  baro:   { gepubliceerd: 4, nu: 4, tip: zwakste, gekozen: null },   // leden kennen 'Ruim'
+  baro:   { gepubliceerd: 4, nu: 4, tip: zwakste, gekozen: null },   // leden kennen 'Comfortabel'
   venster:{ gepubliceerd: 4, nu: 4, tip: null,    gekozen: null },   // 'In positie' is gemeld
 };
 
@@ -435,26 +476,27 @@ function tekenMeter() {
     ? "De cyclus is afgerond. Er is geen positie meer om een stand over te hebben."
     : "Slaapt tot het venster op <b>In positie</b> staat — zolang wij er niet in zitten, vragen we de leden niets.";
 
-  const toon = S.baro.gekozen ?? S.baro.nu;
+  const toon = S.baro.gekozen ?? S.baro.nu;      // standnummer 1..5
   let svg = "";
   STANDEN.forEach((st, i) => {
+    const nr = st.nr;
     const a0 = 180 - i * 36, a1 = a0 - 36;
     const lucht = 2.2;                       // graden tussenruimte per kant
-    const geselecteerd = S.baro.gekozen === i;
-    const voorgesteld = wakker && S.baro.tip === i && S.baro.gekozen === null && S.baro.tip !== S.baro.nu;
-    svg += `<path class="seg" data-stand="${i}" d="${sector(a0 - lucht, a1 + lucht, RO, RI)}" fill="${st.kl}"
-             opacity="${geselecteerd || voorgesteld || (S.baro.gekozen === null && i === toon) ? 1 : .72}"></path>`;
+    const geselecteerd = S.baro.gekozen === nr;
+    const voorgesteld = wakker && S.baro.tip === nr && S.baro.gekozen === null && S.baro.tip !== S.baro.nu;
+    svg += `<path class="seg" data-stand="${nr}" d="${sector(a0 - lucht, a1 + lucht, RO, RI)}" fill="${st.kl}"
+             opacity="${geselecteerd || voorgesteld || (S.baro.gekozen === null && nr === toon) ? 1 : .72}"></path>`;
     if (voorgesteld) svg += `<path d="${sector(a0 - lucht, a1 + lucht, RO + 5, RI - 5)}" fill="none" stroke="#8A5A12" stroke-width="2.5" stroke-dasharray="6 4"></path>`;
     if (geselecteerd) svg += `<path d="${sector(a0 - lucht, a1 + lucht, RO + 5, RI - 5)}" fill="none" stroke="#136289" stroke-width="3"></path>`;
   });
-  const h = 180 - (S.baro.nu + 0.5) * 36;
+  const h = 180 - (S.baro.nu - 0.5) * 36;
   const [nx, ny] = punt(h, RO - 14);
   const [bx, by] = punt(h + 90, 9), [cx2, cy2] = punt(h - 90, 9);
   svg += `<path d="M${bx} ${by}L${nx} ${ny}L${cx2} ${cy2}Z" fill="#0F0E0D"></path>`;
   svg += `<circle cx="${CX}" cy="${CY}" r="11" fill="#0F0E0D"></circle><circle cx="${CX}" cy="${CY}" r="4.5" fill="#fff"></circle>`;
   document.getElementById("gauge").innerHTML = svg;
 
-  document.getElementById("gnaam").textContent = STANDEN[toon].nm;
+  document.getElementById("gnaam").textContent = STANDEN[toon - 1].nm;
   document.getElementById("gonder").textContent =
     !wakker ? "nog niet van toepassing"
     : S.baro.gekozen !== null ? "gekozen — nog niet gepubliceerd"
@@ -462,24 +504,24 @@ function tekenMeter() {
 
   document.getElementById("legenda").innerHTML = STANDEN.map((st, i) => {
     const kl = [
-      i === S.baro.nu ? "nu" : "",
-      wakker && S.baro.tip === i && S.baro.gekozen === null && S.baro.tip !== S.baro.nu ? "tip" : "",
-      S.baro.gekozen === i ? "gekozen" : "",
+      st.nr === S.baro.nu ? "nu" : "",
+      wakker && S.baro.tip === st.nr && S.baro.gekozen === null && S.baro.tip !== S.baro.nu ? "tip" : "",
+      S.baro.gekozen === st.nr ? "gekozen" : "",
     ].filter(Boolean).join(" ");
-    return `<button class="lreg ${kl}" data-stand="${i}">
+    return `<button class="lreg ${kl}" data-stand="${st.nr}">
       <span class="vlak" style="background:${st.kl}"></span>
-      <span class="nm">${st.nm}</span><span class="om">${omschrijving(st)}</span></button>`;
+      <span class="nm">${st.nm}</span><span class="om">${omschrijving(st, ijkVan(zwakstePos))}</span></button>`;
   }).join("");
 
-  document.getElementById("bvraag").textContent = STANDEN[toon].vraag;
-  document.getElementById("bgepub").textContent = "Leden kennen: " + STANDEN[S.baro.gepubliceerd].nm;
+  document.getElementById("bvraag").textContent = STANDEN[toon - 1].vraag;
+  document.getElementById("bgepub").textContent = "Leden kennen: " + STANDEN[S.baro.gepubliceerd - 1].nm;
 
   const tip = wakker && S.baro.tip !== null && S.baro.tip !== S.baro.nu;
   document.getElementById("bsug").hidden = !tip || S.baro.gekozen !== null;
   if (tip) {
-    const pz = POSITIES.filter((x) => x.open).find((x) => standVan(opWeg(x)) === S.baro.tip) || zwakstePos;
+    const pz = POSITIES.filter((x) => x.open).find((x) => standVan(x) === S.baro.tip) || zwakstePos;
     document.getElementById("bsugtekst").innerHTML =
-      `Barometer: het systeem stelt <b>${STANDEN[S.baro.tip].nm}</b> voor — ${pz.nm} staat op ask ${kom(pz.ask)} van een stoploss op ${kom(pz.stoploss)}. Klik de omstippelde stand en publiceer.`;
+      `Barometer: het systeem stelt <b>${STANDEN[S.baro.tip - 1].nm}</b> voor — ${pz.nm} staat op ask ${kom(pz.ask)} van een stoploss op ${kom(pz.stoploss)}. Klik de omstippelde stand en publiceer.`;
   }
 }
 
@@ -512,7 +554,7 @@ function tekenPubliceer() {
   const v = S.venster.gekozen, b = S.baro.gekozen;
   const stukken = [];
   if (v !== null) stukken.push(`venster naar <b>${VENSTERS[v].nm}</b>`);
-  if (b !== null) stukken.push(`barometer naar <b>${STANDEN[b].nm}</b>`);
+  if (b !== null) stukken.push(`barometer naar <b>${STANDEN[b - 1].nm}</b>`);
   document.getElementById("pubtekst").innerHTML = stukken.length
     ? "Klaar om te publiceren: " + stukken.join(" en ") + "."
     : "Klik een stand aan om hem te veranderen.";
@@ -531,7 +573,7 @@ function publiceer() {
   if (S.baro.gekozen !== null) {
     S.baro.nu = S.baro.gepubliceerd = S.baro.gekozen;
     S.baro.gekozen = null; S.baro.tip = S.baro.nu;
-    VERSTUURD.unshift({ t: "Barometer op " + STANDEN[S.baro.nu].nm, s: "\u201C" + STANDEN[S.baro.nu].vraag + "\u201D", d: "zojuist" });
+    VERSTUURD.unshift({ t: "Barometer op " + STANDEN[S.baro.nu - 1].nm, s: "\u201C" + STANDEN[S.baro.nu - 1].vraag + "\u201D", d: "zojuist" });
   }
   teken();
 }
@@ -545,14 +587,8 @@ const OPEN = new Set(["OESX 16OCT26 P5300"]);
 
 function detail(p) {
   const resultaat = p.premie - p.ask;
-  const binnen = Math.max(0, (resultaat / p.premie) * 100);
-  const weg = opWeg(p);
+  const binnen = ((p.premie - p.ask) / p.premie) * 100;
   const m = (l, w, n) => `<span class="dfeit"><span class="dlab">${l}</span><span class="dwaarde">${w}</span>${n ? `<span class="dnoot">${n}</span>` : ""}</span>`;
-  const balk = (lab, pct, kl, rechts) => `
-    <div class="dbalkrij"><span class="dbalklab">${lab}</span>
-      <span class="dbalk"><i style="width:${Math.max(0, Math.min(100, pct))}%;background:${kl}"></i></span>
-      <span class="dbalkpct">${rechts}</span></div>`;
-
   const merken = [
     p.doorrolUit ? ["dblauw", "Doorrol uit " + p.doorrolUit] : null,
     p.afwijking ? ["dlet", "Afwijking · " + p.afwijkingKort] : null,
@@ -560,54 +596,48 @@ function detail(p) {
     ["", p.besluit + " · " + p.wieVolgt],
   ].filter(Boolean);
 
-  return `<div class="detail">
-    <div class="dvak">
-      <div class="dfeiten">
-        ${m("Premie", kom(p.premie), p.aantal + " contract" + (p.aantal > 1 ? "en" : ""))}
-        ${m("Ask nu", kom(p.ask), "bod " + kom(p.bod))}
-        ${m("Open resultaat", (resultaat >= 0 ? "+" : "\u2212") + kom(Math.abs(resultaat)), "€ " + (resultaat < 0 ? "\u2212" : "") + Math.abs(Math.round(resultaat * 10 * p.aantal)).toLocaleString("nl-BE"))}
-        ${m("Stoploss", kom(p.stoploss), kom(p.stoploss - p.ask) + " te gaan")}
-        ${m("Strike", p.strike.toLocaleString("nl-BE"), p.expiratie)}
-        ${m("Dagen", String(p.dagen), "prijs 2 min oud")}
-      </div>
-      <div class="dbalken">
-        ${balk("Premie binnen", binnen, binnen >= 50 ? "var(--s5)" : "var(--s3)", Math.round(binnen) + " %")}
-        ${balk("Naar de stoploss", weg, weg >= 80 ? "var(--s1)" : "var(--blue)", Math.round(weg) + " %")}
-      </div>
-      <div class="dmerken">
-        ${merken.map(([kl, t]) => `<span class="dmerk ${kl}">${t}</span>`).join("")}
-        <a class="knop tweede" href="#">Positierecord</a>
-        ${p.gemeld ? "" : `<button class="knop">Bericht opstellen</button>`}
-      </div>
+  return `<div class="detail"><div class="dvak">
+    <div class="dfeiten">
+      ${m("Premie", kom(p.premie), p.aantal + " contract" + (p.aantal > 1 ? "en" : ""))}
+      ${m("Ask nu", kom(p.ask), "bod " + kom(p.bod))}
+      ${m("Open resultaat", (resultaat >= 0 ? "+" : "\u2212") + kom(Math.abs(resultaat)),
+          "€ " + (resultaat < 0 ? "\u2212" : "") + Math.abs(Math.round(resultaat * 10 * p.aantal)).toLocaleString("nl-BE"))}
+      ${m("Break-even", kom(p.premie), "ask gelijk aan de premie")}
+      ${m("Stoploss", kom(p.stoploss), kom(p.stoploss - p.ask) + " te gaan")}
+      ${m("Dagen", String(p.dagen), "prijs 2 min oud")}
     </div>
-  </div>`;
+    <div class="dbalken">
+      <div class="dbalkrij"><span class="dbalklab">Premie binnen</span>
+        <span class="dbalk"><i style="width:${Math.max(0, Math.min(100, binnen))}%;background:${binnen >= 50 ? "#0A9D4E" : "#F26A21"}"></i></span>
+        <span class="dbalkpct">${binnen < 0 ? "\u2212" : ""}${Math.abs(Math.round(binnen))} %</span></div>
+    </div>
+    <div class="dmerken">
+      ${merken.map(([kl, t]) => `<span class="dmerk ${kl}">${t}</span>`).join("")}
+      <a class="knop tweede" href="#">Positierecord</a>
+      ${p.gemeld ? "" : `<button class="knop">Bericht opstellen</button>`}
+    </div>
+  </div></div>`;
 }
 
-// De balk loopt van ask 0 (waardeloos) tot iets over de stoploss. De vakjes
-// hebben de breedte van hun eigen bereik: even brede vakjes zouden het
-// merkteken in een ander vakje zetten dan het label ernaast.
-const RECHTS = 120;
-
 function tekenPosities() {
-  // De schaal eronder staat op dezelfde grenzen als de vakjes, en in punten —
-  // want dat is wat op het scherm van de broker staat.
-  // De stoploss verschilt per positie, dus de schaal toont die van de zwakste
-  // en zegt dat erbij. Elke balk staat in procent van zijn eigen stoploss.
-  const maat = zwakstePos.stoploss;
-  document.getElementById("schaal").innerHTML = [...STANDEN].reverse().map((s) => {
-    const breed = (s.tot - s.van) / RECHTS;
-    return `<span style="flex:0 0 calc(${(breed * 100).toFixed(2)}% - 4px)">${
-      s.van === 0 ? "waardeloos" : s.van === 100 ? `stoploss ${kom(maat)}` : kom((s.van / 100) * maat)}</span>`;
+  const ijk = ijkVan(zwakstePos);
+  document.getElementById("schaal").innerHTML = VAKKEN.map((v, i) => {
+    const grens = [null, ijk.stoploss, ijk.waarschuwing, ijk.breakeven, ijk.helft, ijk.winstanker][i];
+    return `<span style="flex:0 0 calc(${(v.tot - v.van).toFixed(2)}% - 3px)">${
+      i === 0 ? "voorbij" : kom(grens)}</span>`;
   }).join("");
 
   document.getElementById("posities").innerHTML = POSITIES.map((p) => {
-    const st = standVan(opWeg(p));
-    const zones = [...STANDEN].reverse().map((s) => {
-      const breed = (s.tot - s.van) / RECHTS;
-      return `<span class="z" style="flex:0 0 calc(${(breed * 100).toFixed(2)}% - 4px);background:${s.kl};opacity:${p.open ? .9 : .5}"></span>`;
+    const st = standVan(p);
+    const eigen = ijkVan(p);
+    const vakjes = VAKKEN.map((v) => {
+      const kleur = v.stand === 0 ? DIEPROOD : STANDEN[v.stand - 1].kl;
+      return `<span class="z" style="flex:0 0 calc(${(v.tot - v.van).toFixed(2)}% - 3px);background:${kleur};opacity:${p.open ? .9 : .4}"></span>`;
     }).join("");
-    const pct = Math.max(1, Math.min(99, (opWeg(p) / RECHTS) * 100));
-    const merker = `<span class="merkerlab" style="left:${pct}%">${kom(p.ask)}</span><span class="merker" style="left:calc(${pct}% - 1.5px)"></span>`;
+    const plek = plekVan(p.ask, eigen);
+    const binnen = ((p.premie - p.ask) / p.premie) * 100;
+    const merker = !p.open ? "" :
+      `<span class="merkerlab" style="left:${Math.max(3, Math.min(97, plek))}%">${binnen >= 0 ? "+" : "−"}${Math.abs(Math.round(binnen))} %</span><span class="merker" style="left:calc(${Math.max(1, Math.min(99, plek))}% - 1.5px)"></span>`;
     const uit = OPEN.has(p.nm);
     return `<div class="posblok ${uit ? "uitgeklapt" : ""}">
       <button class="pos ${p.open ? "" : "posdicht"}" data-pos="${p.nm}">
@@ -616,10 +646,12 @@ function tekenPosities() {
           <span class="posonder">${p.open
             ? `${p.dagen} dagen · premie ${kom(p.premie)} · ask ${kom(p.ask)}`
             : `${p.uitkomst} · +${kom(p.premie)}`}</span></span></span>
-        <span class="spoorbalk">${zones}${p.open ? merker : ""}</span>
-        <span class="posstand">${p.open
-          ? `<span class="badge" style="background:${STANDEN[st].kl}">${STANDEN[st].nm}</span>`
-          : `<span class="badge" style="background:var(--dim)">Afgerond</span>`}</span>
+        <span class="spoorbalk">${vakjes}${merker}</span>
+        <span class="posstand">${!p.open
+          ? `<span class="badge" style="background:var(--dim)">Afgerond</span>`
+          : p.ask > p.stoploss
+            ? `<span class="badge" style="background:${DIEPROOD}">Voorbij de stoploss</span>`
+            : `<span class="badge" style="background:${STANDEN[st - 1].kl}">${STANDEN[st - 1].nm}</span>`}</span>
       </button>
       ${uit ? detail(p) : ""}
     </div>`;
@@ -627,7 +659,7 @@ function tekenPosities() {
 
   const p = zwakstePos;
   document.getElementById("zwakste").innerHTML =
-    `<b>${p.nm}</b> is de zwakste en bepaalt de barometer: ask ${kom(p.ask)} van een stoploss op ${kom(p.stoploss)} — <b>${STANDEN[zwakste].nm}</b>.`;
+    `<b>${p.nm}</b> is de zwakste en bepaalt de barometer: ask ${kom(p.ask)}, break-even op ${kom(p.premie)}, stoploss op ${kom(p.stoploss)} — <b>${STANDEN[zwakste - 1].nm}</b>.`;
 }
 
 /* ───────────────────────── kaarten en verstuurd ─────────────────────────

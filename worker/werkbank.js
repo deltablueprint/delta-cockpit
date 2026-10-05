@@ -196,7 +196,7 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
     venster: { nu: venster, verloop: VENSTERS, gepubliceerd: baro.leden ? baro.leden.venster.waarde : null },
     posities: meet.posities,
     zwakste: meet.zwakste,
-    zones: meet.zones,
+    vakken: meet.vakken,
     drempels: meet.drempels,
     kaarten: kaartlijst,
     verstuurd,
