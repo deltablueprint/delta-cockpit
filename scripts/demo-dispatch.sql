@@ -16,6 +16,8 @@
 -- Staat de balk grijs, draai dan alleen het laatste blok onderaan opnieuw.
 
 -- ---------- opruimen van een eerdere demo ----------
+delete from positiemeting where positie in (select id from positie where cyclus in
+  (select id from cyclus where label = 'DEMO · dispatch'));
 delete from barometerstand where cyclus in (select id from cyclus where label = 'DEMO · dispatch');
 delete from gebeurtenis   where cyclus in (select id from cyclus where label = 'DEMO · dispatch');
 delete from positie       where cyclus in (select id from cyclus where label = 'DEMO · dispatch');
@@ -86,6 +88,54 @@ select c.id, datetime('now', '-66 minutes'), 'ibkr', 'positie_geopend',
        json_object('contract', p.contract, 'aantal', p.aantal, 'premie', p.ontvangen_premie_pt)
   from cyclus c join positie p on p.cyclus = c.id and p.tranche = 2
  where c.label = 'DEMO · dispatch';
+
+-- ---------- het verloop van de tranches ----------
+-- Vijf dagen meting per tranche, zodat de lijnen rechts iets te tonen hebben.
+delete from positiemeting where positie in (select id from positie where cyclus in
+  (select id from cyclus where label = 'DEMO · dispatch'));
+
+insert into positiemeting (positie, moment, ask, bod, stand, binnen)
+select p.id, datetime('now', '-' || (v.n * 6) || ' hours'),
+       round(52.0 + (v.n * 1.4) + ((v.n % 3) * 1.1), 1), round(51.0 + (v.n * 1.4), 1),
+       case when 52.0 + (v.n * 1.4) > 50 then 1 else 2 end,
+       round((38.5 - (52.0 + v.n * 1.4 + (v.n % 3) * 1.1)) / 38.5 * 100, 1)
+  from positie p join cyclus c on c.id = p.cyclus
+  join (select 0 as n union all select 1 union all select 2 union all select 3
+        union all select 4 union all select 5 union all select 6 union all select 7
+        union all select 8 union all select 9 union all select 10 union all select 11) v
+ where c.label = 'DEMO · dispatch' and p.tranche = 1;
+
+insert into positiemeting (positie, moment, ask, bod, stand, binnen)
+select p.id, datetime('now', '-' || (v.n * 6) || ' hours'),
+       round(14.5 + (v.n * 0.7) - ((v.n % 4) * 0.5), 1), round(14.0 + (v.n * 0.7), 1), 3,
+       round((19.0 - (14.5 + v.n * 0.7 - (v.n % 4) * 0.5)) / 19.0 * 100, 1)
+  from positie p join cyclus c on c.id = p.cyclus
+  join (select 0 as n union all select 1 union all select 2 union all select 3
+        union all select 4 union all select 5 union all select 6 union all select 7
+        union all select 8 union all select 9 union all select 10 union all select 11) v
+ where c.label = 'DEMO · dispatch' and p.tranche = 2;
+
+insert into positiemeting (positie, moment, ask, bod, stand, binnen)
+select p.id, datetime('now', '-' || (v.n * 6) || ' hours'),
+       round(1.5 + (v.n * 0.6) + ((v.n % 5) * 0.4), 1), round(1.2 + (v.n * 0.6), 1),
+       case when 1.5 + (v.n * 0.6) < 3.3 then 5 else 4 end,
+       round((11.0 - (1.5 + v.n * 0.6 + (v.n % 5) * 0.4)) / 11.0 * 100, 1)
+  from positie p join cyclus c on c.id = p.cyclus
+  join (select 0 as n union all select 1 union all select 2 union all select 3
+        union all select 4 union all select 5 union all select 6 union all select 7
+        union all select 8 union all select 9 union all select 10 union all select 11) v
+ where c.label = 'DEMO · dispatch' and p.tranche = 3;
+
+-- Een paar standwisselingen, zodat de geschiedenis rechts niet leeg is.
+insert into barometerstand (cyclus, stand, venster, reden, herkomst, vastgesteld_op, vastgesteld_door, gepubliceerd_op)
+select id, 2, 'opent_binnenkort', 'Demo: het venster gaat open.', 'mens', datetime('now', '-6 days'), 'simon', datetime('now', '-6 days')
+  from cyclus where label = 'DEMO · dispatch';
+insert into barometerstand (cyclus, stand, venster, reden, herkomst, vastgesteld_op, vastgesteld_door, gepubliceerd_op)
+select id, 5, 'in_positie', 'Demo: wij zitten erin.', 'mens', datetime('now', '-4 days'), 'simon', datetime('now', '-4 days')
+  from cyclus where label = 'DEMO · dispatch';
+insert into barometerstand (cyclus, stand, venster, reden, herkomst, vastgesteld_op, vastgesteld_door)
+select id, 4, 'in_positie', 'Demo: de 5600 liep op.', 'voorstel', datetime('now', '-26 hours'), 'jacqueline'
+  from cyclus where label = 'DEMO · dispatch';
 
 -- ---------- de koersen ----------
 -- Dit blok mag je los opnieuw draaien zodra de balk grijs wordt: het zet alleen

@@ -4,6 +4,7 @@
 // meteen hierheen. Dit bestand neemt dat aan, bewaart het, en vertelt de
 // schermen hoe vers het is. Eén kant op: er gaat niets terug naar de broker.
 
+import { legVerloopVast } from "./meting.js";
 import { spiegel } from "./spiegel.js";
 
 const getal = (w) => (Number.isFinite(Number(w)) ? Number(w) : null);
@@ -139,6 +140,12 @@ export async function neemStand(env, pakket = {}) {
     gespiegeld = await spiegel(env, { id: null },
       await brugPosities(env), await brugUitvoeringen(env));
   } catch { /* de stand is binnen; spiegelen kan bij de volgende push */ }
+
+  // En het verloop: hoe een tranche zich ontwikkelde, niet alleen hoe ze er nú
+  // voor staat. Alleen als er iets te zien is — zie worker/meting.js. Mislukt
+  // het, dan mag dat de zending niet laten falen.
+  try { await legVerloopVast(env); }
+  catch { /* de volgende hartslag legt het vast */ }
 
   // Het antwoord draagt de instellingen: zo haalt de brug ze op zonder dat er
   // ooit iets naar hem toe gestuurd hoeft te worden.

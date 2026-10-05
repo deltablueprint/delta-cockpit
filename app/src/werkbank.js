@@ -71,10 +71,99 @@ export async function werkbankscherm(inhoud, kruimel) {
 
     inhoud.innerHTML = `<div class="werkbank">
       ${kop()}
-      ${standvak()}
-      ${positievak()}
-      ${ledenvak()}
+      <div class="wbkolommen">
+        <div class="wbhoofd">
+          ${standvak()}
+          ${positievak()}
+          ${ledenvak()}
+        </div>
+        ${geschiedenisvak()}
+      </div>
     </div>`;
+  }
+
+  // ------------------------------------------------------- de geschiedenis
+  //
+  // Rechts staat wat er gebeurd is: welke standen wij achter elkaar zetten, en
+  // hoe elke tranche zich ondertussen ontwikkelde. Een scherm dat alleen het nu
+  // toont beantwoordt de vraag niet die een lid stelt — wordt het beter of
+  // slechter?
+  function geschiedenisvak() {
+    const g = data.geschiedenis || { standen: [], verloop: {} };
+
+    const standen = g.standen.map((r, i) => {
+      const vorige = g.standen[i + 1] || null;
+      const stuk = [];
+      if (!vorige || vorige.venster !== r.venster) {
+        stuk.push(`<span class="gstuk">venster <b>${ontsnap(labelVenster(r.venster))}</b></span>`);
+      }
+      if (!vorige || Number(vorige.stand) !== Number(r.stand)) {
+        stuk.push(`<span class="gstuk"><span class="gvlak" style="background:${
+          KLEUR[Number(r.stand) - 1] || "var(--dim)"}"></span><b>${ontsnap(labelStand(Number(r.stand)))}</b></span>`);
+      }
+      // Een rij waarin niets veranderde is een bevestiging; die zeggen we zo.
+      if (!stuk.length) stuk.push(`<span class="gstuk gstil">bevestigd</span>`);
+
+      return `<li class="greg">
+        <span class="gtijd">${ontsnap(String(r.vastgesteld_op || "").slice(0, 16))}</span>
+        <span class="gwat">${stuk.join("")}</span>
+        ${r.reden ? `<span class="greden">${ontsnap(r.reden)}</span>` : ""}
+        <span class="gvoet">${r.wie ? ontsnap(r.wie) : "—"}${
+          r.gepubliceerd_op ? " · gemeld aan de leden" : " · niet gemeld"}</span>
+      </li>`;
+    }).join("");
+
+    // Het verloop van één tranche als lijn: de ask daalt naar rechts is winst,
+    // dus tekenen we 'binnen' — hoeveel van de premie binnen is. Dan loopt de
+    // lijn omhoog als het beter gaat, en dat is hoe iemand een grafiek leest.
+    const lijn = (rijen) => {
+      const w = 180, h = 34;
+      const waarden = rijen.map((r) => Number(r.binnen)).filter((n) => Number.isFinite(n));
+      if (waarden.length < 2) return "";
+      const laag = Math.min(...waarden, 0), hoog = Math.max(...waarden, 0);
+      const spanne = hoog - laag || 1;
+      const punt = (n, i) => [
+        (i / (waarden.length - 1)) * w,
+        h - ((n - laag) / spanne) * h,
+      ];
+      const d = waarden.map((n, i) => `${i ? "L" : "M"}${punt(n, i).map((x) => x.toFixed(1)).join(" ")}`).join("");
+      const nul = h - ((0 - laag) / spanne) * h;
+      const laatste = waarden[waarden.length - 1];
+      return `<svg class="glijn" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+        <line x1="0" y1="${nul.toFixed(1)}" x2="${w}" y2="${nul.toFixed(1)}" stroke="var(--b1)" stroke-width="1"/>
+        <path d="${d}" fill="none" stroke="${laatste >= 0 ? "var(--grn)" : "var(--red)"}"
+              stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+    };
+
+    const posities = data.posities.map((p) => {
+      const rijen = g.verloop[p.id] || [];
+      const eerste = rijen.length ? Number(rijen[0].binnen) : null;
+      const nu = rijen.length ? Number(rijen[rijen.length - 1].binnen) : p.binnen;
+      const verschil = eerste !== null && nu !== null && Number.isFinite(eerste) && Number.isFinite(nu)
+        ? nu - eerste : null;
+      return `<li class="gpos">
+        <span class="gposnaam">${ontsnap(p.contract || `Tranche ${p.tranche}`)}</span>
+        ${rijen.length >= 2 ? lijn(rijen)
+          : `<span class="gleeg">nog geen verloop vastgelegd</span>`}
+        <span class="gposvoet">${getalMet(nu, 0)} % binnen${
+          verschil === null ? "" : ` · ${getalMet(verschil, 0)} sinds het begin van de meting`}</span>
+      </li>`;
+    }).join("");
+
+    return `<aside class="wbzij">
+      <section class="paneel">
+        <div class="paneelkop">Geschiedenis</div>
+        <div class="paneelbody">
+          <div class="gkop">Wat wij zetten</div>
+          ${g.standen.length ? `<ul class="glijst">${standen}</ul>`
+            : `<p class="wbleeg">Er is nog geen stand vastgelegd.</p>`}
+          <div class="gkop">Hoe de tranches liepen</div>
+          ${data.posities.length ? `<ul class="gposlijst">${posities}</ul>`
+            : `<p class="wbleeg">Deze cyclus heeft nog geen positie.</p>`}
+        </div>
+      </section>
+    </aside>`;
   }
 
   // ------------------------------------------------------------------- kop

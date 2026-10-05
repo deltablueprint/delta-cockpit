@@ -29,6 +29,7 @@ export const STANDEN = [1, 2, 3, 4, 5];
 const STANDAARD = {
   koers_vers_minuten: 20,
   doorrol_minuten: 60,
+  meting_minuten: 60,
 };
 
 // De grenzen van de vijf standen, als terugval wanneer de tabel leeg of stuk is.
@@ -47,7 +48,7 @@ export async function drempels(env) {
   try {
     const r = await env.DB.prepare(
       "select sleutel, waarde from instelling where archief = 0 and sleutel in " +
-      "('koers_vers_minuten','doorrol_minuten')"
+      "('koers_vers_minuten','doorrol_minuten','meting_minuten')"
     ).all();
     for (const rij of r.results) {
       const n = Number(rij.waarde);
@@ -342,4 +343,50 @@ export async function metingen(env, cyclusId, { nu = null, positie = null } = {}
     vakken: VAKKEN,
     drempels: d,
   };
+}
+
+// --------------------------------------------------- het verloop vastleggen
+//
+// De brug overschrijft de prijs bij elke hartslag; daarmee weet de cockpit hoe
+// een tranche er nú voor staat en niets over hoe ze daar kwam. Deze functie
+// legt het verloop vast — maar alleen als er iets te zien is: de stand
+// verandert, of er is een tijd voorbij. Elke hartslag wegschrijven zou een
+// tabel opleveren die honderd keer zo groot is en geen regel extra vertelt.
+export async function legVerloopVast(env, { nu = null } = {}) {
+  const moment = nu ? new Date(nu) : new Date();
+  const d = await drempels(env);
+  const minuten = Number(d.meting_minuten) > 0 ? Number(d.meting_minuten) : 60;
+
+  // Alleen wat in de markt staat. Een tranche die nog op uitvoering wacht heeft
+  // geen contract en dus geen verloop.
+  const open = (await env.DB.prepare(
+    `select distinct p.cyclus from positie p
+      where p.archief = 0 and p.uitkomst is null and p.aantal > 0
+        and p.status in ('bewaken', 'publiceren naar leden', 'uitvoering vastgelegd')
+        and p.cyclus is not null`
+  ).all()).results;
+
+  let geschreven = 0;
+  for (const c of open) {
+    const m = await metingen(env, c.cyclus, { nu });
+    for (const p of m.posities) {
+      if (!p.open || !p.verse_prijs || p.ask === null) continue;
+      const laatste = await env.DB.prepare(
+        "select moment, stand from positiemeting where positie = ? order by moment desc limit 1"
+      ).bind(p.id).first();
+
+      const toen = laatste ? leesMoment(laatste.moment) : null;
+      const oud = toen ? (moment - toen) / 60000 : null;
+      const zelfdeStand = laatste && Number(laatste.stand) === Number(p.stand);
+      if (laatste && zelfdeStand && oud !== null && oud < minuten) continue;
+
+      await env.DB.prepare(
+        `insert or ignore into positiemeting (positie, moment, ask, bod, stand, binnen)
+         values (?, ?, ?, ?, ?, ?)`
+      ).bind(p.id, moment.toISOString().slice(0, 19).replace("T", " "),
+             p.ask, p.bod, p.stand, p.binnen).run();
+      geschreven++;
+    }
+  }
+  return { geschreven };
 }

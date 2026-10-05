@@ -187,6 +187,29 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
     stroom(env, id, 8).catch(() => []),
   ]);
 
+  // De geschiedenis: wat wij achter elkaar besloten, en hoe elke tranche zich
+  // ondertussen ontwikkelde. Zonder dat is elk scherm een momentopname — en de
+  // vraag die een lid stelt is juist: wordt het beter of slechter?
+  const standen = (await env.DB.prepare(
+    `select b.stand, b.venster, b.reden, b.herkomst, b.vastgesteld_op, b.gepubliceerd_op,
+            coalesce(g.korte_naam, g.naam, b.vastgesteld_door) as wie
+       from barometerstand b
+       left join gebruiker g on g.id = b.vastgesteld_door
+      where b.cyclus = ? and b.archief = 0
+      order by b.vastgesteld_op desc, b.id desc limit 40`
+  ).bind(id).all().then((r) => r.results).catch(() => []));
+
+  // Per tranche het verloop van de ask. Nieuwste eerst uit de database, oudste
+  // eerst op het scherm: een lijn leest van links naar rechts.
+  const verloop = {};
+  for (const p of meet.posities) {
+    const r = await env.DB.prepare(
+      `select moment, ask, stand, binnen from positiemeting
+        where positie = ? order by moment desc limit 60`
+    ).bind(p.id).all().then((x) => x.results).catch(() => []);
+    if (r.length) verloop[p.id] = r.reverse();
+  }
+
   const cyclusrij = cycli.find((c) => c.id === id) || null;
   const venster = baro.wij ? baro.wij.venster.waarde : "pre_analyse";
 
@@ -218,6 +241,7 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
     kaarten: kaartlijst,
     verstuurd,
     stroom: gebeurtenissen,
+    geschiedenis: { standen, verloop },
     // Wacht er iets op de leden? Drie dingen kunnen dat zijn, en ze staan los
     // van elkaar: een kaart, een stand die wij wel kennen en zij niet, of een
     // voorstel dat nog niet overgenomen is.

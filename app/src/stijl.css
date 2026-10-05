@@ -542,6 +542,37 @@ td.bewerkt input, td.bewerkt select {
 td.bezigcel { opacity: .6; }
 td.zojuist { background: var(--grnbg); transition: background 1s; }
 
+/* --- Dispatch: links het nu, rechts wat er gebeurd is --- */
+/* Naast elkaar zodra er plaats is, eronder zodra die er niet is. Op een iPad in
+   landscape (1024 px, min het menu) houdt een kolom van 320 px rechts te weinig
+   over voor de meter en zijn standenlijst: die viel dan buiten beeld. */
+.wbkolommen { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gutter); align-items: start; }
+@media (min-width: 1360px) {
+  .wbkolommen { grid-template-columns: minmax(0, 1fr) 320px; }
+}
+.wbhoofd { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
+.wbzij { min-width: 0; }
+.gkop { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--faint); margin: 2px 0 8px; }
+.gkop + * + .gkop { margin-top: 18px; }
+.glijst, .gposlijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.greg { padding: 8px 0; border-top: 1px solid var(--b1); font-size: 12px; color: var(--ink2); }
+.greg:first-child { border-top: 0; padding-top: 0; }
+.gtijd { display: block; font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.gwat { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 2px; }
+.gstuk { display: inline-flex; align-items: center; gap: 6px; }
+.gstuk b { color: var(--ink); }
+.gstil { color: var(--faint); }
+.gvlak { width: 11px; height: 11px; border-radius: 2px; flex: 0 0 auto; }
+.greden { display: block; margin-top: 3px; color: var(--mut); line-height: 1.45; }
+.gvoet { display: block; margin-top: 3px; font-size: 11px; color: var(--faint); }
+.gpos { padding: 10px 0; border-top: 1px solid var(--b1); }
+.gpos:first-child { border-top: 0; padding-top: 0; }
+.gposnaam { display: block; font-size: 12px; font-weight: 600; color: var(--ink); }
+.glijn { display: block; width: 100%; height: 34px; margin: 6px 0 2px; }
+.gleeg { display: block; margin: 6px 0; font-size: 11.5px; color: var(--faint); }
+.gposvoet { display: block; font-size: 11px; color: var(--mut); font-variant-numeric: tabular-nums; }
+
 /* --- de balk van een tranche op haar eigen record --- */
 .posmeter { margin: 0 0 2px; padding: 14px 20px 6px; background: #fff; border-bottom: 1px solid var(--b1); }
 .posmeterrij { display: flex; align-items: center; gap: 14px; }

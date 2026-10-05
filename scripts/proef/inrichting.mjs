@@ -44,6 +44,9 @@ const ZONDER_SCHERM = new Set([
   // de barometer staan als vijf standen onder elkaar (/barometerdrempels), niet
   // als rijen met sleutels.
   "barometerdrempel",
+  // Het verloop van een tranche: door de brug geschreven, op het scherm als
+  // lijn. Een lijst met duizenden regels zou niemand openen.
+  "positiemeting",
   // De stand van de onderliggende. Eén rij per index, overschreven bij elke
   // hartslag van de brug: een momentopname, geen vastlegging. Wat bewaard moet
   // blijven staat in de gebeurtenissenstroom.
