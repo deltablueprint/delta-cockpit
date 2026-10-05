@@ -1730,6 +1730,8 @@ De balk loopt **van verlies links naar winst rechts** — de ask daalt naar rech
 
 **De uitklap toont vijf getallen en verder niets (5 okt 2026).** Totale premie in euro, netto niet gerealiseerd in procent, waartegen verkocht, de ask nu, en de dagen die resten. De grijze bijschriften eronder zijn weg — ze herhaalden wat elders al staat of zetten een tweede getal naast het getal. De balk die eronder stond is weg om dezelfde reden: de grote balk op de regel erboven zegt hetzelfde, en dan beter.
 
+**De strook heet *Verloop*** en draagt het aantal handelsdagen, met de eerste en de laatste datum eronder — links onder het eerste vakje, rechts onder het laatste. Hoveren over een vakje geeft de dag en wat er die dag gold. Zonder die drie dingen is een rij gekleurde blokjes een plaatje; met die drie is het een tijdlijn.
+
 **Elke dag een vakje.** Onder het venster, onder de barometer en in het verlengde van elke positieregel staat een strook handelsdagen, één vakje per dag, in de kleur die die dag gold. Bij het venster en de barometer per week gegroepeerd met een spleet ertussen, zodat je weken telt zonder label. Welke dagen meetellen komt uit de handelskalender; staat er voor een datum niets in, dan geldt maandag tot en met vrijdag — beter een kalender die ongeveer klopt dan een lege strook. De dagen vóór de eerste vastlegging dragen geen kleur, en de dagen waarop het venster niet op *In positie* stond ook niet: dan sliep de barometer.
 
 Een vakje per dag toont wat een getal niet kan: niet alleen wat er staat, maar hoe lang het al zo staat, en hoe het van kleur veranderde.

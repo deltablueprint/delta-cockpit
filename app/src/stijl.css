@@ -544,10 +544,19 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
 
 /* De strook handelsdagen onder het venster en onder de barometer. Een spleet
    tussen de weken: zo tel je weken zonder dat er een label bij hoeft. */
-.strook { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
+/* Het vak krimpt mee met de strook, zodat de datum rechts onder het laatste
+   vakje staat en niet aan de rand van het paneel. */
+.strookvak { display: inline-block; min-width: 180px; margin-top: 14px; }
+.strooklab { display: flex; align-items: baseline; gap: 8px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin-bottom: 5px; }
+.strook { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
 .strook .week { display: flex; gap: 2px; }
-.strook i { width: 11px; height: 14px; border-radius: 2px; display: block; }
-.strooknoot { font-size: 10.5px; color: var(--faint); margin-left: auto; }
+.strook i { width: 11px; height: 14px; border-radius: 2px; display: block; cursor: default; }
+.strook i:hover, .dagen i:hover { outline: 1.5px solid var(--ink); outline-offset: 1px; }
+.strooknoot { font-size: 10.5px; font-weight: 400; letter-spacing: 0; text-transform: none;
+  color: var(--faint); }
+.strookdata { display: flex; justify-content: space-between; margin-top: 4px;
+  font-size: 10.5px; color: var(--faint); }
 
 /* Eén vakje per dag, in de kleur van de stand waarop de tranche die dag sloot.
    Ze staan tegen elkaar aan: een rij vakjes leest als een verloop, los van

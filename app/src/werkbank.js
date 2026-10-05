@@ -317,21 +317,34 @@ export async function werkbankscherm(inhoud, kruimel) {
         const i = (data.venster.verloop || []).indexOf(d.venster);
         const kleur = i < 0 ? "var(--b2)" : VENSTERBLAUW[i];
         return `<i style="background:${kleur}" title="${ontsnap(
-          `${d.dag} · ${d.venster ? labelVenster(d.venster) : "nog niets vastgelegd"}`)}"></i>`;
+          `${kortedatum(d.dag)} · ${d.venster ? labelVenster(d.venster) : "nog niets vastgelegd"}`)}"></i>`;
       }
       // De barometer slaapt tot wij in positie zitten: op die dagen is er geen
       // stand, en dan hoort er ook geen kleur te staan.
       const inPositie = d.venster === "in_positie";
       const kleur = inPositie && d.stand >= 1 && d.stand <= 5 ? KLEUR[d.stand - 1] : "var(--b2)";
       return `<i style="background:${kleur}" title="${ontsnap(
-        `${d.dag} · ${inPositie && d.stand ? labelStand(d.stand) : "geen stand"}`)}"></i>`;
+        `${kortedatum(d.dag)} · ${inPositie && d.stand ? labelStand(d.stand) : "geen stand"}`)}"></i>`;
     };
 
-    return `<div class="strook">
-      ${weken.map((w) => `<span class="week" title="week ${w.week}">${
-        w.dagen.map(vakje).join("")}</span>`).join("")}
-      <span class="strooknoot">${dagen.length} handelsdagen</span>
+    const eerste = dagen[0].dag, laatste = dagen[dagen.length - 1].dag;
+    return `<div class="strookvak">
+      <div class="strooklab">Verloop<span class="strooknoot">${dagen.length} handelsdagen</span></div>
+      <div class="strook">
+        ${weken.map((w) => `<span class="week" title="week ${w.week}">${
+          w.dagen.map(vakje).join("")}</span>`).join("")}
+      </div>
+      <div class="strookdata"><span>${ontsnap(kortedatum(eerste))}</span><span>${
+        ontsnap(kortedatum(laatste))}</span></div>
     </div>`;
+  }
+
+  // '2026-09-25' wordt '25 sep'. Het jaar hoort er niet bij: een cyclus loopt
+  // weken, niet jaren, en een jaartal bij elke datum is ruis.
+  const MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+  function kortedatum(d) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(d || ""));
+    return m ? `${Number(m[3])} ${MAANDEN[Number(m[2]) - 1]}` : String(d || "");
   }
 
   // Eén vakje per dag, in de kleur van de stand waarop de tranche die dag sloot.
@@ -339,12 +352,13 @@ export async function werkbankscherm(inhoud, kruimel) {
   // kleur veranderde: van groen naar oranje is een verhaal, een los getal niet.
   function dagen(p) {
     const rijen = (data.geschiedenis && data.geschiedenis.verloop[p.id]) || [];
-    if (!rijen.length) return `<span class="dagen leeg"></span>`;
-    return `<span class="dagen">${rijen.map((r) => {
+    if (!rijen.length) return `<span class="dagen leeg" title="nog geen verloop vastgelegd"></span>`;
+    return `<span class="dagen" title="${ontsnap(
+      `verloop ${kortedatum(rijen[0].dag)} – ${kortedatum(rijen[rijen.length - 1].dag)}`)}">${rijen.map((r) => {
       const st = Number(r.stand);
       const kleur = st >= 1 && st <= 5 ? KLEUR[st - 1] : "var(--b2)";
       return `<i style="background:${kleur}" title="${ontsnap(
-        `${r.dag}: ${st ? labelStand(st) : "niet gemeten"}${
+        `${kortedatum(r.dag)}: ${st ? labelStand(st) : "niet gemeten"}${
           r.binnen === null || r.binnen === undefined ? "" : ` · ${getalMet(r.binnen, 0)} % binnen`}`)}"></i>`;
     }).join("")}</span>`;
   }
