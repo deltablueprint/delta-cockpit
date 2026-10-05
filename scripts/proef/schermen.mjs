@@ -179,7 +179,7 @@ const wb = readFileSync("app/src/werkbank.js", "utf8");
 eis("de werkbank bouwt de namen uit wat ze kreeg, niet uit een eigen lijst",
     wb.includes("data.barometer.schaal") && wb.includes("data.venster.verloop"));
 eis("er staat geen vaste standnaam in het scherm",
-    !/Niets|Meekijken|Paraat|Dichtbij blijven|Comfortabel|Onder de strike/.test(wb));
+    !/Niets|Meekijken|Paraat|Dichtbij blijven|Comfortabel|Onder druk|Vrijwel afgerond|Veilig|Aandacht/.test(wb));
 
 await stelVast(env, simon, { cyclus: CYCLUS, stand: 2, venster: "open", reden: "Rustig." });
 const herhaald = await stelVast(env, simon, { cyclus: CYCLUS, stand: 2, venster: "open", reden: "Nog eens." });
@@ -187,6 +187,28 @@ eis("dezelfde stand nog eens vastleggen kan niet", !!herhaald.fout);
 
 const na = await huidig(env, CYCLUS);
 eis("vastleggen is niet melden", na.gelijk === false);
+
+// --------------------------------- blauw is vastgelegd, groen is nog niet weg
+//
+// Twee randen met twee betekenissen. Lopen ze door elkaar, dan weet je op het
+// drukste moment van de maand niet of een stand al bij de leden ligt.
+const wbcss = css;
+eis("de stand zoals hij vastligt heeft een blauw kader",
+    /\.vhok\.nu \{[^}]*var\(--blue\)/.test(wbcss));
+eis("wat je net koos heeft een groen kader",
+    /\.vhok\.gekozen \{[^}]*var\(--grn\)/.test(wbcss));
+eis("en dat geldt ook voor de regels naast de meter",
+    /\.lreg\.nu \{[^}]*var\(--blue\)/.test(wbcss) && /\.lreg\.gekozen \{[^}]*var\(--grn\)/.test(wbcss));
+eis("het systeemvoorstel blijft een stippellijn, en geen van beide kleuren",
+    /\.lreg\.tip \{[^}]*dashed/.test(wbcss));
+// Het venster krijgt geen voorstel: het is een oordeel over de markt, en juist
+// dat is voor een lid het meeste waard (BOUWSPEC §13a). Daarom staat er ook
+// geen stippellijn op een venstervakje.
+eis("het venster stelt zichzelf niet voor", !/vensterTip/.test(readFileSync("app/src/werkbank.js", "utf8")));
+
+const wbtekst = readFileSync("app/src/werkbank.js", "utf8");
+eis("de meter tekent het gekozen vak groen, niet blauw",
+    /if \(gekozen\) svg \+=[^;]*stroke="#1F5E45"/.test(wbtekst));
 
 // ------------------------------------------------------------- de opmaak
 for (const klasse of ["opsteller", "opfeiten", "opacties", "werkbank", "vensterrij", "meterrij", "spoorbalk", "publiceerbalk"]) {

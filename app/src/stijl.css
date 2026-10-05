@@ -1537,9 +1537,24 @@ body.sleept .lijsttabel { pointer-events: none; }
   --s1: #0A9D4E;  --s2: #8DC63F;  --s3: #FBC02D;  --s4: #F26A21;  --s5: #D7261E;
 }
 
-.werkbank { padding: 18px 20px 48px; max-width: 1020px; display: flex; flex-direction: column; gap: 16px; }
-.werkbank .paneelkop { border-bottom: 1px solid var(--b2); }
+/* De maat is een iPad in landscape: 1024 px breed, min de 244 px van het menu
+   en de marges, blijft er ongeveer 740 px over. Daar moet alles in passen
+   zonder dat de balken omvallen — die horen naast elkaar te blijven, want juist
+   het vergelijken van drie tranches is waar dit scherm voor is. */
+.werkbank { padding: 18px 20px 48px; max-width: 980px; display: flex; flex-direction: column; gap: 18px; }
+
+/* Eén marge voor het hele scherm. Alles wat in een paneel staat — de kop, de
+   body, een positieregel, een kaart, de balk onderaan — begint op dezelfde
+   linkerlijn. Zonder dat leest het scherm als losse stukken die toevallig
+   onder elkaar staan.
+
+   .paneelbody bestond niet in de opmaak: het werkbankscherm gebruikte hem wel,
+   en daardoor zat alles op nul padding tegen de rand geplakt. */
+.werkbank { --gutter: 18px; }
+.werkbank .paneel { margin-bottom: 0; }
+.werkbank .paneelkop { padding: 12px var(--gutter); border-bottom: 1px solid var(--b2); }
 .werkbank .paneelkop .meta { margin-left: auto; font-size: 11.5px; font-weight: 400; color: var(--mut); }
+.werkbank .paneelbody { padding: 16px var(--gutter) 18px; }
 .wbtop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .cycluskies {
   height: 30px; padding: 0 10px; border: 1px solid #D8D5CE; background: #fff; border-radius: 2px;
@@ -1549,7 +1564,7 @@ body.sleept .lijsttabel { pointer-events: none; }
 .wbachter .stip { width: 9px; height: 9px; border-radius: 50%; background: var(--grn); flex-shrink: 0; }
 .wbachter.wacht { color: var(--amb); } .wbachter.wacht .stip { background: var(--amb); }
 .wbachter.bij { color: var(--grn); }
-.wbleeg { margin: 0; padding: 16px 14px; font-size: 12.5px; color: var(--mut); }
+.wbleeg { margin: 0; padding: 18px var(--gutter); font-size: 12.5px; color: var(--mut); }
 .wbnoot { margin: 10px 0 0; font-size: 11.5px; color: var(--mut); }
 .wbnoot.wblet { color: var(--amb); font-weight: 600; }
 .wbmelding { font-size: 12.5px; color: var(--red); }
@@ -1557,17 +1572,17 @@ body.sleept .lijsttabel { pointer-events: none; }
 /* Het systeem stelt iets voor. Een stippellijn, want het is een voorstel en
    geen stand: wat het systeem meet is niet wat wij vaststellen. */
 .suggestie {
-  display: flex; align-items: center; gap: 10px; padding: 9px 14px;
+  display: flex; align-items: center; gap: 10px; padding: 10px var(--gutter);
   background: var(--ambbg); border-bottom: 1px solid #E6D3A8;
   font-size: 12.5px; color: var(--amb); font-weight: 600;
 }
 .suggestie .vk { width: 13px; height: 13px; border: 2px dashed currentColor; border-radius: 2px; flex-shrink: 0; }
 
 /* --- het venster: zes vakjes naast elkaar --- */
-.deel { padding-bottom: 16px; }
-.deel + .deel { padding-top: 16px; border-top: 1px solid var(--b2); }
+.deel { padding-bottom: 18px; }
+.deel + .deel { padding-top: 18px; border-top: 1px solid var(--b2); }
 .deel:last-child { padding-bottom: 0; }
-.deelkop { display: flex; align-items: baseline; gap: 9px; margin-bottom: 10px; flex-wrap: wrap; }
+.deelkop { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
 .dtitel { font-size: 13px; font-weight: 700; }
 .dmeta { font-size: 11.5px; color: var(--mut); }
 .dkent { margin-left: auto; font-size: 11.5px; color: var(--mut); }
@@ -1578,22 +1593,30 @@ body.sleept .lijsttabel { pointer-events: none; }
   padding: 11px 10px 12px; cursor: pointer; text-align: left; font-family: inherit;
 }
 .vhok .nm { font-size: 12px; font-weight: 600; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.vensterrij { align-items: stretch; }
 .vhok:hover { border-color: var(--blue); }
 .vhok.gehad { background: #fff; } .vhok.gehad .nm { color: var(--mut); }
-.vhok.nu { background: var(--navbg); border-color: var(--navbg); }
-.vhok.nu .nm { color: #fff; font-weight: 700; }
-.vhok.gekozen { border: 2px solid var(--blue); background: var(--bluebg); }
-.vhok.gekozen .nm { color: var(--blue); font-weight: 700; }
+/* Twee randen met twee betekenissen, en ze horen niet door elkaar te lopen:
+     blauw  — dit is de stand zoals hij vastligt, en de leden weten hem
+     groen  — dit is wat jij net koos, en het is nog niet weg
+
+   Na publiceren wordt het groene kader dus blauw: dat ene moment is precies
+   wat deze twee kleuren vertellen. Een derde kleur zou alleen maar vragen
+   oproepen, dus 'eerder geweest' blijft gedempt wit. */
+.vhok.nu { border: 2px solid var(--blue); background: var(--bluebg); }
+.vhok.nu .nm { color: var(--blue); font-weight: 700; }
+.vhok.gekozen { border: 2px solid var(--grn); background: var(--grnbg); }
+.vhok.gekozen .nm { color: var(--grn); font-weight: 700; }
 
 /* De barometer slaapt tot wij in positie zitten. Niet verborgen — je moet
    kunnen zien dat hij bestaat en waarom hij nog niets zegt. */
 .slaapt { display: none; font-size: 12.5px; color: var(--mut); background: var(--soft);
-  border: 1px solid var(--b1); border-radius: 3px; padding: 9px 12px; margin-bottom: 10px; }
+  border: 1px solid var(--b1); border-radius: 3px; padding: 10px 13px; margin-bottom: 14px; }
 .deel.uit .slaapt { display: block; }
 .deel.uit .meterrij { opacity: .32; filter: grayscale(1); pointer-events: none; }
 .deel.uit .dkent { display: none; }
 
-.meterrij { display: grid; grid-template-columns: 310px 1fr; gap: 18px; align-items: center; }
+.meterrij { display: grid; grid-template-columns: 300px minmax(0, 560px); gap: 24px; align-items: center; }
 .gauge { position: relative; }
 .gauge svg { display: block; width: 100%; height: auto; }
 .gauge .seg { cursor: pointer; }
@@ -1602,19 +1625,21 @@ body.sleept .lijsttabel { pointer-events: none; }
 .gaugenaam { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
 .gaugeonder { font-size: 11px; color: var(--mut); }
 
-.legenda { display: flex; flex-direction: column; gap: 5px; }
-.lreg { display: flex; align-items: center; gap: 9px; padding: 5px 8px; border-radius: 3px;
+.legenda { display: flex; flex-direction: column; gap: 4px; }
+.lreg { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 3px;
   border: 1px solid transparent; cursor: pointer; font-size: 12.5px; color: var(--ink2);
   font-family: inherit; background: none; text-align: left; }
 .lreg:hover { background: var(--soft); }
 .lreg .vlak { width: 15px; height: 15px; border-radius: 3px; flex-shrink: 0; }
 .lreg .nm { font-weight: 600; min-width: 118px; }
 .lreg .om { color: var(--mut); font-size: 12px; }
-.lreg.nu { background: var(--b2); }
+.lreg.nu { border-color: var(--blue); border-style: solid; background: var(--bluebg); }
+.lreg.nu .nm { color: var(--blue); }
 .lreg.tip { border-color: var(--amb); border-style: dashed; }
-.lreg.gekozen { border-color: var(--blue); border-style: solid; background: var(--bluebg); }
+.lreg.gekozen { border-color: var(--grn); border-style: solid; background: var(--grnbg); }
+.lreg.gekozen .nm { color: var(--grn); font-weight: 700; }
 
-.publiceerbalk { display: flex; align-items: center; gap: 12px; padding: 11px 14px;
+.publiceerbalk { display: flex; align-items: center; gap: 12px; padding: 12px var(--gutter);
   background: var(--soft); border-top: 1px solid var(--b1); }
 .pubtekst { flex: 1 1 auto; min-width: 0; font-size: 12.5px; color: var(--mut); }
 .pubtekst b { color: var(--ink); font-weight: 600; }
@@ -1624,7 +1649,7 @@ body.sleept .lijsttabel { pointer-events: none; }
 .posblok:last-child { border-bottom: none; }
 .posblok.uitgeklapt { background: var(--soft); }
 .pos { width: 100%; border: 0; background: none; font-family: inherit; text-align: left; cursor: pointer;
-  display: grid; grid-template-columns: 210px 1fr 108px; gap: 14px; align-items: center; padding: 12px 14px; }
+  display: grid; grid-template-columns: 210px 1fr 108px; gap: 16px; align-items: center; padding: 13px var(--gutter); }
 .pos:hover { background: var(--soft); }
 .posdicht { opacity: .5; }
 .poslinks { display: flex; align-items: center; gap: 9px; min-width: 0; }
@@ -1645,16 +1670,16 @@ body.sleept .lijsttabel { pointer-events: none; }
   font-weight: 700; white-space: nowrap; color: var(--ink); }
 /* De schaal onder de balken, op dezelfde grenzen als de vakjes. In punten, want
    dat is wat op het scherm van de broker staat. */
-.werkbank .schaalrij { display: grid; grid-template-columns: 210px 1fr 108px; gap: 14px; padding: 0 14px 10px; }
+.werkbank .schaalrij { display: grid; grid-template-columns: 210px 1fr 108px; gap: 16px; padding: 2px var(--gutter) 12px; }
 .werkbank .schaal { grid-column: 2; display: flex; gap: 3px; font-size: 10px; color: var(--faint); }
 .werkbank .schaal span { text-align: right; }
 .werkbank .schaal span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.zwakste { padding: 10px 14px; border-top: 1px solid var(--b2); font-size: 12.5px;
+.zwakste { padding: 11px var(--gutter); border-top: 1px solid var(--b2); font-size: 12.5px;
   color: var(--ink3); background: var(--soft); }
 
 /* --- het detail onder een positie: zes cijfers, een balk, en wat eraan hangt --- */
-.detail { padding: 0 14px 16px 36px; }
+.detail { padding: 0 var(--gutter) 16px 43px; }
 .dvak { background: #fff; border: 1px solid var(--b1); border-radius: 4px; padding: 14px 16px 15px;
   display: flex; flex-direction: column; gap: 14px; }
 .dfeiten { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
@@ -1663,7 +1688,7 @@ body.sleept .lijsttabel { pointer-events: none; }
 .dwaarde { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .dnoot { font-size: 11px; color: var(--mut); }
 .dbalken { display: flex; flex-direction: column; gap: 6px; max-width: 420px; }
-.dbalkrij { display: grid; grid-template-columns: 96px 1fr 38px; gap: 10px; align-items: center; }
+.dbalkrij { display: grid; grid-template-columns: 96px 1fr 54px; gap: 10px; align-items: center; }
 .dbalklab { font-size: 11px; color: var(--mut); }
 .dbalk { height: 7px; border-radius: 4px; background: var(--b2); overflow: hidden; }
 .dbalk i { display: block; height: 100%; border-radius: 4px; }
@@ -1682,12 +1707,12 @@ body.sleept .lijsttabel { pointer-events: none; }
 .werkbank .tweekolom { display: grid; grid-template-columns: 1fr 1fr; }
 .werkbank .kol { border-right: 1px solid var(--b1); }
 .werkbank .kol:last-child { border-right: none; }
-.werkbank .kolkop { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: var(--head);
+.werkbank .kolkop { display: flex; align-items: center; gap: 8px; padding: 10px var(--gutter); background: var(--head);
   border-bottom: 1px solid var(--b1); font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; color: var(--mut); }
 .werkbank .kolkop .n { margin-left: auto; font-weight: 600; color: var(--dim); letter-spacing: 0; text-transform: none; font-size: 11px; }
 
-.werkbank .kaart { padding: 12px 14px; border-bottom: 1px solid var(--b2); display: flex; flex-direction: column; gap: 8px; }
+.werkbank .kaart { padding: 14px var(--gutter); border-bottom: 1px solid var(--b2); display: flex; flex-direction: column; gap: 9px; }
 .werkbank .kaart:last-child { border-bottom: none; }
 .werkbank .kaartkop { display: flex; align-items: center; gap: 8px; }
 .werkbank .kaartkop h3 { margin: 0; font-size: 14px; font-weight: 600; flex: 1 1 auto; min-width: 0; }
@@ -1705,7 +1730,7 @@ body.sleept .lijsttabel { pointer-events: none; }
 .werkbank .fwaarde { font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .werkbank .kaartknoppen { display: flex; justify-content: flex-end; gap: 8px; }
 
-.werkbank .vreg { display: flex; align-items: flex-start; gap: 9px; padding: 10px 14px;
+.werkbank .vreg { display: flex; align-items: flex-start; gap: 10px; padding: 11px var(--gutter);
   border-bottom: 1px solid var(--b2); font-size: 12.5px; }
 .werkbank .vreg:last-child { border-bottom: none; }
 .werkbank .vreg .vink { color: var(--grn); font-weight: 700; line-height: 1.4; }
@@ -1714,15 +1739,34 @@ body.sleept .lijsttabel { pointer-events: none; }
 .werkbank .vreg .kern span { color: var(--mut); }
 .werkbank .vreg .tijd { font-size: 11px; color: var(--faint); white-space: nowrap; }
 
-@media (max-width: 1100px) {
+/* Tot een iPad in landscape blijft alles staan zoals het staat; alleen de zes
+   cijfers onder een positie gaan naar twee rijen, want zes naast elkaar worden
+   daar te smal om te lezen. */
+@media (max-width: 1000px) {
+  .werkbank { --gutter: 16px; }
+  .dfeiten { grid-template-columns: repeat(3, 1fr); }
+  .meterrij { grid-template-columns: 260px minmax(0, 1fr); gap: 18px; }
+  .lreg .nm { min-width: 104px; }
+  .pos, .werkbank .schaalrij { grid-template-columns: 178px 1fr 96px; gap: 12px; }
+  .detail { padding-left: 38px; }
+  /* Liever twee regels dan 'Opent binnen…': de naam van een vensterstand is
+     wat een lid straks te horen krijgt, en die hoort leesbaar te blijven. */
+  .vhok { padding: 9px 9px 10px; }
+  .vhok .nm { font-size: 11.5px; white-space: normal; line-height: 1.25; }
+}
+
+/* Smaller dan een iPad: dan valt het naast elkaar wél om, want anders wordt
+   alles onleesbaar smal. */
+@media (max-width: 760px) {
   .meterrij { grid-template-columns: 1fr; }
   .tweekolom { grid-template-columns: 1fr; }
   .kol { border-right: none; border-bottom: 1px solid var(--b1); }
-  .dfeiten { grid-template-columns: repeat(3, 1fr); }
-  .pos { grid-template-columns: 1fr; }
-  .detail { padding-left: 14px; }
+  .pos, .werkbank .schaalrij { grid-template-columns: 1fr; }
+  .werkbank .schaal { grid-column: 1; }
+  .detail { padding-left: var(--gutter); }
   .vensterrij { flex-wrap: wrap; }
   .vhok { flex: 1 1 30%; }
+  .dfeiten { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ========================================================== de opsteller ===

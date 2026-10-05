@@ -28,7 +28,7 @@ eis("de schaal heeft vijf standen", nu.schaal.length === 5);
 // onder druk, 5 is vrijwel afgerond. De stand telt op naarmate de positie
 // veiliger staat.
 eis("1 is onder druk", nu.schaal[0].waarde === "1" && nu.schaal[0].label === "Onder druk");
-eis("5 is het veiligst", nu.schaal[4].label === "Vrijwel afgerond");
+eis("5 is het veiligst", nu.schaal[4].label === "Veilig");
 eis("het venster is een verloop van zes standen", nu.vensters.length === 6);
 eis("de namen komen uit beheer, niet uit de code",
     (await q("select count(*) n from db_choice where tabel='barometerstand' and kolom='stand'"))[0].n === 5);

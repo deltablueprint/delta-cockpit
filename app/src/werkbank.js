@@ -98,15 +98,19 @@ export async function werkbankscherm(inhoud, kruimel) {
     const toonVenster = kiesVenster ?? v.nu;
     const toonStand = kiesStand ?? (b.wij ? Number(b.wij.stand.waarde) : null);
 
-    const vensterTip = b.wakker ? null : null;   // het venster stelt zichzelf niet voor
+    // Het venster krijgt geen systeemvoorstel. Het is een oordeel over de markt,
+    // en juist dat is voor een lid het meeste waard — een systeem dat het zelf
+    // zet, zet het een keer verkeerd (BOUWSPEC §13a).
     const standTip = b.voorstel !== null && b.wij && Number(b.wij.stand.waarde) !== b.voorstel
       ? b.voorstel : null;
 
     const vakje = (x, i) => {
-      const nuHier = x.waarde === v.nu && kiesVenster === null;
+      // Het blauwe kader blijft staan terwijl je kiest: zo zie je naast elkaar
+      // wat er vastligt en wat je ervan wil maken. Staat de keuze op hetzelfde
+      // vakje, dan wint groen — die regel staat later in de opmaak.
       const kl = [
         v.verloop.indexOf(x.waarde) < v.verloop.indexOf(v.nu) ? "gehad" : "",
-        nuHier ? "nu" : "",
+        x.waarde === v.nu ? "nu" : "",
         kiesVenster === x.waarde ? "gekozen" : "",
       ].filter(Boolean).join(" ");
       return `<button class="vhok ${kl}" data-venster="${x.waarde}">
@@ -197,7 +201,9 @@ export async function werkbankscherm(inhoud, kruimel) {
       svg += `<path class="seg" data-stand="${stand}" d="${sector(a0, a1, RO, RI)}" fill="${KLEUR[stand - 1]}"
         opacity="${gekozen || voorgesteld || (kiesStand === null && stand === toon) ? 1 : 0.72}"></path>`;
       if (voorgesteld) svg += `<path d="${sector(a0, a1, RO + 5, RI - 5)}" fill="none" stroke="#8A5A12" stroke-width="2.5" stroke-dasharray="6 4"></path>`;
-      if (gekozen) svg += `<path d="${sector(a0, a1, RO + 5, RI - 5)}" fill="none" stroke="#136289" stroke-width="3"></path>`;
+      // Groen: dit is wat je net koos en wat nog niet weg is. De blauwe regel
+      // ernaast blijft zeggen wat de leden kennen.
+      if (gekozen) svg += `<path d="${sector(a0, a1, RO + 5, RI - 5)}" fill="none" stroke="#1F5E45" stroke-width="3"></path>`;
     }
     if (toon) {
       const h = 180 - (toon - 0.5) * 36;
@@ -278,7 +284,9 @@ export async function werkbankscherm(inhoud, kruimel) {
     const schaal = VAKKEN.map((v, i) => {
       const breed = v.tot - v.van;
       const label = !ijk ? v.naam
-        : i === 0 ? "voorbij"
+        // Het smalle stuk voorbij de stoploss draagt geen label: het is te smal
+        // om er een woord in te krijgen, en de dieprode kleur zegt het al.
+        : i === 0 ? ""
         : `${getal(grens[i])}`;
       return `<span style="flex:0 0 calc(${breed.toFixed(2)}% - 3px)">${ontsnap(label)}</span>`;
     }).join("");
@@ -461,6 +469,6 @@ function getal(n, decimalen = 1) {
 function getalMet(n, decimalen = 1) {
   const x = Number(n);
   if (!Number.isFinite(x)) return "—";
-  return `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(x).toFixed(1).replace(".", ",")}`;
+  return `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(x).toFixed(decimalen).replace(".", ",")}`;
 }
 

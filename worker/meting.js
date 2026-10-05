@@ -113,9 +113,9 @@ export const VAKKEN = [
   { stand: 0, van: 0,  tot: 8,   naam: "voorbij de grens" },
   { stand: 1, van: 8,  tot: 26,  naam: "onder druk" },
   { stand: 2, van: 26, tot: 50,  naam: "krap" },
-  { stand: 3, van: 50, tot: 68,  naam: "ruim" },
+  { stand: 3, van: 50, tot: 68,  naam: "aandacht" },
   { stand: 4, van: 68, tot: 84,  naam: "comfortabel" },
-  { stand: 5, van: 84, tot: 100, naam: "vrijwel afgerond" },
+  { stand: 5, van: 84, tot: 100, naam: "veilig" },
 ];
 
 // Waar een ask op die balk staat, in procent van links naar rechts. Binnen elk

@@ -97,9 +97,9 @@ eis("voorbij de stoploss is het de zwaarste stand", standVan(90, ijk) === 1);
 eis("op de stoploss ook", standVan(60, ijk) === 1);
 eis("tussen stoploss en waarschuwing: onder druk", standVan(55, ijk) === 1);
 eis("tussen waarschuwing en break-even: krap", standVan(30, ijk) === 2);
-eis("net onder break-even: ruim", standVan(14, ijk) === 3);
+eis("net onder break-even: aandacht", standVan(14, ijk) === 3);
 eis("voorbij de helft: comfortabel", standVan(7, ijk) === 4);
-eis("voorbij het winstanker: vrijwel afgerond", standVan(2, ijk) === 5);
+eis("voorbij het winstanker: veilig", standVan(2, ijk) === 5);
 eis("waardeloos ook", standVan(0, ijk) === 5);
 eis("zonder ask is er geen stand", standVan(null, ijk) === null);
 eis("en onzin ook niet", standVan(NaN, ijk) === null && standVan(-1, ijk) === null);
@@ -156,7 +156,7 @@ eis("eroverheen ook", meet.posities[0].stand === 1);
 eis("en dan staat het er apart bij", meet.posities[0].voorbij_de_grens === true);
 await db.prepare("update brokerpositie set laatprijs = 0.1 where conid = '5001'").run();
 meet = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
-eis("bijna waardeloos is vrijwel afgerond", meet.posities[0].stand === 5);
+eis("bijna waardeloos is veilig", meet.posities[0].stand === 5);
 await db.prepare("update brokerpositie set laatprijs = 21.0 where conid = '5001'").run();
 
 // Een stoploss die per positie anders staat, verandert de schaal mee.
@@ -224,7 +224,7 @@ await db.prepare(
 
 meet = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
 const rustig = meet.posities.find((p) => p.strike === 5200);
-eis("de tweede tranche staat vrijwel afgerond", rustig.stand === 5);
+eis("de tweede tranche staat veilig", rustig.stand === 5);
 eis("maar de zwakste bepaalt de barometer", meet.voorstel === 3 && meet.zwakste.id === POSITIE);
 
 // En een positie die dicht is telt niet mee.

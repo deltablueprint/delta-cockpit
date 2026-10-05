@@ -1617,7 +1617,7 @@ Die laatste zijn de ene plek waar wél verwijderd wordt, en dat is precies zoals
 
 **Een kaart blijft bestaan, maar alleen voor een positie.** Open, gesloten, doorgerold — dat zijn de enige drie. De doorrol wordt herkend: sluit een positie en gaat er kort daarna een nieuwe open, dan verandert de kaart van de sluiting van vorm en laadt het doorrolsjabloon met beide contracten erin. De mapping staat in code, niet als ingerichte SQL.
 
-## 13c. De nieuwe werkbank (migraties 0128–0132, 5 okt 2026)
+## 13c. De nieuwe werkbank (migraties 0128–0133, 5 okt 2026)
 
 Het scherm waarop je begint, herbouwd uit `docs/mockup-werkbank.html`. Vier vakken, in deze volgorde, en niets anders.
 
@@ -1639,7 +1639,7 @@ De balk loopt **van verlies links naar winst rechts** — de ask daalt naar rech
 
 **De ijkpunten staan op vaste plekken op het scherm**, met break-even in het midden, en binnen elk vak wordt lineair geïnterpoleerd. Zo tonen twee tranches met verschillende premies dezelfde zonebreedtes en kun je ze naast elkaar lezen zonder eerst de schaal te ijken. Links staat een smal, dieprood stuk voor wat voorbij de stoploss staat: hoe ver eroverheen doet er niet toe, want daar hoort de tranche gesloten te zijn.
 
-**De richting van de schaal** staat in §10.1 en liep in 0107 andersom. Beslist op 5 oktober 2026: **1 is onder druk, 5 is vrijwel afgerond** — de stand telt op naarmate de positie veiliger staat. 0132 draait de labels én de al vastgelegde standen om, met een notitie in de reden zodat niemand zich later afvraagt waarom het getal niet bij de tekst past.
+**De richting van de schaal** staat in §10.1 en liep in 0107 andersom. Beslist op 5 oktober 2026: **1 is onder druk, 5 is veilig** — de stand telt op naarmate de positie veiliger staat. De vijf heten: *Onder druk · Krap · Aandacht · Comfortabel · Veilig* (0132, 0133). De woorden gaan naar de leden en staan dus in beheer, niet in de code. 0132 draait de labels én de al vastgelegde standen om, met een notitie in de reden zodat niemand zich later afvraagt waarom het getal niet bij de tekst past.
 
 **De zwakste open positie bepaalt de stand** — niet het gemiddelde: één tranche die tegen haar stoploss aanligt vraagt iets van een lid, ook als de twee andere vrijwel afgerond zijn.
 
@@ -1658,6 +1658,10 @@ De balk loopt **van verlies links naar winst rechts** — de ask daalt naar rech
 **De doorrol wordt herkend.** Sluit een positie en gaat er binnen `doorrol_minuten` een nieuwe open in dezelfde cyclus, dan is dat één handeling: de kaart van de sluiting verandert van vorm, laadt het doorrolsjabloon en draagt beide contracten met het nettoresultaat. Er komt geen kaart bij.
 
 **Niet melden is een besluit, geen wegklikken.** Het vraagt een reden, en die komt op de gebeurtenis te staan met wie het besloot.
+
+**De maat van het scherm is een iPad in landscape.** 1024 px breed, min het menu en de marges: ongeveer 740 px voor de werkbank. Daar past alles in zonder horizontaal te scrollen en zonder dat de balken omvallen — juist het naast elkaar lezen van drie tranches is waar dit scherm voor is. Onder de 760 px (telefoon) valt het wel om, want dan wordt alles onleesbaar smal.
+
+**Twee kaders, twee betekenissen.** Blauw is de stand zoals hij vastligt en die de leden kennen; groen is wat je net koos en nog niet weg is. Na publiceren wordt het groene kader dus blauw. Het systeemvoorstel blijft een amberen stippellijn en is geen van beide.
 
 **Routes:** `GET /api/werkbank` (alles in één vraag — het scherm toont één samenhangend beeld, en drie losse vragen zouden drie momenten opleveren die niet bij elkaar horen), `POST /api/werkbank/publiceer`, `POST /api/kaart/:id/niet-melden`, `POST /api/kaart/:id/concept`.
 
