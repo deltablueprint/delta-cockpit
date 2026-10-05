@@ -88,10 +88,10 @@ export async function werkbankscherm(inhoud, kruimel) {
       w.voorstel ? "een voorstel" : null,
     ].filter(Boolean).join(" · ");
 
+    // Er loopt er één. Een keuzelijst met één regel erin is geen keuze maar een
+    // vraag die je elke keer opnieuw moet beantwoorden; de naam volstaat.
     return `<div class="wbtop">
-      <select class="cycluskies" data-cyclus>
-        ${data.cycli.map((c) => `<option value="${c.id}"${c.id === data.cyclus.id ? " selected" : ""}>${ontsnap(c.label)}</option>`).join("")}
-      </select>
+      <span class="wbcyclus">Lopende cyclus: <b>${ontsnap(data.cyclus.label)}</b></span>
       <span class="wbachter ${wacht ? "wacht" : "bij"}"><span class="stip"></span><span>${
         wacht ? `Wacht op de leden: ${ontsnap(wat)}` : "De leden zijn bij"}</span></span>
     </div>`;
@@ -462,16 +462,7 @@ export async function werkbankscherm(inhoud, kruimel) {
     return haal();
   }
 
-  function opWissel(e) {
-    const kies = e.target.closest("[data-cyclus]");
-    if (!kies) return;
-    cyclusId = Number(kies.value);
-    kiesStand = null; kiesVenster = null; open = new Set();
-    haal();
-  }
-
   inhoud.addEventListener("click", opKlik);
-  inhoud.addEventListener("change", opWissel);
 
   // De knop gaat aan zodra er een reden staat. Niet opnieuw tekenen bij elke
   // toetsaanslag: dan springt de cursor uit het vak en ben je je tekst kwijt.

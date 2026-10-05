@@ -1714,6 +1714,8 @@ De balk loopt **van verlies links naar winst rechts** — de ask daalt naar rech
 
 **De kaders staan in hetzelfde ritme als de rest van de app**: 10 px ertussen, 14 px erbinnen — zoals op het gespreksscherm. Alles in een paneel komt op dezelfde linkerlijn uit: de kop, de body, een positieregel, een kaart, de knopbalk.
 
+**Er loopt er één (5 okt 2026).** Bovenaan stond een keuzelijst met cycli. In productie loopt er op een gegeven moment één cyclus, dus stond daar een keuze van één — een vraag die je elke keer opnieuw moest beantwoorden. Nu staat er *Lopende cyclus: <naam>*. In demodata lopen er meerdere naast elkaar; dan toont het scherm er één.
+
 **De namen zijn wat er staat, en verder staat er niets.** Het eerste vak heet *Instap venster* en *Positie Barometer* — twee namen die zeggen wat ze zijn. De begeleidende zinnetjes eronder en achter de kopjes zijn weg (5 okt 2026): 'voorbereidingstijd voor de leden', 'wat wij van een lid vragen', de slaapregel, de uitleg van de posities-schaal en die van de publicaties. Ze legden iets uit dat het scherm zelf al laat zien, en op een scherm dat je elke dag opent is dat ruis. De barometer die slaapt is nog steeds grijs en onklikbaar — dat is de uitleg. De lijst standen naast de meter toont alleen de **namen** van de vijf standen; de ask-grenzen stonden er ook en staan al onder de posities, waardoor die lijst een tabel werd in plaats van een keuzelijst.
 
 **Twee kaders, twee betekenissen.** Blauw is de stand zoals hij vastligt en die de leden kennen; groen is wat je net koos en nog niet weg is. Na publiceren wordt het groene kader dus blauw. Het systeemvoorstel blijft een amberen stippellijn en is geen van beide.
