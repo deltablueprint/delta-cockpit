@@ -1849,20 +1849,7 @@ body.sleept .lijsttabel { pointer-events: none; }
 .dnoot { font-size: 11px; color: var(--mut); }
 .dbalken { display: flex; flex-direction: column; gap: 6px; max-width: 560px; }
 
-/* De maat vanaf break-even: het midden is nul, rechts is winst tot alles
-   binnen, links verlies tot de stoploss. De staaf groeit vanuit het midden naar
-   de kant waar de tranche staat. */
-.dmaat { position: relative; height: 18px; }
-.dmaatlijn { position: absolute; left: 0; right: 0; top: 5px; height: 7px;
-  border-radius: 4px; background: var(--b2); }
-.dmaat i { position: absolute; top: 5px; height: 7px; display: block; }
-.dmaat i.winst { left: 50%; background: var(--grn); border-radius: 0 4px 4px 0; }
-.dmaat i.verlies { right: 50%; background: var(--red); border-radius: 4px 0 0 4px; }
-.dmaatnul { position: absolute; left: 50%; top: 2px; width: 1px; height: 13px;
-  background: var(--ink); transform: translateX(-.5px); }
-.dmaatrand { position: absolute; top: 14px; font-size: 9.5px; color: var(--faint); letter-spacing: .02em; }
-.dmaatrand.links { left: 0; }
-.dmaatrand.rechts { right: 0; }
+
 .dbalkrij { display: grid; grid-template-columns: 96px 1fr 54px; gap: 10px; align-items: center; }
 .dbalklab { font-size: 11px; color: var(--mut); }
 .dbalk { height: 7px; border-radius: 4px; background: var(--b2); overflow: hidden; }
