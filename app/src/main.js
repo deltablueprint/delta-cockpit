@@ -12,7 +12,6 @@ import { onverdeeldscherm } from "./onverdeeld.js";
 import { berichtenscherm } from "./berichten.js";
 import { zetBezoek } from "./api.js";
 import { stopLive } from "./live.js";
-import { werkbankscherm } from "./werkbank.js";
 import { opstellerscherm } from "./opsteller.js";
 import { barometerscherm } from "./barometerscherm.js";
 
@@ -36,7 +35,6 @@ function soortVanRoute(route) {
     const tabel = (meta && meta.tabellen || []).find((x) => x.naam === t[1]);
     return tabel ? tabel.label : t[1].replace(/_/g, " ");
   }
-  if (route === "/werkbank") return "werkbank";
   if (route.startsWith("/bericht/")) return "bericht";
   if (route.startsWith("/barometer/")) return "barometer";
   if (route.startsWith("/uitkomst/")) return "gesprek";
@@ -71,13 +69,6 @@ function teken() {
     huidigeLijst.tabelnaam = null;
     huidigeLijst.url = null;
     berichtenscherm(inhoud, kruimel);
-    return;
-  }
-
-  if (pad === "/werkbank") {
-    huidigeLijst.tabelnaam = null;
-    huidigeLijst.url = null;
-    werkbankscherm(inhoud, kruimel);
     return;
   }
 

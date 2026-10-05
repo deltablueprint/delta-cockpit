@@ -8,7 +8,7 @@
 import { readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
-const DOEN = ["migraties", "db-wordt-gevuld", "record", "navigator", "aanmaken", "brug", "spiegel", "stroom", "kaartdefinitie", "motor", "wachtrij", "bericht", "achterstand", "barometer", "werkbankscherm", "backtest", "inrichting", "schermen", "toestand", "hersteld", "eigenaar", "voorwaardelijk", "flow"];
+const DOEN = ["migraties", "db-wordt-gevuld", "record", "navigator", "aanmaken", "brug", "spiegel", "stroom", "bericht", "achterstand", "barometer", "inrichting", "schermen", "hersteld"];
 const bestaat = new Set(readdirSync("scripts/proef").filter((f) => f.endsWith(".mjs")).map((f) => f.slice(0, -4)));
 
 let stuk = 0;

@@ -139,21 +139,11 @@ export const brugInstelling = (waarden) =>
   haal("/api/brug/instelling", { methode: "PUT", body: { waarden } });
 export const brugFlex = () => haal("/api/brug/flex");
 
-// ---- de werkbank: de wachtrij, de achterstand en de barometer ----
-export const haalWachtrij = (cyclus = null, van = "alles") => {
-  const p = new URLSearchParams();
-  if (cyclus) p.set("cyclus", cyclus);
-  if (van === "mij") p.set("van", "mij");
-  const q = p.toString();
-  return haal(`/api/wachtrij${q ? `?${q}` : ""}`);
-};
-export const beantwoordKaart = (id, body) =>
-  haal(`/api/wachtrij/${id}/antwoord`, { methode: "POST", body });
+// ---- de leden: de barometer en de berichten ----
+// Van kaart naar concept. Welke gebeurtenis een kaart is, bepaalt de werkbank;
+// deze route maakt er een bericht van.
 export const conceptUitKaart = (id, body = {}) =>
   haal(`/api/wachtrij/${id}/concept`, { methode: "POST", body });
-
-export const haalAchterstand = (cyclus = null) =>
-  haal(`/api/achterstand${cyclus ? `?cyclus=${cyclus}` : ""}`);
 
 export const haalBarometer = (cyclus) => haal(`/api/cyclus/${cyclus}/barometer`);
 export const zetBarometer = (cyclus, body) =>
@@ -169,11 +159,3 @@ export const stuurTerug = (publicatie, reden) =>
 export const werkbankCycli = () => haal("/api/werkbank/cycli");
 export const haalStroom = (cyclus, limiet = 40) =>
   haal(`/api/cyclus/${cyclus}/stroom?limiet=${limiet}`);
-
-// Of er iets veranderd is in de wachtrij. Klein genoeg om elke tien seconden te
-// stellen; de volle rij wordt pas opgehaald als het antwoord anders is.
-export const wachtrijStand = (cyclus = null) =>
-  haal(`/api/wachtrij/stand${cyclus ? `?cyclus=${cyclus}` : ""}`);
-
-// Wat er in deze cyclus nog te doen staat: de processtappen die nog open staan.
-export const haalTedoen = (cyclus) => haal(`/api/cyclus/${cyclus}/tedoen`);

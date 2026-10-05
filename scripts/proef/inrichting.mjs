@@ -13,8 +13,6 @@ import { readFileSync, readdirSync } from "node:fs";
 import { verseDB } from "./db.mjs";
 import { BRONNEN } from "../../worker/stroom.js";
 import { VENSTERS } from "../../worker/barometer.js";
-import { DOELEN, PRIORITEITEN } from "../../worker/wachtrij.js";
-import { SLEUTELVORMEN, aanleidingDeugt } from "../../worker/motor.js";
 
 const db = verseDB("/tmp/delta-inrichting-proef.sqlite");
 const q = async (s, ...b) => (await db.prepare(s).bind(...b).all()).results;
@@ -144,9 +142,6 @@ for (const g of groepen) {
 const PAREN = [
   { wat: "de bron van een gebeurtenis",      waarden: BRONNEN,       tabel: "gebeurtenis",   kolom: "bron" },
   { wat: "het venster van de barometer",     waarden: VENSTERS,      tabel: "barometerstand", kolom: "venster" },
-  { wat: "wat een knop op een kaart doet",   waarden: DOELEN,        tabel: "processtap",    kolom: "knop1_doel" },
-  { wat: "de sleutelvormen van de motor",    waarden: SLEUTELVORMEN, tabel: "processtap",    kolom: "sleutel_bron" },
-  { wat: "de prioriteit van een kaart",      waarden: PRIORITEITEN,  tabel: "processtap",    kolom: "prioriteit" },
 ];
 
 for (const paar of PAREN) {
@@ -162,25 +157,6 @@ for (const paar of PAREN) {
     eis(`${paar.wat}: '${w}' is te kiezen in beheer maar de code kent het niet`,
         paar.waarden.map(String).includes(w));
   }
-}
-
-// En wat er echt is ingericht, moet ook een waarde uit die lijst zijn. Een
-// definitie met een doel dat niemand kent is een knop die niets doet.
-for (const kolom of ["knop1_doel", "knop2_doel", "sleutel_bron", "prioriteit", "opschalen_naar"]) {
-  const gebruikt = await q(
-    `select distinct "${kolom}" as w from processtap where kaartsoort is not null and "${kolom}" is not null`
-  );
-  const mag = (await q("select waarde from db_choice where tabel = 'processtap' and kolom = ? and actief = 1", kolom))
-    .map((c) => String(c.waarde));
-  for (const g of gebruikt) {
-    eis(`een kaartdefinitie gebruikt ${kolom} = '${g.w}', en dat bestaat`, mag.includes(String(g.w)));
-  }
-}
-
-// Elke aanleiding die is ingericht, mag alleen lezen. Dit is het enige stuk
-// ingerichte tekst dat zelf bepaalt welke rijen de motor te zien krijgt.
-for (const d of await q("select kaartsoort, aanleiding from processtap where aanleiding is not null")) {
-  eis(`de aanleiding van ${d.kaartsoort} komt door het slot`, aanleidingDeugt(d.aanleiding));
 }
 
 // Elke afvinkregel die op een processtap staat, bestaat ook echt in de code.

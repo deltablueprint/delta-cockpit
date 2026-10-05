@@ -1,5 +1,9 @@
 // Van kaart naar bericht, en van bericht naar de deur uit.
 //
+// Welke gebeurtenis een kaart wordt, bepaalt de werkbank. Deze proef begint
+// waar dat al gebeurd is: er ligt een kaart, en de vraag is of er een bericht
+// uit komt dat niemand bedoeld heeft.
+//
 //   node scripts/proef/bericht.mjs
 //
 // De vraag: kan er een bericht naar 412 leden gaan dat niemand bedoeld heeft?
@@ -7,8 +11,6 @@
 import { verseDB, CYCLUS, POSITIE } from "./db.mjs";
 import { conceptUitKaart, vraagNalezen, geefVrij, stuurTerug } from "../../worker/bericht.js";
 import { verstuurPublicatie } from "../../worker/spiegel.js";
-import { wachtrij } from "../../worker/wachtrij.js";
-import { weeg } from "../../worker/motor.js";
 import { log } from "../../worker/stroom.js";
 
 const db = verseDB("/tmp/delta-bericht-proef.sqlite");
@@ -20,17 +22,24 @@ const q = async (s, ...b) => (await db.prepare(s).bind(...b).all()).results;
 let fouten = 0;
 const eis = (wat, goed) => { if (!goed) { fouten++; console.log(`FOUT  ${wat}`); } };
 
+// Een kaart is een gebeurtenis die om een antwoord vraagt. Wie die vlag zet is
+// een vraag voor de werkbank; hier gaat het om wat er dáárna gebeurt, dus
+// zetten we hem zelf.
+const maakKaart = async (id) => {
+  await db.prepare("update gebeurtenis set vraagt_antwoord = 1 where id = ?").bind(id).run();
+  return { id };
+};
+
 // Een kaart: de positie is gesloten.
-await log(env, simon, {
+const gesloten = await log(env, simon, {
   bron: "ibkr", soort: "positie_gesloten", titel: "Tranche verdwenen bij de broker",
   cyclus: CYCLUS, positie: POSITIE, moment: "2026-09-01 10:00:00",
 });
-await weeg(env);
-const kaart = (await wachtrij(env, simon)).kaarten[0];
+const kaart = await maakKaart(gesloten);
 eis("er staat een kaart", !!kaart);
 
 // ----------------------------------------------------- van kaart naar concept
-let uit = await conceptUitKaart(env, simon, kaart.id);
+let uit = await conceptUitKaart(env, simon, kaart.id, "sluiting");
 eis("het concept wordt gemaakt", !!uit.publicatie);
 const pid = uit.publicatie;
 const p = (await q("select * from publicatie where id = ?", pid))[0];
@@ -42,7 +51,7 @@ eis("er staan geen accolades in de tekst", !p.tekst.includes("{{"));
 eis("de feiten zijn vastgelegd zoals ze nu zijn", p.contract !== undefined);
 
 // Twee keer drukken mag geen tweede halve bericht opleveren.
-uit = await conceptUitKaart(env, simon, kaart.id);
+uit = await conceptUitKaart(env, simon, kaart.id, "sluiting");
 eis("twee keer drukken geeft hetzelfde concept", uit.publicatie === pid);
 eis("en zegt dat het al bestond", uit.bestond_al === true);
 eis("er staat er maar één",
@@ -69,12 +78,10 @@ eis("nalezen vragen lukt", !uit.fout);
 eis("het bericht ligt bij de lezer",
     (await q("select status, nalezer from publicatie where id = ?", pid))[0].status === "nalezen");
 
-// Dit is het hart van etappe E: de vraag komt in HAAR rij, niet in een postbus.
-await weeg(env);
-const haarRij = await wachtrij(env, jacq);
-const naleeskaart = haarRij.kaarten.find((k) => k.kaartsoort === "nalezen");
-eis("de nalezer krijgt een kaart in de wachtrij", !!naleeskaart);
-eis("die kaart wijst naar dit bericht", naleeskaart && naleeskaart.publicatie === pid);
+// De vraag ligt bij haar, en bij niemand anders.
+const liggend = (await q("select nalezer, status from publicatie where id = ?", pid))[0];
+eis("het bericht wijst de nalezer aan", liggend.nalezer === "jacqueline");
+eis("en wacht op haar", liggend.status === "nalezen");
 
 // Terwijl het bij haar ligt, kan de opsteller het niet alvast versturen.
 uit = await verstuurPublicatie(env, simon, pid);
@@ -111,15 +118,14 @@ eis("twee keer versturen kan niet", !!uit.fout);
 
 // ---------------------------------------------- een bericht zonder positie
 // Dit is waar 0104 voor was. Voor die migratie kon dit niet eens ingevoegd.
-await log(env, simon, {
+const voorstel = await log(env, simon, {
   bron: "meting", soort: "barometer_voorstel", titel: "Barometer 5 naar 4",
   cyclus: CYCLUS, feiten: { van: 5, naar: 4, reden: "de volatiliteit is gezakt" },
 });
-await weeg(env);
-const baro = (await wachtrij(env, simon)).kaarten.find((k) => k.kaartsoort === "barometer");
+const baro = await maakKaart(voorstel);
 eis("de barometerkaart staat er", !!baro);
 if (baro) {
-  uit = await conceptUitKaart(env, simon, baro.id);
+  uit = await conceptUitKaart(env, simon, baro.id, "barometer");
   eis("een bericht zonder positie kan nu", !uit.fout && !!uit.publicatie);
   const b = (await q("select * from publicatie where id = ?", uit.publicatie))[0];
   eis("en heeft echt geen positie", b.positie === null);
@@ -134,12 +140,6 @@ for (const s of sjablonen) {
   eis(`${s.naam}: heeft tekst`, !!String(s.tekst || "").trim());
   eis(`${s.naam}: soort bestaat als keuze`,
       (await q("select count(*) n from db_choice where tabel='publicatie' and kolom='soort' and waarde=?", s.soort))[0].n === 1);
-}
-// Elk sjabloon waar een kaartdefinitie naar wijst, bestaat ook echt.
-const verwezen = await q("select distinct knop1_sjabloon s from processtap where knop1_sjabloon is not null");
-for (const v of verwezen) {
-  eis(`de kaart wijst naar een bestaand sjabloon: ${v.s}`,
-      sjablonen.some((s) => s.naam === v.s));
 }
 
 console.log(fouten === 0 ? "alles klopt." : `${fouten} fout(en).`);

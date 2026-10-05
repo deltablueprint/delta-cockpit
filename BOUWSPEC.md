@@ -1540,7 +1540,7 @@ Na etappe 4 is een echte cyclus volledig vast te leggen. Werken op desktop, iPad
 
 ---
 
-## 13a. Het venster — voorbereidingstijd voor een lid (migraties 0121, 0123)
+## 13a. Het venster — voorbereidingstijd voor een lid (migraties 0121, 0123, 0124)
 
 Het venster had drie standen (open / wacht / dicht) en was gebouwd op de verkeerde vraag: *kunnen wij instappen*. Het gaat niet over ons. **Elke maand ligt het instapmoment anders, en wie pas hoort dat we erin zitten als we erin zitten, is mentaal te laat.** Het venster is dus voorbereidingstijd.
 
@@ -1548,7 +1548,7 @@ Zes standen, als verloop:
 
 | Stand | Wat het zegt |
 |---|---|
-| Gesloten | we kijken, nog niets aan de hand |
+| Pre-analyse | we kijken, de chart is nog niet gelezen |
 | Besluit loopt | we zijn aan het beslissen |
 | Opent binnenkort | maak je klaar |
 | Open | wij zitten erin, je kunt volgen |
@@ -1557,9 +1557,28 @@ Zes standen, als verloop:
 
 **Drie standen worden nooit door het systeem gezet, en ook nooit tegengesproken:** *Opent binnenkort* en *Open*. Dat is jullie oordeel over de markt, en juist die twee zijn voor een lid het meeste waard — een systeem dat ze zelf zet, zet ze een keer verkeerd. Staat het venster op een van die twee, dan zwijgt de kaart, ook al zegt het proces iets anders.
 
-**De kaart kijkt naar het verschil, niet naar een trigger.** *"Het proces staat op besluit, de leden zien nog gesloten."* Mis je hem — de motor lag stil, iemand klikte hem weg — dan is het verschil er morgen nog en komt de kaart terug. Hij sluit zichzelf zodra je het venster bijstelt.
+**Het systeem stelt voor, jij publiceert.** Het voorstel staat als stippellijn om de stand; je klikt hem aan en drukt op publiceren. Mis je het — niemand keek — dan is het verschil er morgen nog, want het wordt bij het lezen afgeleid en niet als taak weggeschreven.
+
+**Een nieuwe cyclus begint op pre-analyse** (0124). Bij het aanmaken schrijft de cockpit meteen een barometerstand: stand 1, venster *pre-analyse*, reden "Cyclus geopend." Zonder die rij heeft de barometer geen stand, en dan moet elk scherm zelf gokken wat 'nog niets' betekent.
 
 **'Venster gemist' is geen venstertoestand** (0123). Het venster zegt hetzelfde tegen alle leden tegelijk; 'gemist' zegt juist iets over één lid: dat hij niet heeft aangegeven de positie gevolgd te hebben toen de stand naar *In positie* ging. Dat hoort op de ledenkant, per lid. Die bestaat nog niet — dit is dus uitgesteld, niet verplaatst.
+
+## 13b. De taakkaartlaag is eruit (migratie 0125, 5 okt 2026)
+
+De eerste werkbank was een **wachtrij van taken**: processtappen met een stuk SQL per definitie (`voorwaarde`, `aanleiding`) dat bepaalde wanneer een gebeurtenis zich tot kaart stempelde, een motor die dat elke tien seconden deed, en een scherm met *Van mij / Alles*. Die vorm is verlaten. Twee redenen:
+
+- **Het werk stond op de verkeerde plek.** Een instapvoorwaarde meten, een analyse invullen, een besluit afronden — dat doe je op het cyclusrecord en in zijn related lists, waar het veld staat. Een kaart die ernaar verwijst is een omweg, en twee plekken die hetzelfde beweren lopen uit elkaar.
+- **De definitielaag was te machtig.** Vrije SQL in beheer bepaalde welke rijen de motor te zien kreeg. Het slot erop was dicht, maar het blijft het gevaarlijkste wat er stond.
+
+**Wat de werkbank nu is:** de positie monitoren, het venster en de barometer zetten, en de ledencommunicatie doen. Niets anders.
+
+**Wat eruit ging** (code verwijderd, database op archief): `worker/motor.js`, `worker/wachtrij.js`, `worker/stappen.js`, `worker/achterstand.js`, `app/src/werkbank.js`, de routes `/api/wachtrij*`, `/api/achterstand` en `/api/cyclus/:id/tedoen`, de twaalf kaartdefinities onder proces 4 en de menuregel naar `/werkbank`.
+
+**Wat bleef:** de gebeurtenissenstroom (`gebeurtenis`), de publicaties met hun nalees- en vierogenstroom, de berichtsjablonen, de barometer met haar venster, de spiegel en de brug. Daarop wordt de nieuwe werkbank gebouwd.
+
+**Niets is verwijderd uit de database.** De definities staan op `archief = 1` en hun kolommen op `processtap` blijven staan: een kolom laten vallen betekent de tabel herbouwen, en dat is een groter risico dan een ongebruikte kolom. De verwijderde code en de proeven die erbij hoorden staan in de git-tak **`voor-de-herbouw`**.
+
+**Een kaart blijft bestaan, maar alleen voor een positie.** Open, gesloten, doorgerold — dat zijn de enige drie. De doorrol wordt herkend: sluit een positie en gaat er kort daarna een nieuwe open, dan verandert de kaart van de sluiting van vorm en laadt het doorrolsjabloon met beide contracten erin. De mapping staat in code, niet als ingerichte SQL.
 
 ## 14. Openstaande punten
 

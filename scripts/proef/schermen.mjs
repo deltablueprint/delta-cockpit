@@ -8,11 +8,9 @@
 // een route die nergens in het menu of in een ander scherm te bereiken is.
 import { readFileSync } from "node:fs";
 import { verseDB, CYCLUS, POSITIE } from "./db.mjs";
-import { wachtrij } from "../../worker/wachtrij.js";
 import { conceptUitKaart, vraagNalezen, geefVrij, stuurTerug } from "../../worker/bericht.js";
 import { verstuurPublicatie } from "../../worker/spiegel.js";
 import { huidig, stelVast } from "../../worker/barometer.js";
-import { weeg } from "../../worker/motor.js";
 import { log } from "../../worker/stroom.js";
 
 const db = verseDB("/tmp/delta-schermen-proef.sqlite");
@@ -26,7 +24,6 @@ const eis = (wat, goed) => { if (!goed) { fouten++; console.log(`FOUT  ${wat}`);
 
 const opsteller = readFileSync("app/src/opsteller.js", "utf8");
 const baro = readFileSync("app/src/barometerscherm.js", "utf8");
-const werkbank = readFileSync("app/src/werkbank.js", "utf8");
 const api = readFileSync("app/src/api.js", "utf8");
 const main = readFileSync("app/src/main.js", "utf8");
 const css = readFileSync("app/src/stijl.css", "utf8");
@@ -38,10 +35,6 @@ eis("main.js roept de opsteller aan", main.includes("opstellerscherm(inhoud, kru
 eis("main.js roept het barometerscherm aan", main.includes("barometerscherm(inhoud, kruimel,"));
 
 // Een scherm dat nergens vandaan te bereiken is, bestaat niet.
-eis("de werkbank brengt je naar de opsteller", werkbank.includes("#/bericht/"));
-eis("de werkbank brengt je naar de barometer", werkbank.includes("#/barometer/"));
-eis("de opsteller brengt je terug naar de werkbank", opsteller.includes("#/werkbank"));
-eis("het barometerscherm ook", baro.includes("#/werkbank"));
 
 // Elke api-functie die een scherm importeert, bestaat.
 for (const [naam, tekst] of [["opsteller", opsteller], ["barometerscherm", baro]]) {
@@ -60,9 +53,12 @@ await log(env, simon, {
   bron: "ibkr", soort: "positie_gesloten", titel: "Tranche verdwenen bij de broker",
   cyclus: CYCLUS, positie: POSITIE, moment: "2026-09-01 10:00:00",
 });
-await weeg(env);
-const kaart = (await wachtrij(env, simon)).kaarten[0];
-const { publicatie } = await conceptUitKaart(env, simon, kaart.id);
+const gesloten = await log(env, simon, {
+  bron: "ibkr", soort: "positie_gesloten", titel: "Tranche verdwenen bij de broker",
+  cyclus: CYCLUS, positie: POSITIE, moment: "2026-09-01 10:01:00",
+});
+await db.prepare("update gebeurtenis set vraagt_antwoord = 1 where id = ?").bind(gesloten).run();
+const { publicatie } = await conceptUitKaart(env, simon, gesloten, "sluiting");
 await db.prepare("update publicatie set tekst = 'De positie is gesloten.' where id = ?").bind(publicatie).run();
 
 const stand = async () => (await q("select status from publicatie where id = ?", publicatie))[0].status;
@@ -131,40 +127,18 @@ for (const tekst of [opsteller, baro]) {
 
 // ------------------------------- een scherm dat weg is, schrijft niet meer
 //
-// De werkbank peilt elke tien seconden. Klik je intussen door naar een ander
-// scherm, dan tikt die klok gewoon door — en tekende hij zichzelf over het
-// scherm waar je inmiddels was. Dat zag eruit als een omleiding naar de
-// werkbank, maar het was erger: op een formulier waar je in zat te typen was je
-// je werk kwijt.
+// Een scherm dat peilt en intussen verlaten wordt, tekende zichzelf over het
+// scherm waar je inmiddels was. Dat zag eruit als een omleiding, maar het was
+// erger: op een formulier waar je in zat te typen was je je werk kwijt.
 //
 // Elk scherm dat een timer of een luisteraar op het document zet, moet kunnen
-// zeggen of het nog van deze wereld is.
-const werkbankTekst = readFileSync("app/src/werkbank.js", "utf8");
-
-eis("de werkbank weet of hij nog de levende is", werkbankTekst.includes("leeftNog"));
-
-// Niet 'komt de wacht ergens voor' — dat is te makkelijk waar. De wacht moet de
-// eerste regel zijn van alles wat later nog iets tekent: de klok die afgaat, en
-// het antwoord dat terugkomt. Een eerdere versie van deze proef telde alleen
-// vóórkomens, en liet daardoor precies de fout door die hij moest vangen.
-const naSetTimeout = werkbankTekst.split(/setTimeout\(async \(\) => \{/)[1] || "";
-eis("de klok kijkt als eerste of dit scherm nog bestaat",
-    /^\s*if \(!leeftNog\(\)\) return;/.test(naSetTimeout));
-
-const naDeVraag = werkbankTekst.split(/const nu = await wachtrijStand\([^)]*\);/)[1] || "";
-eis("en na het antwoord opnieuw, want ondertussen kan er geklikt zijn",
-    /^[\s\S]{0,260}if \(!leeftNog\(\)\) return;/.test(naDeVraag));
-
-const naHalen = werkbankTekst.split(/\n\s*const cyclus = toestand\.cycli\.find/)[0] || "";
-eis("en tekenen gebeurt niet meer na vertrek",
-    /if \(!leeftNog\(\)\) return;\s*$/.test(naHalen.trimEnd()) || naHalen.includes("if (!leeftNog()) return;"));
-eis("de controle kijkt naar de route", werkbankTekst.includes('location.hash.slice(1).split("?")[0] === "/werkbank"'));
-eis("en naar het bezoek, zodat twee werkbanken elkaar niet overschrijven",
-    werkbankTekst.includes("dit === bezoek"));
+// zeggen of het nog van deze wereld is. De werkbank die dit het hardst nodig
+// had wordt opnieuw gebouwd; deze regel geldt dan weer, en de proeven erbij
+// staan in de git-tak 'voor-de-herbouw'.
 
 // Elke luisteraar op het document moet zichzelf opruimen, anders peilen er na
 // tien keer openen tien tegelijk.
-for (const bestand of ["werkbank.js", "opsteller.js", "barometerscherm.js"]) {
+for (const bestand of ["opsteller.js", "barometerscherm.js"]) {
   const t = readFileSync(`app/src/${bestand}`, "utf8");
   const erbij = (t.match(/document\.addEventListener\(/g) || []).length;
   const eraf = (t.match(/document\.removeEventListener\(/g) || []).length;
@@ -173,7 +147,7 @@ for (const bestand of ["werkbank.js", "opsteller.js", "barometerscherm.js"]) {
 }
 
 // Een scherm met een timer moet die ook kunnen stoppen.
-for (const bestand of ["werkbank.js", "opsteller.js", "barometerscherm.js"]) {
+for (const bestand of ["opsteller.js", "barometerscherm.js"]) {
   const t = readFileSync(`app/src/${bestand}`, "utf8");
   if (!/setTimeout|setInterval/.test(t)) continue;
   eis(`${bestand}: een timer wordt ook weer gestopt`, /clearTimeout|clearInterval/.test(t));
@@ -183,7 +157,7 @@ for (const bestand of ["werkbank.js", "opsteller.js", "barometerscherm.js"]) {
 //
 // `vite build` waarschuwt hierover maar bouwt gewoon door, en de deploy slaagt.
 // Je merkt het pas als het scherm bij een gebruiker wit blijft. Eén keer gebeurd:
-// werkbank.js importeerde ICOON uit ikonen.js, dat die naam niet exporteert.
+// een scherm importeerde ICOON uit ikonen.js, dat die naam niet exporteert.
 import { readdirSync as lees } from "node:fs";
 
 const bestanden = lees("app/src").filter((f) => f.endsWith(".js"));

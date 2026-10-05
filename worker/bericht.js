@@ -8,8 +8,25 @@
 // De sjablonen staan in de database (migratie 0105), niet hier. De woorden
 // waarmee wij onze leden aanspreken horen in beheer te staan.
 
-import { vulIn } from "./wachtrij.js";
 import { log } from "./stroom.js";
+
+// De tekst van een bericht staat als sjabloon in beheer: "Positie gesloten:
+// {{positie.naam}}". Wat er niet ingevuld kan worden valt weg in plaats van als
+// {{...}} op het scherm te blijven staan — een bericht met een gat erin leest
+// nog; een bericht met accolades leest als een storing.
+const PLAATSHOUDER = /\{\{\s*([a-z0-9_]+)\.([a-z0-9_]+)\s*\}\}/gi;
+
+export function vulIn(sjabloon, gegevens) {
+  if (!sjabloon) return null;
+  const uit = String(sjabloon).replace(PLAATSHOUDER, (heel, groep, naam) => {
+    const bron = gegevens[groep];
+    if (!bron) return "";
+    const w = bron[naam];
+    return w === null || w === undefined ? "" : String(w);
+  });
+  return uit.replace(/\s{2,}/g, " ").trim() || null;
+}
+
 
 // Alles wat een plaatshouder kan aanwijzen, voor één kaart.
 async function gegevensVoor(env, g) {

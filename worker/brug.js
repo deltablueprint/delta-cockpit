@@ -5,7 +5,6 @@
 // schermen hoe vers het is. Eén kant op: er gaat niets terug naar de broker.
 
 import { spiegel } from "./spiegel.js";
-import { draai } from "./motor.js";
 
 const getal = (w) => (Number.isFinite(Number(w)) ? Number(w) : null);
 const kort = (w, n = 200) => (w === null || w === undefined ? null : String(w).slice(0, n));
@@ -140,18 +139,6 @@ export async function neemStand(env, pakket = {}) {
     gespiegeld = await spiegel(env, { id: null },
       await brugPosities(env), await brugUitvoeringen(env));
   } catch { /* de stand is binnen; spiegelen kan bij de volgende push */ }
-
-  // En meteen de motor. Dit is de klok van het systeem geworden: er is geen
-  // cron meer, de hartslag van de brug komt elke tien seconden langs en dat is
-  // tweehonderdveertig keer zo fijn als een uurronde.
-  //
-  // Wegen gebeurt bij elke tik — dat is goedkoop. De rondgang langs de kalender
-  // en alle toestandsvragen hoogstens elke 'motor_rondgang_seconden'; de ronde
-  // beslist dat zelf. Mislukken mag de zending nooit laten falen: de brug moet
-  // door, en de volgende tik haalt het in.
-  try {
-    await draai(env, { aanleiding: "brug" });
-  } catch { /* de volgende push of de cron haalt het in */ }
 
   // Het antwoord draagt de instellingen: zo haalt de brug ze op zonder dat er
   // ooit iets naar hem toe gestuurd hoeft te worden.

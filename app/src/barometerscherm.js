@@ -34,7 +34,7 @@ export async function barometerscherm(inhoud, kruimel, cyclusId) {
     const label = c.label || `Cyclus ${cyclusId}`;
     document.title = `Barometer · ${label} · Delta Blueprint Cockpit`;
     kruimel.innerHTML = `<span>Werken</span> <span class="pijlje">&rsaquo;</span>
-      <a href="#/werkbank">Werkbank</a> <span class="pijlje">&rsaquo;</span>
+      <a href="#/berichten">Berichten</a> <span class="pijlje">&rsaquo;</span>
       <span>Barometer · ${ontsnap(label)}</span>`;
 
     // Wat je kiest begint bij wat er staat. Een scherm dat leeg opent dwingt je
