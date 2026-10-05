@@ -566,14 +566,6 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
 .gvlak { width: 11px; height: 11px; border-radius: 2px; flex: 0 0 auto; }
 .greden { display: block; margin-top: 3px; color: var(--mut); line-height: 1.45; }
 .gvoet { display: block; margin-top: 3px; font-size: 11px; color: var(--faint); }
-/* Het verloop staat in het verlengde van de regel waar het over gaat: naast de
-   balk, niet in een kolom ernaast. De lijn toont hoeveel van de premie binnen
-   is, dus hij loopt omhoog als het beter gaat. */
-.trend { flex: 0 0 96px; display: flex; flex-direction: column; align-items: stretch; gap: 1px; }
-.trend svg { display: block; width: 96px; height: 26px; }
-.trend.leeg { height: 26px; }
-.trendnoot { font-size: 10.5px; color: var(--mut); text-align: right;
-  font-variant-numeric: tabular-nums; line-height: 1; }
 
 /* --- de balk van een tranche op haar eigen record --- */
 .posmeter { margin: 0 0 2px; padding: 14px 20px 6px; background: #fff; border-bottom: 1px solid var(--b1); }
@@ -1801,7 +1793,7 @@ body.sleept .lijsttabel { pointer-events: none; }
 .posblok:last-child { border-bottom: none; }
 .posblok.uitgeklapt { background: var(--soft); }
 .pos { width: 100%; border: 0; background: none; font-family: inherit; text-align: left; cursor: pointer;
-  display: grid; grid-template-columns: 210px 1fr 96px 108px; gap: 16px; align-items: center; padding: 13px var(--gutter); }
+  display: grid; grid-template-columns: 210px 1fr 108px; gap: 16px; align-items: center; padding: 13px var(--gutter); }
 .pos:hover { background: var(--soft); }
 .posdicht { opacity: .5; }
 .poslinks { display: flex; align-items: center; gap: 9px; min-width: 0; }
@@ -1822,7 +1814,7 @@ body.sleept .lijsttabel { pointer-events: none; }
   font-weight: 700; white-space: nowrap; color: var(--ink); }
 /* De schaal onder de balken, op dezelfde grenzen als de vakjes. In punten, want
    dat is wat op het scherm van de broker staat. */
-.werkbank .schaalrij { display: grid; grid-template-columns: 210px 1fr 96px 108px; gap: 16px; padding: 2px var(--gutter) 12px; }
+.werkbank .schaalrij { display: grid; grid-template-columns: 210px 1fr 108px; gap: 16px; padding: 2px var(--gutter) 12px; }
 .werkbank .schaal { grid-column: 2; display: flex; gap: 3px; font-size: 10px; color: var(--faint); }
 .werkbank .schaal span { text-align: right; }
 .werkbank .schaal span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1839,7 +1831,22 @@ body.sleept .lijsttabel { pointer-events: none; }
 .dlab { font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); }
 .dwaarde { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .dnoot { font-size: 11px; color: var(--mut); }
-.dbalken { display: flex; flex-direction: column; gap: 6px; max-width: 420px; }
+.dbalken { display: flex; flex-direction: column; gap: 6px; max-width: 460px; }
+
+/* De maat vanaf break-even: het midden is nul, rechts is winst tot alles
+   binnen, links verlies tot de stoploss. De staaf groeit vanuit het midden naar
+   de kant waar de tranche staat. */
+.dmaat { position: relative; height: 18px; }
+.dmaatlijn { position: absolute; left: 0; right: 0; top: 5px; height: 7px;
+  border-radius: 4px; background: var(--b2); }
+.dmaat i { position: absolute; top: 5px; height: 7px; display: block; }
+.dmaat i.winst { left: 50%; background: var(--grn); border-radius: 0 4px 4px 0; }
+.dmaat i.verlies { right: 50%; background: var(--red); border-radius: 4px 0 0 4px; }
+.dmaatnul { position: absolute; left: 50%; top: 2px; width: 1px; height: 13px;
+  background: var(--ink); transform: translateX(-.5px); }
+.dmaatrand { position: absolute; top: 14px; font-size: 9.5px; color: var(--faint); letter-spacing: .02em; }
+.dmaatrand.links { left: 0; }
+.dmaatrand.rechts { right: 0; }
 .dbalkrij { display: grid; grid-template-columns: 96px 1fr 54px; gap: 10px; align-items: center; }
 .dbalklab { font-size: 11px; color: var(--mut); }
 .dbalk { height: 7px; border-radius: 4px; background: var(--b2); overflow: hidden; }
@@ -1898,9 +1905,7 @@ body.sleept .lijsttabel { pointer-events: none; }
   .dfeiten { grid-template-columns: repeat(3, 1fr); }
   .meterrij { grid-template-columns: 260px 210px; gap: 18px; }
   .lreg .nm { min-width: 104px; }
-  .pos, .werkbank .schaalrij { grid-template-columns: 178px 1fr 76px 96px; gap: 12px; }
-  .trend { flex-basis: 76px; }
-  .trend svg { width: 76px; }
+  .pos, .werkbank .schaalrij { grid-template-columns: 178px 1fr 96px; gap: 12px; }
   .detail { padding-left: 38px; }
   /* Liever twee regels dan 'Opent binnen…': de naam van een vensterstand is
      wat een lid straks te horen krijgt, en die hoort leesbaar te blijven. */

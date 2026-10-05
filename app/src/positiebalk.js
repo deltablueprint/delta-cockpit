@@ -60,14 +60,42 @@ export function standBadge(p, naam) {
 }
 
 // De zes cijfers en de balk 'premie binnen'. Geen geschreven tekst: metrics.
+// De balk van break-even uit: links verlies tot de stoploss, rechts winst tot
+// alles binnen. Het merkteken zit in het midden; de staaf groeit naar de kant
+// waar de tranche staat.
+function maatBalk(p) {
+  if (p.binnen === null || p.binnen === undefined || !Number.isFinite(Number(p.binnen))) return "";
+  const b = Number(p.binnen);
+
+  // De linkerrand: bij de stoploss. Zonder ijkpunten valt er niets te schalen —
+  // dan houden we honderd procent aan, zodat de balk wel leesbaar blijft.
+  const ergst = p.premie > 0 && p.stoploss > 0 ? ((p.premie - p.stoploss) / p.premie) * 100 : -100;
+  const deel = b >= 0
+    ? Math.min(1, b / 100)
+    : Math.min(1, ergst < 0 ? b / ergst : 1);
+  const breed = (deel * 50).toFixed(1);
+
+  return `<div class="dbalkrij">
+    <span class="dbalklab">Vanaf break-even</span>
+    <span class="dmaat">
+      <span class="dmaatlijn"></span>
+      <i class="${b >= 0 ? "winst" : "verlies"}" style="width:${breed}%"></i>
+      <span class="dmaatnul"></span>
+      <span class="dmaatrand links">stoploss</span>
+      <span class="dmaatrand rechts">alles binnen</span>
+    </span>
+    <span class="dbalkpct">${getalMet(b, 0)} %</span></div>`;
+}
+
 export function metriekHtml(p) {
   const feit = (l, w, n) => `<span class="dfeit"><span class="dlab">${ontsnap(l)}</span>
     <span class="dwaarde">${ontsnap(w)}</span>${n ? `<span class="dnoot">${ontsnap(n)}</span>` : ""}</span>`;
-  const binnen = p.binnen === null || p.binnen === undefined ? "" : `
-    <div class="dbalkrij"><span class="dbalklab">Premie binnen</span>
-      <span class="dbalk"><i style="width:${Math.max(0, Math.min(100, p.binnen))}%;background:${
-        p.binnen >= 50 ? "var(--grn)" : "var(--amb)"}"></i></span>
-      <span class="dbalkpct">${getalMet(p.binnen, 0)} %</span></div>`;
+  // De balk met break-even in het midden. Rechts is winst: hoeveel van de premie
+  // binnen is, tot alles binnen (ask 0). Links is verlies, tot de stoploss — dat
+  // is het punt waarop de tranche gesloten hoort te zijn, en dus de verste rand
+  // die iets betekent. Een balk die van nul tot honderd loopt kan het verschil
+  // tussen 'net onder break-even' en 'bijna tegen de stoploss' niet tonen.
+  const binnen = maatBalk(p);
 
   return `<div class="dvak">
     <div class="dfeiten">

@@ -291,46 +291,6 @@ export async function werkbankscherm(inhoud, kruimel) {
     }).join("");
   }
 
-  // Het verloop van één tranche als lijn, in het verlengde van haar eigen regel.
-  // We tekenen 'binnen' — hoeveel van de premie binnen is — en niet de ask: dan
-  // loopt de lijn omhoog als het beter gaat, en dat is hoe iemand een grafiek
-  // leest. In de geschiedeniskolom stond hij los van de positie waar hij over
-  // gaat; naast de balk hoort hij bij één regel.
-  function trend(p) {
-    const rijen = (data.geschiedenis && data.geschiedenis.verloop[p.id]) || [];
-    const waarden = rijen.map((r) => Number(r.binnen)).filter((n) => Number.isFinite(n));
-    if (waarden.length < 2) return `<span class="trend leeg" title="nog geen verloop vastgelegd"></span>`;
-
-    // De nullijn doet hier het werk: hij zegt of je boven of onder water staat.
-    // Zonder lucht eromheen valt hij samen met de rand van het vakje en lijkt
-    // een stijgende lijn onder nul ineens een lijn in de winst.
-    const w = 96, h = 26;
-    const ruw = [Math.min(...waarden, 0), Math.max(...waarden, 0)];
-    const lucht = (ruw[1] - ruw[0] || 1) * 0.12;
-    const laag = ruw[0] - lucht, hoog = ruw[1] + lucht;
-    const spanne = hoog - laag || 1;
-    const punt = (n, i) => [(i / (waarden.length - 1)) * w, h - ((n - laag) / spanne) * h];
-    const d = waarden.map((n, i) => `${i ? "L" : "M"}${punt(n, i).map((x) => x.toFixed(1)).join(" ")}`).join("");
-    const nul = h - ((0 - laag) / spanne) * h;
-    const eerste = waarden[0], nu = waarden[waarden.length - 1];
-
-    // Het vlak tussen de lijn en nul, zodat je in één oogopslag ziet aan welke
-    // kant van break-even de tranche staat — ook als de lijn stijgt terwijl ze
-    // nog onder water is.
-    const vlak = `${d}L${w} ${nul.toFixed(1)}L0 ${nul.toFixed(1)}Z`;
-
-    return `<span class="trend" title="${ontsnap(`${getalMet(nu, 0)} % binnen, ${
-      getalMet(nu - eerste, 0)} sinds het begin van de meting`)}">
-      <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-        <path d="${vlak}" fill="${nu >= 0 ? "var(--grnbg)" : "var(--redbg)"}" stroke="none"/>
-        <line x1="0" y1="${nul.toFixed(1)}" x2="${w}" y2="${nul.toFixed(1)}"
-              stroke="var(--dim)" stroke-width="1" stroke-dasharray="2 2"/>
-        <path d="${d}" fill="none" stroke="${nu >= 0 ? "var(--grn)" : "var(--red)"}"
-              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span class="trendnoot">${getalMet(nu, 0)} %</span></span>`;
-  }
-
   // --------------------------------------------------------- de posities
   function positievak() {
     // De balk loopt van verlies links naar winst rechts; de ask daalt dus naar
@@ -348,7 +308,6 @@ export async function werkbankscherm(inhoud, kruimel) {
             <span class="posnaam">${ontsnap(p.contract || `Tranche ${p.tranche}`)}</span><br>
             <span class="posonder">${ontsnap(onderschrift(p))}</span></span></span>
           ${balkHtml(p, VAKKEN)}
-          ${trend(p)}
           <span class="posstand">${standBadge(p, p.stand ? labelStand(p.stand) : null)}</span>
         </button>
         ${uit ? detail(p) : ""}
