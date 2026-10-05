@@ -276,6 +276,12 @@ export async function metingen(env, cyclusId, { nu = null, positie = null } = {}
       prijs_moment: p.prijs_moment, prijs_minuten_oud: minuten === null ? null : Math.round(minuten),
       verse_prijs: versePrijs,
       resultaat,
+      // De ontvangen premie in euro: de punten maal de multiplier maal het
+      // aantal contracten. Dat is het bedrag dat binnenkwam, en het getal waar
+      // een mens over praat.
+      premie_eur: premie !== null && Number.isFinite(premie) && Number(p.aantal) > 0
+        ? premie * (Number(p.multiplier) > 0 ? Number(p.multiplier) : 10) * Number(p.aantal)
+        : null,
       // In euro, met de multiplier van het contract en het werkelijke aantal.
       resultaat_eur: resultaat !== null && Number(p.aantal) > 0
         ? resultaat * (Number(p.multiplier) > 0 ? Number(p.multiplier) : 10) * Number(p.aantal)

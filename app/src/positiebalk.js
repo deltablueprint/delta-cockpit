@@ -97,14 +97,23 @@ export function metriekHtml(p) {
   // tussen 'net onder break-even' en 'bijna tegen de stoploss' niet tonen.
   const binnen = maatBalk(p);
 
+  // Vijf getallen, en verder niets. Wat eronder stond — 'bod 50,0', 'prijs 9 min
+  // oud', '22 % van het kapitaal' — herhaalde wat elders al staat of was een
+  // tweede getal naast het getal, en op een scherm dat je elke dag opent is dat
+  // ruis. Wat je wil weten: wat kwam er binnen, wat staat er open, waartegen
+  // kwam je erin, waartegen kom je eruit, en hoe lang nog.
+  // Een ontvangen premie is altijd positief; daar hoort geen plusteken bij.
+  const euro = (n) => (n === null || n === undefined || !Number.isFinite(Number(n))
+    ? "—" : `${Number(n) < 0 ? "\u2212 " : ""}€ ${Math.abs(Number(n)).toFixed(0)}`);
+
   return `<div class="dvak">
     <div class="dfeiten">
-      ${feit("Premie", getal(p.premie), leeg(p.inzet_pct) ? "" : `${getal(p.inzet_pct)} % van het kapitaal`)}
-      ${feit("Ask nu", getal(p.ask), p.ask_is_marktprijs ? "marktprijs" : `bod ${getal(p.bod)}`)}
-      ${feit("Open resultaat", getalMet(p.resultaat), p.resultaat_eur === null ? "" : `€ ${getalMet(p.resultaat_eur, 0)}`)}
-      ${feit("Break-even", getal(p.breakeven), "ask gelijk aan de premie")}
-      ${feit("Stoploss", getal(p.stoploss), p.tot_stoploss === null ? "" : `${getal(p.tot_stoploss)} te gaan`)}
-      ${feit("Dagen", p.dagen === null ? "—" : String(p.dagen), p.prijs_minuten_oud === null ? "" : `prijs ${p.prijs_minuten_oud} min oud`)}
+      ${feit("Totale premie", euro(p.premie_eur))}
+      ${feit("Netto niet gerealiseerd", p.binnen === null || p.binnen === undefined
+        ? "—" : `${getalMet(p.binnen, 0)} %`)}
+      ${feit("Verkocht tegen", getal(p.premie))}
+      ${feit("Ask nu", getal(p.ask))}
+      ${feit("Dagen resterend", p.dagen === null ? "—" : String(p.dagen))}
     </div>
     <div class="dbalken">${binnen}</div>
   </div>`;
