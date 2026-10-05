@@ -44,6 +44,7 @@ export async function werkbankscherm(inhoud, kruimel) {
   let kiesVenster = null;    // welke vensterstand je aanklikte
   let open = new Set();      // welke posities uitgeklapt staan
   let melding = null;
+  let nietMeldenVoor = null;   // de kaart waarvan je aan het opschrijven bent waarom hij niet weg gaat
   let data = null;
 
   async function haal() {
@@ -136,15 +137,14 @@ export async function werkbankscherm(inhoud, kruimel) {
 
       <div class="paneelbody">
         <div class="deel">
-          <div class="deelkop"><span class="dtitel">Venster</span><span class="dmeta">voorbereidingstijd voor de leden</span>
+          <div class="deelkop"><span class="dtitel">Instap venster</span>
             <span class="dkent">${v.gepubliceerd ? `Leden kennen: ${ontsnap(labelVenster(v.gepubliceerd))}` : "Nog niets gemeld"}</span></div>
           <div class="vensterrij">${vensters().map(vakje).join("")}</div>
         </div>
 
         <div class="deel${b.wakker ? "" : " uit"}">
-          <div class="deelkop"><span class="dtitel">Barometer</span><span class="dmeta">wat wij van een lid vragen</span>
+          <div class="deelkop"><span class="dtitel">Positie Barometer</span>
             <span class="dkent">${b.leden ? `Leden kennen: ${ontsnap(b.leden.stand.label)}` : "Nog niets gemeld"}</span></div>
-          <div class="slaapt">Slaapt tot het venster op <b>In positie</b> staat — ${ontsnap(b.slaapt_waarom || "")}.</div>
           <div class="meterrij">
             <div class="gauge">${meter(toonStand, standTip)}
               <div class="gaugetekst">
@@ -160,10 +160,17 @@ export async function werkbankscherm(inhoud, kruimel) {
         </div>
       </div>
 
-      <div class="publiceerbalk">
-        <span class="pubtekst">${stuk.length ? `Klaar om te publiceren: ${stuk.join(" en ")}.` : "Klik een stand aan om hem te veranderen."}</span>
-        ${melding ? `<span class="wbmelding">${ontsnap(melding)}</span>` : ""}
-        <button class="knop" data-publiceer ${stuk.length ? "" : "disabled"}>Publiceren</button>
+      <div class="publiceerbalk${stuk.length ? " open" : ""}">
+        ${stuk.length ? `
+          <label class="pubvraag" for="pubreden">Waarom verandert de stand? Dat is wat de leden lezen.</label>
+          <textarea id="pubreden" class="pubreden" rows="2"
+            placeholder="Bijvoorbeeld: de ask liep op tot vlak onder de stoploss."></textarea>` : ""}
+        <div class="pubrij">
+          <span class="pubtekst">${stuk.length ? `Klaar om te publiceren: ${stuk.join(" en ")}.` : "Klik een stand aan om hem te veranderen."}</span>
+          ${melding ? `<span class="wbmelding">${ontsnap(melding)}</span>` : ""}
+          ${stuk.length ? `<button class="knop tweede" data-afbreken>Laat maar</button>` : ""}
+          <button class="knop" data-publiceer disabled>Publiceren</button>
+        </div>
       </div>
     </section>`;
   }
@@ -220,26 +227,16 @@ export async function werkbankscherm(inhoud, kruimel) {
     return `<svg viewBox="0 0 320 212">${svg}</svg>`;
   }
 
+  // Alleen de standen zelf. De ask-grenzen staan al onder de posities; ze hier
+  // herhalen maakte van een keuzelijst een tabel.
   function legenda(tip) {
-    // De grenzen zijn ask-niveaus van de zwakste tranche. Alles is een ask,
-    // want dat is de prijs waartegen je er werkelijk uit komt.
-    const ijk = (data.posities.find((p) => p.ijk && p.open) || {}).ijk || null;
-    const n = (x) => (ijk ? `ask ${getal(x)}` : "—");
-    const omschrijving = ijk ? {
-      1: `${n(ijk.stoploss)} – ${n(ijk.waarschuwing).replace("ask ", "")}`,
-      2: `${n(ijk.waarschuwing)} – ${getal(ijk.breakeven)}`,
-      3: `${n(ijk.breakeven)} – ${getal(ijk.helft)}`,
-      4: `${n(ijk.helft)} – ${getal(ijk.winstanker)}`,
-      5: `onder ask ${getal(ijk.winstanker)}`,
-    } : { 1: "onder druk", 2: "krap", 3: "ruim", 4: "comfortabel", 5: "vrijwel afgerond" };
     const nu = data.barometer.wij ? Number(data.barometer.wij.stand.waarde) : null;
     return [1, 2, 3, 4, 5].map((stand) => {
       const kl = [stand === nu ? "nu" : "", tip === stand && kiesStand === null ? "tip" : "",
                   kiesStand === stand ? "gekozen" : ""].filter(Boolean).join(" ");
       return `<button class="lreg ${kl}" data-stand="${stand}">
         <span class="vlak" style="background:${KLEUR[stand - 1]}"></span>
-        <span class="nm">${ontsnap(labelStand(stand))}</span>
-        <span class="om">${ontsnap(omschrijving[stand])}</span></button>`;
+        <span class="nm">${ontsnap(labelStand(stand))}</span></button>`;
     }).join("");
   }
 
@@ -297,8 +294,7 @@ export async function werkbankscherm(inhoud, kruimel) {
     }).join("");
 
     return `<section class="paneel">
-      <div class="paneelkop">Posities<span class="meta">de ask, van verlies links naar winst rechts${
-        ijk ? ` · break-even ${getal(ijk.breakeven)} in het midden` : ""} · de zwakste bepaalt de barometer</span></div>
+      <div class="paneelkop">Posities</div>
       ${data.posities.length ? regels : `<p class="wbleeg">Deze cyclus heeft nog geen positie.</p>`}
       ${data.posities.length ? `<div class="schaalrij"><span class="schaal">${schaal}</span></div>` : ""}
       ${data.zwakste ? `<div class="zwakste"><b>${ontsnap(data.zwakste.contract || "")}</b> is de zwakste en bepaalt de barometer: ask ${
@@ -360,15 +356,24 @@ export async function werkbankscherm(inhoud, kruimel) {
       ${k.was ? `<div class="omgezet">↻ Was: ${ontsnap(k.was)}</div>` : ""}
       <div class="feiten">${k.feiten.map(([l, w]) =>
         `<span class="feit"><span class="flab">${ontsnap(l)}</span><span class="fwaarde">${ontsnap(w)}</span></span>`).join("")}</div>
-      <div class="kaartknoppen">
-        <button class="knop tweede" data-nietmelden="${k.id}">Niet melden</button>
-        <a class="knop" href="${k.concept ? `#/bericht/${k.concept}` : "#"}" data-concept="${k.id}">${
-          k.concept ? "Concept openen" : "Bericht opstellen"}</a>
-      </div>
+      ${nietMeldenVoor === k.id ? `
+        <div class="kaartreden">
+          <label for="nietreden">Waarom gaat dit niet naar de leden?</label>
+          <textarea id="nietreden" rows="2" placeholder="Bijvoorbeeld: dit is dezelfde tranche als gisteren."></textarea>
+          <div class="kaartknoppen">
+            <button class="knop tweede" data-nietmeldenaf>Laat maar</button>
+            <button class="knop" data-nietmeldendoor="${k.id}" disabled>Niet melden</button>
+          </div>
+        </div>` : `
+        <div class="kaartknoppen">
+          <button class="knop tweede" data-nietmelden="${k.id}">Niet melden</button>
+          <a class="knop" href="${k.concept ? `#/bericht/${k.concept}` : "#"}" data-concept="${k.id}">${
+            k.concept ? "Concept openen" : "Bericht opstellen"}</a>
+        </div>`}
     </div>`).join("");
 
     return `<section class="paneel">
-      <div class="paneelkop">Publicaties<span class="meta">wat er gebeurde, en wat de leden ervan weten</span></div>
+      <div class="paneelkop">Publicaties</div>
       <div class="tweekolom">
         <div class="kol">
           <div class="kolkop">Kaarten · veranderingen in een positie<span class="n">${data.kaarten.length} open</span></div>
@@ -408,14 +413,25 @@ export async function werkbankscherm(inhoud, kruimel) {
       melding = null;
       return teken();
     }
+    if (e.target.closest("[data-afbreken]")) {
+      kiesStand = null; kiesVenster = null; melding = null;
+      return teken();
+    }
     if (e.target.closest("[data-publiceer]")) return publiceer();
 
     const niet = e.target.closest("[data-nietmelden]");
-    if (niet) {
-      const reden = window.prompt("Waarom gaat dit niet naar de leden?");
+    if (niet) { nietMeldenVoor = Number(niet.dataset.nietmelden); melding = null; return teken(); }
+
+    if (e.target.closest("[data-nietmeldenaf]")) { nietMeldenVoor = null; return teken(); }
+
+    const nietOk = e.target.closest("[data-nietmeldendoor]");
+    if (nietOk) {
+      const vak = inhoud.querySelector("#nietreden");
+      const reden = vak ? vak.value.trim() : "";
       if (!reden) return;
-      const uit = await nietMelden(Number(niet.dataset.nietmelden), reden);
+      const uit = await nietMelden(Number(nietOk.dataset.nietmeldendoor), reden);
       melding = uit && uit.fout ? uit.fout : null;
+      nietMeldenVoor = null;
       return haal();
     }
 
@@ -430,7 +446,8 @@ export async function werkbankscherm(inhoud, kruimel) {
   }
 
   async function publiceer() {
-    const reden = window.prompt("Waarom verandert de stand? Dat is wat de leden lezen.");
+    const vak = inhoud.querySelector("#pubreden");
+    const reden = vak ? vak.value.trim() : "";
     if (!reden) return;
     const uit = await publiceerStand({
       cyclus: cyclusId, stand: kiesStand, venster: kiesVenster, reden,
@@ -451,6 +468,15 @@ export async function werkbankscherm(inhoud, kruimel) {
   inhoud.addEventListener("click", opKlik);
   inhoud.addEventListener("change", opWissel);
 
+  // De knop gaat aan zodra er een reden staat. Niet opnieuw tekenen bij elke
+  // toetsaanslag: dan springt de cursor uit het vak en ben je je tekst kwijt.
+  inhoud.addEventListener("input", (e) => {
+    const vak = e.target.closest("#pubreden, #nietreden");
+    if (!vak) return;
+    const knop = inhoud.querySelector(vak.id === "pubreden" ? "[data-publiceer]" : "[data-nietmeldendoor]");
+    if (knop) knop.disabled = !vak.value.trim();
+  });
+
   await haal();
 
   // De peiling. De brug is de klok; dit scherm kijkt of er iets veranderd is.
@@ -459,7 +485,7 @@ export async function werkbankscherm(inhoud, kruimel) {
   (async function peil() {
     await new Promise((r) => setTimeout(r, 10000));
     if (!leeftNog()) return;
-    if (kiesStand === null && kiesVenster === null) await haal();
+    if (kiesStand === null && kiesVenster === null && nietMeldenVoor === null) await haal();
     if (!leeftNog()) return;
     peil();
   })();

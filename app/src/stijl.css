@@ -1595,7 +1595,6 @@ body.sleept .lijsttabel { pointer-events: none; }
 .deel:last-child { padding-bottom: 0; }
 .deelkop { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
 .dtitel { font-size: 13px; font-weight: 700; }
-.dmeta { font-size: 11.5px; color: var(--mut); }
 .dkent { margin-left: auto; font-size: 11.5px; color: var(--mut); }
 
 .vensterrij { display: flex; gap: 6px; }
@@ -1619,15 +1618,12 @@ body.sleept .lijsttabel { pointer-events: none; }
 .vhok.gekozen { border: 2px solid var(--grn); background: var(--grnbg); }
 .vhok.gekozen .nm { color: var(--grn); font-weight: 700; }
 
-/* De barometer slaapt tot wij in positie zitten. Niet verborgen — je moet
-   kunnen zien dat hij bestaat en waarom hij nog niets zegt. */
-.slaapt { display: none; font-size: 12.5px; color: var(--mut); background: var(--soft);
-  border: 1px solid var(--b1); border-radius: 3px; padding: 10px 13px; margin-bottom: 14px; }
-.deel.uit .slaapt { display: block; }
+/* De barometer slaapt tot wij in positie zitten: dan staat hij er grijs bij. */
 .deel.uit .meterrij { opacity: .32; filter: grayscale(1); pointer-events: none; }
 .deel.uit .dkent { display: none; }
 
-.meterrij { display: grid; grid-template-columns: 300px minmax(0, 560px); gap: 24px; align-items: center; }
+.meterrij { display: grid; grid-template-columns: 300px 230px; gap: 24px; align-items: center;
+  justify-content: start; }
 .gauge { position: relative; }
 .gauge svg { display: block; width: 100%; height: auto; }
 .gauge .seg { cursor: pointer; }
@@ -1642,18 +1638,32 @@ body.sleept .lijsttabel { pointer-events: none; }
   font-family: inherit; background: none; text-align: left; }
 .lreg:hover { background: var(--soft); }
 .lreg .vlak { width: 15px; height: 15px; border-radius: 3px; flex-shrink: 0; }
-.lreg .nm { font-weight: 600; min-width: 118px; }
-.lreg .om { color: var(--mut); font-size: 12px; }
+.lreg .nm { font-weight: 600; }
 .lreg.nu { border-color: var(--blue); border-style: solid; background: var(--bluebg); }
 .lreg.nu .nm { color: var(--blue); }
 .lreg.tip { border-color: var(--amb); border-style: dashed; }
 .lreg.gekozen { border-color: var(--grn); border-style: solid; background: var(--grnbg); }
 .lreg.gekozen .nm { color: var(--grn); font-weight: 700; }
 
+/* De reden staat op het scherm en niet in een systeemvenster. Een prompt() is
+   geen scherm: hij staat buiten de app, je kunt er niets naast lezen, en wat je
+   typt is weg zodra je per ongeluk naast klikt. */
 .publiceerbalk { display: flex; align-items: center; gap: 12px; padding: 12px var(--gutter);
   background: var(--soft); border-top: 1px solid var(--b1); }
+.publiceerbalk.open { display: block; }
+.pubrij { display: flex; align-items: center; gap: 12px; }
+.publiceerbalk.open .pubrij { margin-top: 10px; }
+.pubvraag { display: block; font-size: 12.5px; color: var(--ink2); margin-bottom: 6px; }
+.pubreden, .kaartreden textarea {
+  width: 100%; font-family: inherit; font-size: 13px; line-height: 1.45; padding: 8px 10px;
+  border: 1px solid #D8D5CE; border-radius: 3px; background: #fff; color: var(--ink); resize: vertical;
+}
+.pubreden:focus, .kaartreden textarea:focus { border-color: var(--blue); outline: none; }
 .pubtekst { flex: 1 1 auto; min-width: 0; font-size: 12.5px; color: var(--mut); }
 .pubtekst b { color: var(--ink); font-weight: 600; }
+
+.kaartreden { display: flex; flex-direction: column; gap: 7px; }
+.kaartreden label { font-size: 12px; color: var(--ink2); }
 
 /* --- de posities --- */
 .posblok { border-bottom: 1px solid var(--b2); }
@@ -1755,7 +1765,7 @@ body.sleept .lijsttabel { pointer-events: none; }
    daar te smal om te lezen. */
 @media (max-width: 1000px) {
   .dfeiten { grid-template-columns: repeat(3, 1fr); }
-  .meterrij { grid-template-columns: 260px minmax(0, 1fr); gap: 18px; }
+  .meterrij { grid-template-columns: 260px 210px; gap: 18px; }
   .lreg .nm { min-width: 104px; }
   .pos, .werkbank .schaalrij { grid-template-columns: 178px 1fr 96px; gap: 12px; }
   .detail { padding-left: 38px; }
@@ -1768,7 +1778,7 @@ body.sleept .lijsttabel { pointer-events: none; }
 /* Smaller dan een iPad: dan valt het naast elkaar wél om, want anders wordt
    alles onleesbaar smal. */
 @media (max-width: 760px) {
-  .meterrij { grid-template-columns: 1fr; }
+  .meterrij { grid-template-columns: minmax(0, 1fr); }
   .tweekolom { grid-template-columns: 1fr; }
   .kol { border-right: none; border-bottom: 1px solid var(--b1); }
   .pos, .werkbank .schaalrij { grid-template-columns: 1fr; }

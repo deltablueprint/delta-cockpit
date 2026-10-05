@@ -277,8 +277,13 @@ eis("tekenen gebeurt niet meer na vertrek",
 
 // En het scherm mag niet onder je handen vandaan hertekenen terwijl je een
 // stand aan het kiezen bent.
-eis("een peiling laat een lopende keuze met rust",
-    /if \(kiesStand === null && kiesVenster === null\) await haal\(\);/.test(werkbank));
+// Een peiling mag nooit over een halfgeschreven reden heen tekenen: dan ben je
+// je tekst kwijt op het moment dat je hem nodig hebt.
+eis("een peiling laat een lopende keuze en een halfgeschreven reden met rust",
+    /if \(kiesStand === null && kiesVenster === null && nietMeldenVoor === null\) await haal\(\);/.test(werkbank));
+eis("en er wordt niet opnieuw getekend bij elke toetsaanslag",
+    /addEventListener\("input"/.test(werkbank) && !/teken\(\);[\s\S]{0,80}input/.test(werkbank));
+eis("de reden wordt niet meer in een systeemvenster gevraagd", !/window\.prompt/.test(werkbank));
 
 // Elke luisteraar op het document moet zichzelf opruimen, anders peilen er na
 // tien keer openen tien tegelijk.

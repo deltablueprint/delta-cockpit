@@ -1633,7 +1633,7 @@ Het scherm waarop je begint, herbouwd uit `docs/mockup-werkbank.html`. Vier vakk
 
 **Het heet Ledencommunicatie** (0134). 'Werkbank' zei wat het vroeger was: een bank met werk erop. Dat werk is weg (§13b) — wat er staat gaat over de leden: de stand die zij te zien krijgen, de posities waar die stand uit volgt, en wat er verstuurd is. De route blijft `/werkbank`: een adres is geen naam, en favorieten, bladwijzers en de geschiedenis van iedereen wijzen ernaar.
 
-**1. Stand naar de leden.** Het venster boven, de barometer eronder, en **één knop Publiceren voor allebei**. Kies je er twee, dan gaat er één bericht uit over allebei — een lid dat twee berichten krijgt over hetzelfde moment leest het tweede niet meer. De barometer **slaapt** tot het venster op *In positie* staat: daarvoor zitten wij er niet in en vragen we de leden niets, daarna is de cyclus uit. Hij is dan grijs en onklikbaar, met één regel waarom.
+**1. Stand naar de leden.** Het venster boven, de barometer eronder, en **één knop Publiceren voor allebei**. Kies je er twee, dan gaat er één bericht uit over allebei — een lid dat twee berichten krijgt over hetzelfde moment leest het tweede niet meer. De barometer **slaapt** tot het venster op *In positie* staat: daarvoor zitten wij er niet in en vragen we de leden niets, daarna is de cyclus uit. Hij is dan grijs en onklikbaar.
 
 **2. De barometer leest de balk** (0132). De vijf standen zijn de vijf zones van de gezondheidsbalk uit §10.1, en de stand die het systeem voorstelt is de zone waarin de markering van de **zwakste tranche** staat. Er is dus geen apart rekenwerk: iedereen ziet op het scherm waarom.
 
@@ -1674,6 +1674,8 @@ De balk loopt **van verlies links naar winst rechts** — de ask daalt naar rech
 **De maat van het scherm is een iPad in landscape.** 1024 px breed, min het menu en de marges: ongeveer 740 px voor de werkbank. Daar past alles in zonder horizontaal te scrollen en zonder dat de balken omvallen — juist het naast elkaar lezen van drie tranches is waar dit scherm voor is. Onder de 760 px (telefoon) valt het wel om, want dan wordt alles onleesbaar smal.
 
 **De kaders staan in hetzelfde ritme als de rest van de app**: 10 px ertussen, 14 px erbinnen — zoals op het gespreksscherm. Alles in een paneel komt op dezelfde linkerlijn uit: de kop, de body, een positieregel, een kaart, de knopbalk.
+
+**De namen zijn wat er staat, en verder staat er niets.** Het eerste vak heet *Instap venster* en *Positie Barometer* — twee namen die zeggen wat ze zijn. De begeleidende zinnetjes eronder en achter de kopjes zijn weg (5 okt 2026): 'voorbereidingstijd voor de leden', 'wat wij van een lid vragen', de slaapregel, de uitleg van de posities-schaal en die van de publicaties. Ze legden iets uit dat het scherm zelf al laat zien, en op een scherm dat je elke dag opent is dat ruis. De barometer die slaapt is nog steeds grijs en onklikbaar — dat is de uitleg. De lijst standen naast de meter toont alleen de **namen** van de vijf standen; de ask-grenzen stonden er ook en staan al onder de posities, waardoor die lijst een tabel werd in plaats van een keuzelijst.
 
 **Twee kaders, twee betekenissen.** Blauw is de stand zoals hij vastligt en die de leden kennen; groen is wat je net koos en nog niet weg is. Na publiceren wordt het groene kader dus blauw. Het systeemvoorstel blijft een amberen stippellijn en is geen van beide.
 
