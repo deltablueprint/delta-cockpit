@@ -216,5 +216,52 @@ for (const map of ["worker", "scripts/proef"]) {
   }
 }
 
+
+// --------------------------------- de kaartlaag is ook uit beheer verdwenen
+//
+// De code is weg (0125), maar beheer liet de velden nog invullen. Een formulier
+// dat om een 'Voorwaarde' en een 'Sleutel' vraagt terwijl niets die leest, is
+// erger dan een formulier zonder: iemand vult hem in en wacht op een kaart.
+// Niets is verwijderd — alles staat op actief = 0 (0126).
+const KAARTVELDEN = [
+  "kaartsoort", "voorwaarde", "aanleiding", "sleutel_bron", "prioriteit",
+  "opschalen_na_uur", "opschalen_naar", "kaarttitel", "feiten", "eigenaar_bron",
+  "knop1_doel", "knop1_label", "knop1_sjabloon", "knop2_doel", "knop2_label",
+  "knop2_reden_verplicht", "prullenbak", "prullenbak_doel", "tweede_lezer",
+  "bron", "reden",
+];
+for (const kolom of KAARTVELDEN) {
+  const v = await q("select actief from db_field where tabel='processtap' and kolom = ?", kolom);
+  eis(`het kaartveld '${kolom}' staat niet meer op het formulier`,
+      v.length === 0 || Number(v[0].actief) === 0);
+}
+eis("en de rijen zijn niet verwijderd, alleen uitgezet",
+    (await q("select count(*) n from db_field where tabel='processtap'"))[0].n >= KAARTVELDEN.length);
+
+for (const kolom of ["kaartsoort", "knop1_doel", "knop2_doel", "sleutel_bron",
+                     "prioriteit", "prullenbak_doel", "opschalen_naar", "eigenaar_bron", "bron"]) {
+  eis(`de keuzelijst '${kolom}' is niet meer te kiezen`,
+      (await q("select count(*) n from db_choice where tabel='processtap' and kolom = ? and actief = 1", kolom))[0].n === 0);
+}
+
+eis("de twaalf kaartdefinities staan op archief",
+    (await q("select count(*) n from processtap where kaartsoort is not null and archief = 0"))[0].n === 0);
+eis("het proces 'Wachtrij' ook",
+    (await q("select archief from proces where id = 4"))[0].archief === 1);
+for (const label of ["Werkbank", "Motorrondes"]) {
+  eis(`'${label}' staat niet meer in het menu`,
+      (await q("select count(*) n from db_module where label = ? and actief = 1", label))[0].n === 0);
+}
+eis("de instelling van de motorrondgang is gearchiveerd",
+    (await q("select count(*) n from instelling where sleutel = 'motor_rondgang_seconden' and archief = 0"))[0].n === 0);
+
+// Wat blijft moet blijven: een kaart gaat straks over een positie, en de stroom
+// en de barometer zijn de basis van de nieuwe werkbank.
+for (const [tabel, kolom] of [["gebeurtenis", "vraagt_antwoord"], ["gebeurtenis", "sleutel"],
+                              ["gebeurtenis", "beantwoord_op"], ["barometerstand", "venster"]]) {
+  eis(`${tabel}.${kolom} staat er nog`,
+      (await q("select count(*) n from db_field where tabel = ? and kolom = ? and actief = 1", tabel, kolom))[0].n === 1);
+}
+
 console.log(fouten === 0 ? "alles klopt." : `${fouten} fout(en).`);
 process.exit(fouten === 0 ? 0 : 1);

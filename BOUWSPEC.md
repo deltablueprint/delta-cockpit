@@ -1576,6 +1576,8 @@ De eerste werkbank was een **wachtrij van taken**: processtappen met een stuk SQ
 
 **Wat bleef:** de gebeurtenissenstroom (`gebeurtenis`), de publicaties met hun nalees- en vierogenstroom, de berichtsjablonen, de barometer met haar venster, de spiegel en de brug. Daarop wordt de nieuwe werkbank gebouwd.
 
+**Ook uit beheer** (0126). De kaartdefinities waren weg, maar het processtapformulier vroeg nog om *Voorwaarde*, *Aanleiding*, *Sleutel*, *Prioriteit* en de knopvelden — eenentwintig velden die niets meer aanstuurden, met hun keuzelijsten eronder. Die staan nu op `actief = 0`, net als de menuregels *Werkbank* en *Motorrondes* en de instelling `motor_rondgang_seconden`. Op de gebeurtenis zijn `processtap` en `wachten_tot` uit beeld; `vraagt_antwoord`, `sleutel` en `beantwoord_op` blijven, want een kaart blijft bestaan — alleen gaat hij voortaan over een positie. `scripts/proef/inrichting.mjs` bewaakt dit: geen van die velden mag terugkomen zonder dat iemand het expliciet aanzet.
+
 **Niets is verwijderd uit de database.** De definities staan op `archief = 1` en hun kolommen op `processtap` blijven staan: een kolom laten vallen betekent de tabel herbouwen, en dat is een groter risico dan een ongebruikte kolom. De verwijderde code en de proeven die erbij hoorden staan in de git-tak **`voor-de-herbouw`**.
 
 **Een kaart blijft bestaan, maar alleen voor een positie.** Open, gesloten, doorgerold — dat zijn de enige drie. De doorrol wordt herkend: sluit een positie en gaat er kort daarna een nieuwe open, dan verandert de kaart van de sluiting van vorm en laadt het doorrolsjabloon met beide contracten erin. De mapping staat in code, niet als ingerichte SQL.
