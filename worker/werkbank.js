@@ -168,7 +168,9 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
   const cycli = (await env.DB.prepare(
     `select id, label, status, geopend_op from cyclus
       where archief = 0 and status not in ('afgesloten', 'geannuleerd')
-      order by geopend_op desc`
+      -- Dispatch gaat over de cyclus die in de markt staat: die hoort bovenaan,
+      -- ook als er daarna een nieuwe geopend is die nog in de pre-analyse zit.
+      order by case when status = 'in positie' then 0 else 1 end, geopend_op desc`
   ).all()).results;
 
   const id = cyclus || (cycli[0] && cycli[0].id) || null;
@@ -199,13 +201,20 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
       order by b.vastgesteld_op desc, b.id desc limit 40`
   ).bind(id).all().then((r) => r.results).catch(() => []));
 
-  // Per tranche het verloop van de ask. Nieuwste eerst uit de database, oudste
-  // eerst op het scherm: een lijn leest van links naar rechts.
+  // Per tranche één vakje per dag, met de stand waarop hij die dag sloot. Niet
+  // de laagste of het gemiddelde van de dag: waar hij aan het eind van de dag
+  // stond, is wat die dag opleverde — en dat is ook wat de leden te horen
+  // kregen. Oudste eerst op het scherm, want een geschiedenis leest van links
+  // naar rechts.
   const verloop = {};
   for (const p of meet.posities) {
     const r = await env.DB.prepare(
-      `select moment, ask, stand, binnen from positiemeting
-        where positie = ? order by moment desc limit 60`
+      `select dag, stand, ask, binnen from (
+         select date(moment) as dag, stand, ask, binnen,
+                row_number() over (partition by date(moment) order by moment desc) as rn
+           from positiemeting where positie = ?
+       ) where rn = 1
+       order by dag desc limit 30`
     ).bind(p.id).all().then((x) => x.results).catch(() => []);
     if (r.length) verloop[p.id] = r.reverse();
   }
@@ -241,7 +250,7 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
     kaarten: kaartlijst,
     verstuurd,
     stroom: gebeurtenissen,
-    geschiedenis: { standen, verloop },
+    geschiedenis: { standen, verloop, dagen: await dagstanden(env, id, { nu }) },
     // Wacht er iets op de leden? Drie dingen kunnen dat zijn, en ze staan los
     // van elkaar: een kaart, een stand die wij wel kennen en zij niet, of een
     // voorstel dat nog niet overgenomen is.
@@ -371,4 +380,72 @@ export async function nietMelden(env, ik, gebeurtenis, reden) {
   ).bind(ik && ik.id ? ik.id : null, String(reden).trim().slice(0, 1000), gebeurtenis).run();
 
   return { ok: true };
+}
+
+// --------------------------------------------------- de dagen van een cyclus
+//
+// Eén regel per handelsdag, met de stand en het venster zoals ze aan het eind
+// van die dag golden. Niet elke dag draagt een vastlegging — de meeste dagen
+// verandert er niets — dus wordt elke dag teruggerekend naar de laatste stand
+// die er op dat moment lag.
+//
+// Welke dagen tellen komt uit de handelskalender. Staat er voor een datum niets
+// in, dan geldt maandag tot en met vrijdag: beter een kalender die ongeveer
+// klopt dan een lege strook.
+export async function dagstanden(env, cyclusId, { nu = null, maxdagen = 90 } = {}) {
+  const standen = (await env.DB.prepare(
+    `select stand, venster, vastgesteld_op from barometerstand
+      where cyclus = ? and archief = 0 order by vastgesteld_op, id`
+  ).bind(cyclusId).all()).results;
+  if (!standen.length) return [];
+
+  const cyclusrij = await env.DB.prepare("select geopend_op from cyclus where id = ?").bind(cyclusId).first();
+  const eerste = String(cyclusrij && cyclusrij.geopend_op ? cyclusrij.geopend_op : standen[0].vastgesteld_op).slice(0, 10);
+  const laatste = (nu ? new Date(nu) : new Date()).toISOString().slice(0, 10);
+
+  const kalender = new Map();
+  try {
+    const r = await env.DB.prepare(
+      "select datum, status from handelsdag where datum between ? and ?"
+    ).bind(eerste, laatste).all();
+    for (const d of r.results) kalender.set(String(d.datum).slice(0, 10), String(d.status));
+  } catch { /* dan de weekdagen */ }
+
+  const uit = [];
+  const dag = new Date(`${eerste}T12:00:00Z`);
+  const eind = new Date(`${laatste}T12:00:00Z`);
+  while (dag <= eind && uit.length < maxdagen) {
+    const d = dag.toISOString().slice(0, 10);
+    const status = kalender.get(d);
+    const handel = status ? status !== "dicht" : dag.getUTCDay() >= 1 && dag.getUTCDay() <= 5;
+    if (handel) {
+      // De laatste vastlegging van of vóór deze dag. Vóór de eerste vastlegging
+      // is er niets te zeggen; dan draagt de dag geen kleur.
+      let gold = null;
+      for (const s of standen) {
+        if (String(s.vastgesteld_op).slice(0, 10) <= d) gold = s; else break;
+      }
+      uit.push({
+        dag: d,
+        week: weeknummer(dag),
+        stand: gold ? Number(gold.stand) : null,
+        venster: gold ? gold.venster : null,
+      });
+    }
+    dag.setUTCDate(dag.getUTCDate() + 1);
+  }
+  // De laatste dagen zijn de interessante; bij een lange cyclus valt het begin af.
+  return uit.slice(-maxdagen);
+}
+
+// Het weeknummer, alleen om de dagen in blokjes te zetten. ISO-week: de week
+// begint op maandag en week 1 is die met de eerste donderdag erin.
+function weeknummer(d) {
+  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const dag = (t.getUTCDay() + 6) % 7;
+  t.setUTCDate(t.getUTCDate() - dag + 3);
+  const eerste = new Date(Date.UTC(t.getUTCFullYear(), 0, 4));
+  const eersteDag = (eerste.getUTCDay() + 6) % 7;
+  eerste.setUTCDate(eerste.getUTCDate() - eersteDag + 3);
+  return 1 + Math.round((t - eerste) / (7 * 24 * 3600 * 1000));
 }

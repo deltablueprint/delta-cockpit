@@ -191,6 +191,7 @@ export async function werkbankscherm(inhoud, kruimel) {
             <span class="dkent">${v.gepubliceerd ? `Leden kennen: ${ontsnap(labelVenster(v.gepubliceerd))}` : "Nog niets gemeld"}</span></div>
           <div class="vnu">${ontsnap(labelVenster(toonVenster))}</div>
           <div class="vensterrij">${vensters().map(vakje).join("")}</div>
+          ${dagstrook("venster")}
         </div>
 
         <div class="deel${b.wakker ? "" : " uit"}">
@@ -205,6 +206,7 @@ export async function werkbankscherm(inhoud, kruimel) {
             </div>
             <div class="legenda">${legenda(standTip)}</div>
           </div>
+          ${dagstrook("barometer")}
           ${b.voorstel_waarom_niet ? `<p class="wbnoot">Het systeem meet niet: ${ontsnap(b.voorstel_waarom_niet)}.</p>` : ""}
           ${(b.ongemeten || []).length ? `<p class="wbnoot wblet">Niet meegewogen, want niet te meten: ${
             ontsnap(b.ongemeten.map((p) => p.contract || `positie ${p.id}`).join(", "))}.</p>` : ""}
@@ -291,6 +293,62 @@ export async function werkbankscherm(inhoud, kruimel) {
     }).join("");
   }
 
+  // De geschiedenis van de cyclus als strook handelsdagen, in weken gegroepeerd.
+  // Eén vakje per handelsdag, een spleet tussen de weken. Zo zie je niet alleen
+  // wat er nu staat maar hoe lang het al zo staat — en dat is wat een lid dat
+  // meeleest wil weten.
+  function dagstrook(wat) {
+    const dagen = (data.geschiedenis && data.geschiedenis.dagen) || [];
+    if (!dagen.length) return "";
+
+    // Blauw voor het venster: hoe verder in het verloop, hoe donkerder. Voor de
+    // barometer de kleuren van de standen zelf.
+    const VENSTERBLAUW = ["#DCE7EE", "#BBD2DF", "#93B8CC", "#6A9CB7", "#136289", "#1F5E45"];
+
+    const weken = [];
+    for (const d of dagen) {
+      const laatste = weken[weken.length - 1];
+      if (laatste && laatste.week === d.week) laatste.dagen.push(d);
+      else weken.push({ week: d.week, dagen: [d] });
+    }
+
+    const vakje = (d) => {
+      if (wat === "venster") {
+        const i = (data.venster.verloop || []).indexOf(d.venster);
+        const kleur = i < 0 ? "var(--b2)" : VENSTERBLAUW[i];
+        return `<i style="background:${kleur}" title="${ontsnap(
+          `${d.dag} · ${d.venster ? labelVenster(d.venster) : "nog niets vastgelegd"}`)}"></i>`;
+      }
+      // De barometer slaapt tot wij in positie zitten: op die dagen is er geen
+      // stand, en dan hoort er ook geen kleur te staan.
+      const inPositie = d.venster === "in_positie";
+      const kleur = inPositie && d.stand >= 1 && d.stand <= 5 ? KLEUR[d.stand - 1] : "var(--b2)";
+      return `<i style="background:${kleur}" title="${ontsnap(
+        `${d.dag} · ${inPositie && d.stand ? labelStand(d.stand) : "geen stand"}`)}"></i>`;
+    };
+
+    return `<div class="strook">
+      ${weken.map((w) => `<span class="week" title="week ${w.week}">${
+        w.dagen.map(vakje).join("")}</span>`).join("")}
+      <span class="strooknoot">${dagen.length} handelsdagen</span>
+    </div>`;
+  }
+
+  // Eén vakje per dag, in de kleur van de stand waarop de tranche die dag sloot.
+  // In het verlengde van haar eigen regel, zodat je in één blik ziet hoe ze van
+  // kleur veranderde: van groen naar oranje is een verhaal, een los getal niet.
+  function dagen(p) {
+    const rijen = (data.geschiedenis && data.geschiedenis.verloop[p.id]) || [];
+    if (!rijen.length) return `<span class="dagen leeg"></span>`;
+    return `<span class="dagen">${rijen.map((r) => {
+      const st = Number(r.stand);
+      const kleur = st >= 1 && st <= 5 ? KLEUR[st - 1] : "var(--b2)";
+      return `<i style="background:${kleur}" title="${ontsnap(
+        `${r.dag}: ${st ? labelStand(st) : "niet gemeten"}${
+          r.binnen === null || r.binnen === undefined ? "" : ` · ${getalMet(r.binnen, 0)} % binnen`}`)}"></i>`;
+    }).join("")}</span>`;
+  }
+
   // --------------------------------------------------------- de posities
   function positievak() {
     // De balk loopt van verlies links naar winst rechts; de ask daalt dus naar
@@ -308,6 +366,7 @@ export async function werkbankscherm(inhoud, kruimel) {
             <span class="posnaam">${ontsnap(p.contract || `Tranche ${p.tranche}`)}</span><br>
             <span class="posonder">${ontsnap(onderschrift(p))}</span></span></span>
           ${balkHtml(p, VAKKEN)}
+          ${dagen(p)}
           <span class="posstand">${standBadge(p, p.stand ? labelStand(p.stand) : null)}</span>
         </button>
         ${uit ? detail(p) : ""}

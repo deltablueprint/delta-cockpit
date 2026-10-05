@@ -26,10 +26,10 @@ delete from cyclus        where label = 'DEMO · dispatch';
 
 -- ---------- de cyclus ----------
 insert into cyclus (label, status, geopend_op, doelexpiratie, toelichting)
--- Geopend vandaag, zodat hij bovenaan staat: Dispatch toont de laatst geopende
--- lopende cyclus, en er is geen keuzelijst meer om te wisselen. Staat er een
--- andere demo-cyclus in de weg, archiveer die dan.
-values ('DEMO · dispatch', 'in positie', date('now'), date('now', '+25 days'),
+-- Achttien dagen geleden geopend, zodat de strook handelsdagen iets te tonen
+-- heeft. Dispatch zet een cyclus die in de markt staat bovenaan, dus een andere
+-- demo-cyclus in pre-analyse duwt hem niet weg.
+values ('DEMO · dispatch', 'in positie', date('now', '-18 days'), date('now', '+25 days'),
         'Demo om Dispatch te beoordelen. Niet echt.');
 
 -- ---------- drie tranches in de markt ----------
@@ -96,32 +96,32 @@ delete from positiemeting where positie in (select id from positie where cyclus 
 
 -- D1 staat maar een handvol termen in een compound select toe; een rij per uur
 -- maak je dus met een recursieve CTE, niet met twaalf keer union all.
-with recursive v(n) as (select 0 union all select n + 1 from v where n < 11)
+with recursive v(n) as (select 0 union all select n + 1 from v where n < 17)
 insert into positiemeting (positie, moment, ask, bod, stand, binnen)
-select p.id, datetime('now', '-' || (v.n * 6) || ' hours'),
-       round(52.0 + (v.n * 1.4) + ((v.n % 3) * 1.1), 1), round(51.0 + (v.n * 1.4), 1),
-       case when 52.0 + (v.n * 1.4) > 50 then 1 else 2 end,
-       round((38.5 - (52.0 + v.n * 1.4 + (v.n % 3) * 1.1)) / 38.5 * 100, 1)
+select p.id, datetime('now', '-' || v.n || ' days', '+16 hours'),
+       round(52.0 + (v.n * 0.9) + ((v.n % 3) * 1.1), 1), round(51.0 + (v.n * 0.9), 1),
+       case when 52.0 + (v.n * 0.9) > 50 then 1 else 2 end,
+       round((38.5 - (52.0 + v.n * 0.9 + (v.n % 3) * 1.1)) / 38.5 * 100, 1)
   from positie p join cyclus c on c.id = p.cyclus
   join v
  where c.label = 'DEMO · dispatch' and p.tranche = 1;
 
 -- D1 staat maar een handvol termen in een compound select toe; een rij per uur
 -- maak je dus met een recursieve CTE, niet met twaalf keer union all.
-with recursive v(n) as (select 0 union all select n + 1 from v where n < 11)
+with recursive v(n) as (select 0 union all select n + 1 from v where n < 17)
 insert into positiemeting (positie, moment, ask, bod, stand, binnen)
-select p.id, datetime('now', '-' || (v.n * 6) || ' hours'),
-       round(14.5 + (v.n * 0.7) - ((v.n % 4) * 0.5), 1), round(14.0 + (v.n * 0.7), 1), 3,
-       round((19.0 - (14.5 + v.n * 0.7 - (v.n % 4) * 0.5)) / 19.0 * 100, 1)
+select p.id, datetime('now', '-' || v.n || ' days', '+16 hours'),
+       round(14.5 + (v.n * 0.6) - ((v.n % 4) * 0.5), 1), round(14.0 + (v.n * 0.6), 1), case when v.n > 10 then 2 else 3 end,
+       round((19.0 - (14.5 + v.n * 0.6 - (v.n % 4) * 0.5)) / 19.0 * 100, 1)
   from positie p join cyclus c on c.id = p.cyclus
   join v
  where c.label = 'DEMO · dispatch' and p.tranche = 2;
 
 -- D1 staat maar een handvol termen in een compound select toe; een rij per uur
 -- maak je dus met een recursieve CTE, niet met twaalf keer union all.
-with recursive v(n) as (select 0 union all select n + 1 from v where n < 11)
+with recursive v(n) as (select 0 union all select n + 1 from v where n < 17)
 insert into positiemeting (positie, moment, ask, bod, stand, binnen)
-select p.id, datetime('now', '-' || (v.n * 6) || ' hours'),
+select p.id, datetime('now', '-' || v.n || ' days', '+16 hours'),
        round(1.5 + (v.n * 0.6) + ((v.n % 5) * 0.4), 1), round(1.2 + (v.n * 0.6), 1),
        case when 1.5 + (v.n * 0.6) < 3.3 then 5 else 4 end,
        round((11.0 - (1.5 + v.n * 0.6 + (v.n % 5) * 0.4)) / 11.0 * 100, 1)
@@ -131,10 +131,10 @@ select p.id, datetime('now', '-' || (v.n * 6) || ' hours'),
 
 -- Een paar standwisselingen, zodat de geschiedenis rechts niet leeg is.
 insert into barometerstand (cyclus, stand, venster, reden, herkomst, vastgesteld_op, vastgesteld_door, gepubliceerd_op)
-select id, 2, 'opent_binnenkort', 'Demo: het venster gaat open.', 'mens', datetime('now', '-6 days'), 'simon', datetime('now', '-6 days')
+select id, 2, 'opent_binnenkort', 'Demo: het venster gaat open.', 'mens', datetime('now', '-17 days'), 'simon', datetime('now', '-17 days')
   from cyclus where label = 'DEMO · dispatch';
 insert into barometerstand (cyclus, stand, venster, reden, herkomst, vastgesteld_op, vastgesteld_door, gepubliceerd_op)
-select id, 5, 'in_positie', 'Demo: wij zitten erin.', 'mens', datetime('now', '-4 days'), 'simon', datetime('now', '-4 days')
+select id, 5, 'in_positie', 'Demo: wij zitten erin.', 'mens', datetime('now', '-12 days'), 'simon', datetime('now', '-12 days')
   from cyclus where label = 'DEMO · dispatch';
 insert into barometerstand (cyclus, stand, venster, reden, herkomst, vastgesteld_op, vastgesteld_door)
 select id, 4, 'in_positie', 'Demo: de 5600 liep op.', 'voorstel', datetime('now', '-26 hours'), 'jacqueline'

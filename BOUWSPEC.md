@@ -1730,6 +1730,12 @@ De balk loopt **van verlies links naar winst rechts** — de ask daalt naar rech
 
 **De balk in de uitklap heeft break-even in het midden.** Links verlies tot de stoploss, rechts winst tot alles binnen (ask 0), met een streepje op nul. Een balk die van nul tot honderd liep kon het verschil tussen *net onder break-even* en *bijna tegen de stoploss* niet tonen — en dat is precies het verschil waar het om gaat.
 
+**Elke dag een vakje.** Onder het venster, onder de barometer en in het verlengde van elke positieregel staat een strook handelsdagen, één vakje per dag, in de kleur die die dag gold. Bij het venster en de barometer per week gegroepeerd met een spleet ertussen, zodat je weken telt zonder label. Welke dagen meetellen komt uit de handelskalender; staat er voor een datum niets in, dan geldt maandag tot en met vrijdag — beter een kalender die ongeveer klopt dan een lege strook. De dagen vóór de eerste vastlegging dragen geen kleur, en de dagen waarop het venster niet op *In positie* stond ook niet: dan sliep de barometer.
+
+Een vakje per dag toont wat een getal niet kan: niet alleen wat er staat, maar hoe lang het al zo staat, en hoe het van kleur veranderde.
+
+**Dispatch zet de cyclus die in de markt staat bovenaan**, ook als er daarna een nieuwe geopend is die nog in de pre-analyse zit. Er is geen keuzelijst meer, dus de volgorde ís de keuze.
+
 **5. Geschiedenis (rechts, 0149).** Een scherm dat alleen het nu toont beantwoordt de vraag niet die een lid stelt: wordt het beter of slechter? Rechts staat daarom wat er gebeurd is: de standen die wij achter elkaar zetten, met de reden, wie het deed en of het gemeld is.
 
 Het verloop per tranche wordt wél vastgelegd — `brokerpositie` kan het niet dragen, want de brug overschrijft de prijs bij elke hartslag — in `positiemeting`, en alleen als er iets te zien is: de stand verandert, of `meting_minuten` (60) is voorbij. Elke hartslag wegschrijven zou een tabel opleveren die honderd keer zo groot is en geen regel extra vertelt. Een lijntje naast de positieregel stond er even bij en is er weer uit (5 okt 2026): het herhaalde wat de uitklap al toont. De vastlegging blijft, zodat het verloop later alsnog ergens kan landen.
