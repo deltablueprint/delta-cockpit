@@ -27,11 +27,19 @@ import { leesMoment } from "./tijd.js";
 export const STANDEN = [1, 2, 3, 4, 5];
 
 const STANDAARD = {
-  stoploss_ask: 60,
-  waarschuwing_ask: 50,
-  winstanker_pct: 70,
   koers_vers_minuten: 20,
   doorrol_minuten: 60,
+};
+
+// De grenzen van de vijf standen, als terugval wanneer de tabel leeg of stuk is.
+// De grens is de bovenkant van het vak: de ask zakt van verlies naar winst, dus
+// je komt een stand binnen zodra de ask onder zijn grens zakt.
+const STANDAARD_GRENZEN = {
+  1: { waarde: 60,  eenheid: "punten" },
+  2: { waarde: 50,  eenheid: "punten" },
+  3: { waarde: 100, eenheid: "pct_premie" },   // break-even: ligt vast
+  4: { waarde: 50,  eenheid: "pct_premie" },
+  5: { waarde: 30,  eenheid: "pct_premie" },
 };
 
 export async function drempels(env) {
@@ -39,30 +47,44 @@ export async function drempels(env) {
   try {
     const r = await env.DB.prepare(
       "select sleutel, waarde from instelling where archief = 0 and sleutel in " +
-      "('stoploss_ask','waarschuwing_ask','winstanker_pct','koers_vers_minuten','doorrol_minuten')"
+      "('koers_vers_minuten','doorrol_minuten')"
     ).all();
     for (const rij of r.results) {
       const n = Number(rij.waarde);
-      // Onzin in een instelling mag de meter niet omleggen. Dan liever de
-      // standaard dan een stand die nergens op slaat.
       if (Number.isFinite(n) && n > 0) uit[rij.sleutel] = n;
     }
   } catch { /* dan de standaard */ }
 
-  // De waarschuwing ligt vóór de stoploss, en het winstanker is een deel van de
-  // premie. Klopt dat niet, dan is de inrichting fout — en ook dan hoort er een
-  // bruikbare meter uit te komen in plaats van een stand die van de volgorde van
-  // vier ifs afhangt.
-  if (!(uit.waarschuwing_ask < uit.stoploss_ask)) {
-    uit.stoploss_ask = STANDAARD.stoploss_ask;
-    uit.waarschuwing_ask = STANDAARD.waarschuwing_ask;
-    uit.grenzen_rechtgezet = true;
-  }
-  if (!(uit.winstanker_pct > 0 && uit.winstanker_pct < 100)) {
-    uit.winstanker_pct = STANDAARD.winstanker_pct;
-    uit.grenzen_rechtgezet = true;
-  }
+  // De grenzen uit hun eigen tabel (0148). Onzin in een drempel mag de meter
+  // niet omleggen: dan liever de standaard dan een stand die nergens op slaat.
+  const grenzen = JSON.parse(JSON.stringify(STANDAARD_GRENZEN));
+  try {
+    const r = await env.DB.prepare(
+      "select stand, grens_waarde, grens_eenheid from barometerdrempel where archief = 0"
+    ).all();
+    for (const rij of r.results) {
+      const stand = Number(rij.stand);
+      const w = Number(rij.grens_waarde);
+      if (!grenzen[stand]) continue;
+      if (!Number.isFinite(w) || w <= 0) { uit.grenzen_rechtgezet = true; continue; }
+      if (rij.grens_eenheid !== "punten" && rij.grens_eenheid !== "pct_premie") {
+        uit.grenzen_rechtgezet = true; continue;
+      }
+      grenzen[stand] = { waarde: w, eenheid: rij.grens_eenheid };
+    }
+  } catch { /* dan de standaard */ }
+
+  // Break-even is geen instelling: het is de ask gelijk aan de ontvangen premie.
+  grenzen[3] = { ...STANDAARD_GRENZEN[3] };
+  uit.grenzen = grenzen;
   return uit;
+}
+
+// Een grens omrekenen naar een ask-niveau. Punten zijn al een ask; een
+// percentage is een deel van wat je ontving.
+export function grensNaarAsk(grens, premie) {
+  if (!grens) return null;
+  return grens.eenheid === "punten" ? grens.waarde : premie * (grens.waarde / 100);
 }
 
 // De vijf ijkpunten van een tranche, als ask-niveaus, van verlies naar winst.
@@ -77,8 +99,12 @@ export async function drempels(env) {
 export function ijkpunten(premie, stoploss, d) {
   const p = Number(premie);
   if (!Number.isFinite(p) || p <= 0) return null;
+  const g = (d && d.grenzen) || STANDAARD_GRENZEN;
+
+  // De stoploss van de tranche gaat voor: aanscherpen mag altijd, en dan telt
+  // wat er bij de positie staat.
   const sl = Number.isFinite(Number(stoploss)) && Number(stoploss) > 0
-    ? Number(stoploss) : d.stoploss_ask;
+    ? Number(stoploss) : grensNaarAsk(g[1], p);
 
   // De stoploss moet boven break-even liggen, anders is het geen stoploss maar
   // een winstdoel: je zou eruit stappen terwijl je nog op winst staat. Dat kan
@@ -86,20 +112,20 @@ export function ijkpunten(premie, stoploss, d) {
   // iets anders tekent dan er staat is erger dan geen balk.
   if (!(sl > p)) return null;
 
-  // De waarschuwing ligt tussen de stoploss en break-even. Het vaste niveau uit
-  // de standaardset (ask 50) doet dat bij een premie onder de 50; ligt de premie
-  // hoger, dan valt hij erbuiten en nemen we het midden. Zo houdt de balk zijn
-  // volgorde, wat er ook in de standaardset staat.
-  const vast = d.waarschuwing_ask;
-  const waarschuwing = vast > p && vast < sl ? vast : (sl + p) / 2;
+  // De waarschuwing ligt tussen de stoploss en break-even. Een vast puntniveau
+  // doet dat bij een premie daaronder; ligt de premie hoger, dan valt hij
+  // erbuiten en nemen we het midden. Zo houdt de balk zijn volgorde, wat er ook
+  // ingesteld staat. Hetzelfde geldt voor de twee grenzen in de winstkant.
+  const w = grensNaarAsk(g[2], p);
+  const waarschuwing = w > p && w < sl ? w : (sl + p) / 2;
 
-  return {
-    stoploss: sl,
-    waarschuwing,
-    breakeven: p,
-    helft: p * 0.5,
-    winstanker: p * (1 - d.winstanker_pct / 100),
-  };
+  const h0 = grensNaarAsk(g[4], p);
+  const helft = h0 > 0 && h0 < p ? h0 : p * 0.5;
+
+  const a0 = grensNaarAsk(g[5], p);
+  const winstanker = a0 > 0 && a0 < helft ? a0 : helft * 0.6;
+
+  return { stoploss: sl, waarschuwing, breakeven: p, helft, winstanker };
 }
 
 // De zes vakken van de balk, van links (verlies) naar rechts (winst), met hun
@@ -181,19 +207,23 @@ function dagenTot(datum, nu) {
 
 // Alle posities van een cyclus, gemeten. Eén query, daarna rekenen — dit wordt
 // bij elke peiling gesteld.
-export async function metingen(env, cyclusId, { nu = null } = {}) {
+export async function metingen(env, cyclusId, { nu = null, positie = null } = {}) {
   const moment = nu ? new Date(nu) : new Date();
   const d = await drempels(env);
 
+  // Eén cyclus, of één positie. Hetzelfde rekenwerk: het positierecord toont
+  // dezelfde balk als Dispatch, en twee rekensommen voor één balk is hoe ze uit
+  // elkaar gaan lopen.
+  const waar = positie ? "p.id = ?" : "p.cyclus = ?";
   const posities = (await env.DB.prepare(
     `select p.*, b.laatprijs, b.biedprijs, b.marktprijs, b.multiplier, b.gewijzigd_op as prijs_moment,
             coalesce(g.korte_naam, g.naam, p.wie_volgt) as volger
        from positie p
        left join brokerpositie b on b.conid = p.conid
        left join gebruiker g on g.id = p.wie_volgt
-      where p.cyclus = ? and p.archief = 0
+      where ${waar} and p.archief = 0
       order by p.tranche, p.id`
-  ).bind(cyclusId).all()).results;
+  ).bind(positie || cyclusId).all()).results;
 
   // Welke posities in de markt staan. Niet 'alles wat niet gesloten is': een
   // tranche die nog op uitvoering wacht draagt de strike van het bésluit, en er
@@ -236,6 +266,9 @@ export async function metingen(env, cyclusId, { nu = null } = {}) {
     return {
       id: p.id, contract: p.contract, tranche: p.tranche, status: p.status,
       strike: Number(p.strike) || null, aantal: p.aantal,
+      // Het aantal contracten zegt niets zonder de omvang van de portefeuille;
+      // de inzet in procent van het kapitaal is wat een lid wil weten.
+      inzet_pct: p.inzet_pct === null || p.inzet_pct === undefined ? null : Number(p.inzet_pct),
       expiratiedatum: p.expiratiedatum, dagen,
       premie: premie !== null && Number.isFinite(premie) ? premie : null,
       ask, bod, ask_is_marktprijs: p.laatprijs === null || p.laatprijs === undefined,

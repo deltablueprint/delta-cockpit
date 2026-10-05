@@ -9,6 +9,7 @@ import { uitkomstscherm } from "./uitkomst.js";
 import { favorietenscherm } from "./favorieten.js";
 import { koppelingscherm } from "./koppeling.js";
 import { onverdeeldscherm } from "./onverdeeld.js";
+import { drempelscherm } from "./drempels.js";
 import { berichtenscherm } from "./berichten.js";
 import { werkbankscherm } from "./werkbank.js";
 import { zetBezoek } from "./api.js";
@@ -93,6 +94,13 @@ function teken() {
     huidigeLijst.tabelnaam = null;
     huidigeLijst.url = null;
     onverdeeldscherm(inhoud, kruimel);
+    return;
+  }
+
+  if (pad === "/barometerdrempels") {
+    huidigeLijst.tabelnaam = null;
+    huidigeLijst.url = null;
+    drempelscherm(inhoud, kruimel);
     return;
   }
 

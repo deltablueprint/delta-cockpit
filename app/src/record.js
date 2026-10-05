@@ -23,6 +23,8 @@ const LOGO = `<svg viewBox="0 0 296.1 251.9" width="15" height="13" aria-hidden=
 import { volgLive, stopLive, HARTSLAG } from "./live.js";
 import { avatar, avatarMetNaam } from "./avatar.js";
 import { kiezerHtml, kiezerAansluiten } from "./kiezer.js";
+import { balkHtml, schaalHtml, standBadge, metriekHtml } from "./positiebalk.js";
+import { haalPositieMeting } from "./api.js";
 import { voorwaardeSjablonen, voorwaardenOvernemen, stappenVan } from "./api.js";
 
 const ICOON = {
@@ -309,6 +311,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     </div>
     ${procesHtml}
     ${aanwezigenHtml}
+    ${tabelnaam === "positie" && !isNieuw ? `<div class="posmeter" id="posmeter"></div>` : ""}
     <div class="formulier">${sectieHtml}</div>
     ${toonBroker ? `<div class="brokervak" id="brokervak">
       <div class="brokerkop">Open posities bij Lynx</div>
@@ -725,6 +728,28 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         else if (toon) toon.textContent = waarde === null || waarde === undefined || waarde === "" ? "—" : waarde;
       }
     });
+  }
+
+  // ---- de balk van deze tranche ----
+  // Dezelfde balk als in Dispatch, uit dezelfde meting: waar de ask staat
+  // tussen de stoploss en het winstanker, met de cijfers eronder. Op het record
+  // van een tranche is dat het eerste wat je wil zien — vóór de velden.
+  const posmeter = inhoud.querySelector("#posmeter");
+  if (posmeter) {
+    haalPositieMeting(id).then((m) => {
+      const p = m && m.positie;
+      if (!p || !document.body.contains(posmeter)) return;
+      const naam = (meta.keuzes && meta.keuzes["barometerstand.stand"] || [])
+        .find((k) => String(k.waarde) === String(p.stand));
+      posmeter.innerHTML = `
+        <div class="posmeterrij">
+          <span class="posmeternaam">${ontsnap(p.contract || `Tranche ${p.tranche}`)}</span>
+          ${balkHtml(p, m.vakken || [])}
+          <span class="posstand">${standBadge(p, naam ? naam.label : null)}</span>
+        </div>
+        ${schaalHtml(m.vakken || [], p.ijk)}
+        ${metriekHtml(p)}`;
+    }).catch(() => { posmeter.remove(); });
   }
 
   // ---- opslaan ----

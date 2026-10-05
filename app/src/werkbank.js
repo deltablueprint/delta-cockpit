@@ -22,8 +22,7 @@ import { ontsnap } from "./veld.js";
 // beheer; de kleuren staan hier omdat ze de meter tekenen.
 // Stand 1..5: 1 is onder druk, 5 is vrijwel afgerond (BOUWSPEC §10.1). De balk
 // loopt van verlies links naar winst rechts, dus van rood naar groen.
-const KLEUR = ["#D7261E", "#F26A21", "#FBC02D", "#8DC63F", "#0A9D4E"];
-const DIEPROOD = "#9A1C16";   // het smalle stuk voorbij de stoploss
+import { KLEUR, DIEPROOD, balkHtml, schaalHtml, standBadge, metriekHtml } from "./positiebalk.js";
 
 // Elk bezoek krijgt een nummer. Klik je weg terwijl de peiling loopt, dan tekent
 // het antwoord dat daarna binnenkomt niet meer over het scherm waar je inmiddels
@@ -256,28 +255,13 @@ export async function werkbankscherm(inhoud, kruimel) {
 
     const regels = data.posities.map((p) => {
       const uit = open.has(p.id);
-      const vakjes = VAKKEN.map((v) => {
-        const breed = v.tot - v.van;
-        const kleur = v.stand === 0 ? DIEPROOD : KLEUR[v.stand - 1];
-        return `<span class="z" style="flex:0 0 calc(${breed.toFixed(2)}% - 3px);background:${kleur};opacity:${p.open ? 0.9 : 0.4}"></span>`;
-      }).join("");
-
-      const merker = p.plek === null ? ""
-        : `<span class="merkerlab" style="left:${Math.max(2, Math.min(98, p.plek))}%">${
-            p.binnen === null ? getal(p.ask) : `${getalMet(p.binnen, 0)} %`}</span><span class="merker" style="left:calc(${
-            Math.max(1, Math.min(99, p.plek))}% - 1.5px)"></span>`;
-
       return `<div class="posblok ${uit ? "uitgeklapt" : ""}">
         <button class="pos ${p.open ? "" : "posdicht"}" data-pos="${p.id}">
           <span class="poslinks"><span class="chev">${uit ? "▾" : "▸"}</span><span>
             <span class="posnaam">${ontsnap(p.contract || `Tranche ${p.tranche}`)}</span><br>
             <span class="posonder">${ontsnap(onderschrift(p))}</span></span></span>
-          <span class="spoorbalk">${vakjes}${merker}</span>
-          <span class="posstand">${p.voorbij_de_grens
-            ? `<span class="badge" style="background:${DIEPROOD}">Voorbij de stoploss</span>`
-            : p.stand
-              ? `<span class="badge" style="background:${KLEUR[p.stand - 1]}">${ontsnap(labelStand(p.stand))}</span>`
-              : `<span class="badge" style="background:var(--dim)">${p.open ? "niet gemeten" : "Afgerond"}</span>`}</span>
+          ${balkHtml(p, VAKKEN)}
+          <span class="posstand">${standBadge(p, p.stand ? labelStand(p.stand) : null)}</span>
         </button>
         ${uit ? detail(p) : ""}
       </div>`;
@@ -287,21 +271,11 @@ export async function werkbankscherm(inhoud, kruimel) {
     // ask-niveaus van de zwakste tranche erbij. De namen van de standen staan
     // er niet nog eens: die staan rechts op elke regel.
     const ijk = (data.posities.find((p) => p.ijk && p.open) || {}).ijk || null;
-    const grens = ijk ? [null, ijk.stoploss, ijk.waarschuwing, ijk.breakeven, ijk.helft, ijk.winstanker] : [];
-    const schaal = VAKKEN.map((v, i) => {
-      const breed = v.tot - v.van;
-      const label = !ijk ? v.naam
-        // Het smalle stuk voorbij de stoploss draagt geen label: het is te smal
-        // om er een woord in te krijgen, en de dieprode kleur zegt het al.
-        : i === 0 ? ""
-        : `${getal(grens[i])}`;
-      return `<span style="flex:0 0 calc(${breed.toFixed(2)}% - 3px)">${ontsnap(label)}</span>`;
-    }).join("");
 
     return `<section class="paneel">
       <div class="paneelkop">Posities</div>
       ${data.posities.length ? regels : `<p class="wbleeg">Deze cyclus heeft nog geen positie.</p>`}
-      ${data.posities.length ? `<div class="schaalrij"><span class="schaal">${schaal}</span></div>` : ""}
+      ${data.posities.length ? schaalHtml(VAKKEN, ijk) : ""}
       ${data.zwakste ? `<div class="zwakste"><b>${ontsnap(data.zwakste.contract || "")}</b> is de zwakste en bepaalt de barometer: ask ${
         getal(data.zwakste.ask)}, break-even op ${getal(data.zwakste.breakeven)}, stoploss op ${
         getal(data.zwakste.stoploss)} — <b>${ontsnap(labelStand(data.zwakste.stand))}</b>.</div>` : ""}
@@ -323,34 +297,37 @@ export async function werkbankscherm(inhoud, kruimel) {
       p.doorgerold_naar ? ["dblauw", `Doorgerold naar ${p.doorgerold_naar}`] : null,
       p.afwijking ? ["dlet", `Afwijking · ${p.afwijking_soort || "zie het record"}`] : null,
       p.gepubliceerd_op ? ["", `Gemeld ${String(p.gepubliceerd_op).slice(0, 16)}`] : ["dlet", "Nog niet gemeld aan de leden"],
-      p.wie_volgt ? ["", `Volgt: ${p.wie_volgt}`] : null,
     ].filter(Boolean);
 
-    return `<div class="detail"><div class="dvak">
-      <div class="dfeiten">
-        ${feit("Premie", getal(p.premie), `${p.aantal ?? "?"} contract${p.aantal === 1 ? "" : "en"}`)}
-        ${feit("Ask nu", getal(p.ask), p.ask_is_marktprijs ? "marktprijs" : `bod ${getal(p.bod)}`)}
-        ${feit("Open resultaat", getalMet(p.resultaat), p.resultaat_eur === null ? "" : `€ ${getalMet(p.resultaat_eur, 0)}`)}
-        ${feit("Break-even", getal(p.breakeven), "ask gelijk aan de premie")}
-        ${feit("Stoploss", getal(p.stoploss), p.tot_stoploss === null ? "" : `${getal(p.tot_stoploss)} te gaan`)}
-        ${feit("Dagen", p.dagen === null ? "—" : String(p.dagen), p.prijs_minuten_oud === null ? "" : `prijs ${p.prijs_minuten_oud} min oud`)}
-      </div>
-      <div class="dbalken">
-        ${balk("Premie binnen", p.binnen, p.binnen !== null && p.binnen >= 50 ? "var(--grn)" : "var(--amb)")}
-      </div>
+    return `<div class="detail">
+      ${metriekHtml(p)}
       <div class="dmerken">
         ${merken.map(([kl, t]) => `<span class="dmerk ${kl}">${ontsnap(t)}</span>`).join("")}
         <a class="knop tweede" href="#/t/positie/${p.id}">Positierecord</a>
       </div>
-    </div></div>`;
+    </div>`;
   }
 
-  const feit = (l, w, n) => `<span class="dfeit"><span class="dlab">${ontsnap(l)}</span>
-    <span class="dwaarde">${ontsnap(w)}</span>${n ? `<span class="dnoot">${ontsnap(n)}</span>` : ""}</span>`;
-  const balk = (l, pctWaarde, kleur) => pctWaarde === null ? "" : `
-    <div class="dbalkrij"><span class="dbalklab">${ontsnap(l)}</span>
-      <span class="dbalk"><i style="width:${Math.max(0, Math.min(100, pctWaarde))}%;background:${kleur}"></i></span>
-      <span class="dbalkpct">${getalMet(pctWaarde, 0)} %</span></div>`;
+  // Een doorrol is één beweging: eruit en er weer in. Twee kanten met een pijl
+  // ertussen leest als die beweging; drie regels onder elkaar lieten je zelf
+  // uitzoeken wat bij wat hoorde.
+  function rolvak(rol) {
+    const kant = (wat, lab, k) => `
+      <div class="rolkant ${wat}">
+        <span class="rollab">${lab}</span>
+        <span class="rolcontract">${ontsnap(k.contract)}</span>
+        <span class="rolgetal ${k.op || ""}">${ontsnap(k.getal)}</span>
+        ${k.inzet ? `<span class="rolnoot">${ontsnap(k.inzet)}</span>` : ""}
+      </div>`;
+    return `<div class="rolvak">
+      ${kant("uit", "Uit", rol.uit)}
+      <span class="rolpijl" aria-hidden="true">
+        <svg viewBox="0 0 34 12"><path d="M0 6h26M21 1l6 5-6 5" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      ${kant("in", "In", rol.in)}
+      <div class="rolnetto ${rol.netto_op}"><span>Netto</span><b>${ontsnap(rol.netto)}</b></div>
+    </div>`;
+  }
 
   // ------------------------------------------------- kaarten en verstuurd
   function ledenvak() {
@@ -359,8 +336,9 @@ export async function werkbankscherm(inhoud, kruimel) {
         <span class="pt ${k.soort === "doorrol" ? "p-hoog" : k.soort === "positie_gesloten" ? "p-med" : "p-laag"}">${
           k.soort === "doorrol" ? "doorrol" : k.soort === "positie_gesloten" ? "gesloten" : "nieuw"}</span></div>
       ${k.was ? `<div class="omgezet">↻ Was: ${ontsnap(k.was)}</div>` : ""}
-      <div class="feiten">${k.feiten.map(([l, w]) =>
-        `<span class="feit"><span class="flab">${ontsnap(l)}</span><span class="fwaarde">${ontsnap(w)}</span></span>`).join("")}</div>
+      ${k.rol ? rolvak(k.rol) : ""}
+      ${k.feiten.length ? `<div class="feiten">${k.feiten.map(([l, w]) =>
+        `<span class="feit"><span class="flab">${ontsnap(l)}</span><span class="fwaarde">${ontsnap(w)}</span></span>`).join("")}</div>` : ""}
       ${nietMeldenVoor === k.id ? `
         <div class="kaartreden">
           <label for="nietreden">Waarom gaat dit niet naar de leden?</label>

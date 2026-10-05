@@ -40,6 +40,10 @@ const ZONDER_SCHERM = new Set([
   "favoriet", "bezoek", "gebruiker_voorkeur", "inzending", "audit",
   "brokerpositie", "brokergebeurtenis", "brokerverbinding", "brokerinstelling",
   "lynx_rapport", "cyclus_event",
+  // Deze twee hebben een eigen scherm in plaats van een lijst: de drempels van
+  // de barometer staan als vijf standen onder elkaar (/barometerdrempels), niet
+  // als rijen met sleutels.
+  "barometerdrempel",
   // De stand van de onderliggende. Eén rij per index, overschreven bij elke
   // hartslag van de brug: een momentopname, geen vastlegging. Wat bewaard moet
   // blijven staat in de gebeurtenissenstroom.

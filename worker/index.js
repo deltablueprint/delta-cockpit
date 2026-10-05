@@ -22,6 +22,8 @@ import { favorieten, favorietToevoegen, favorietWijzigen, favorietWeg,
          favorietenVolgorde, bezoeken, bezoekBijzetten, bezoekenLeeg } from "./navigator.js";
 import { vraagNalezen, geefVrij, stuurTerug } from "./bericht.js";
 import { werkbank, publiceer, nietMelden, conceptVoorKaart } from "./werkbank.js";
+import { metingen } from "./meting.js";
+import { drempelsVoorScherm, zetDrempels } from "./drempelscherm.js";
 import { stroom } from "./stroom.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
@@ -312,6 +314,28 @@ async function behandel(request, env, ctx) {
       // regel dat de barometer slaapt tot het venster op 'In positie' staat.
       // Twee wegen naar dezelfde handeling met één bewaking erop is geen
       // bewaking. Zie BOUWSPEC §13c.
+
+      // De meting van één tranche, voor de balk op het positierecord. Zelfde
+      // rekenwerk als Dispatch: twee rekensommen voor één balk is hoe ze uit
+      // elkaar gaan lopen.
+      const posMeting = pad.match(/^\/api\/positie\/(\d+)\/meting$/);
+      if (posMeting && request.method === "GET") {
+        const m = await metingen(env, null, { positie: Number(posMeting[1]) });
+        return json({ positie: m.posities[0] || null, vakken: m.vakken, drempels: m.drempels });
+      }
+
+      // De drempels van de barometer. Eén route voor het hele scherm: de vijf
+      // grenzen zijn één schaal, en een halve schaal is erger dan een
+      // geweigerde — zie worker/drempelscherm.js.
+      if (pad === "/api/barometerdrempels") {
+        if (request.method === "GET") return json(await drempelsVoorScherm(env));
+        if (request.method === "POST") {
+          const body = await request.json().catch(() => ({}));
+          const uit = await zetDrempels(env, ik, body);
+          if (uit.fout) return json(uit, uit.status || 400);
+          return json(uit);
+        }
+      }
 
       // Van kaart naar concept. Dit gaat via de werkbank: alleen daar is bekend
       // wélke gebeurtenissen een kaart zijn, welk sjabloon erbij hoort, en dat

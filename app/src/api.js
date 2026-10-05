@@ -167,3 +167,13 @@ export const stuurTerug = (publicatie, reden) =>
 
 export const haalStroom = (cyclus, limiet = 40) =>
   haal(`/api/cyclus/${cyclus}/stroom?limiet=${limiet}`);
+
+// De drempels van de barometer. Eén vraag voor het hele scherm, één voor het
+// hele scherm terug: een halve schaal bewaren zou meten op een volgorde die
+// niemand zo bedoeld heeft.
+export const haalDrempels = () => haal("/api/barometerdrempels");
+export const zetDrempels = (drempels) =>
+  haal("/api/barometerdrempels", { methode: "POST", body: { drempels } });
+
+// De meting van één tranche, voor de balk op het positierecord.
+export const haalPositieMeting = (id) => haal(`/api/positie/${id}/meting`);

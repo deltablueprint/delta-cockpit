@@ -542,6 +542,59 @@ td.bewerkt input, td.bewerkt select {
 td.bezigcel { opacity: .6; }
 td.zojuist { background: var(--grnbg); transition: background 1s; }
 
+/* --- de balk van een tranche op haar eigen record --- */
+.posmeter { margin: 0 0 2px; padding: 14px 20px 6px; background: #fff; border-bottom: 1px solid var(--b1); }
+.posmeterrij { display: flex; align-items: center; gap: 14px; }
+.posmeternaam { font-size: 13px; font-weight: 700; color: var(--ink); flex: 0 0 auto; }
+.posmeter .schaalrij { margin-top: 5px; }
+.posmeter .dvak { border: 0; background: none; padding: 10px 0 0; }
+
+/* --- barometer instellingen: de vijf standen onder elkaar --- */
+.drijen { display: flex; flex-direction: column; gap: 6px; }
+.drij {
+  display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  padding: 9px 10px; background: #fff; border: 1px solid var(--b1); border-radius: 3px;
+  font-size: 12.5px; color: var(--ink2);
+}
+.drij.vast { background: var(--soft); }
+.dkleur { width: 14px; height: 14px; border-radius: 3px; flex: 0 0 auto; }
+.drij .dnaam { font-weight: 700; color: var(--ink); min-width: 118px; }
+.dzin, .dkomt { color: var(--mut); }
+.drij .dgetal {
+  width: 76px; height: 28px; padding: 0 8px; text-align: right; font-family: inherit; font-size: 12.5px;
+  border: 1px solid #CFCBC3; border-radius: 3px; background: #fff; font-variant-numeric: tabular-nums;
+}
+.drij .deenheid { height: 28px; padding: 0 6px; font-family: inherit; font-size: 12.5px;
+  border: 1px solid #CFCBC3; border-radius: 3px; background: #fff; }
+.drij .dgetal:disabled, .drij .deenheid:disabled { background: var(--soft); color: var(--mut); }
+.dvoorbeeld { margin-left: auto; color: var(--mut); font-variant-numeric: tabular-nums; }
+.dvastlabel { font-size: 11px; color: var(--faint); }
+.dvoet { margin: 12px 0 0; font-size: 12px; color: var(--mut); line-height: 1.5; }
+.drempels .paneelbody { padding: 14px; }
+
+/* --- een doorrol: eruit en er weer in --- */
+.rolvak {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; gap: 10px;
+  margin: 10px 0 0; padding: 12px; background: var(--soft); border: 1px solid var(--b1); border-radius: 3px;
+}
+.rolkant { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rollab { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.rolcontract { font-size: 12.5px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.rolgetal { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink); }
+.rolgetal.winst { color: var(--grn); }
+.rolgetal.verlies { color: var(--red); }
+.rolnoot { font-size: 11px; color: var(--mut); }
+.rolpijl { align-self: center; color: var(--faint); }
+.rolpijl svg { display: block; width: 34px; height: 12px; }
+.rolnetto {
+  grid-column: 1 / -1; display: flex; align-items: baseline; gap: 8px;
+  margin-top: 4px; padding-top: 9px; border-top: 1px solid var(--b1);
+  font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint);
+}
+.rolnetto b { font-size: 15px; letter-spacing: 0; text-transform: none; font-variant-numeric: tabular-nums; }
+.rolnetto.winst b { color: var(--grn); }
+.rolnetto.verlies b { color: var(--red); }
+
 /* --- de toevoegregel onderaan elke lijst ---
    Een lege regel die er niet uitziet als een regel: geen randen tot je erin
    staat, zodat de lijst erboven leesbaar blijft en de uitnodiging toch zichtbaar

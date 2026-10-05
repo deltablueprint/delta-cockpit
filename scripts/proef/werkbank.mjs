@@ -40,9 +40,12 @@ await db.prepare(
 // komt, en het getal waar de regels tegen toetsen. De stoploss is een vast
 // niveau uit de standaardset — géén veelvoud van de premie.
 let d = await drempels(env);
-eis("de stoploss staat op ask 60", d.stoploss_ask === 60);
-eis("de waarschuwing op ask 50", d.waarschuwing_ask === 50);
-eis("het winstanker op 70 % binnen", d.winstanker_pct === 70);
+eis("de stoploss staat op ask 60", d.grenzen[1].waarde === 60 && d.grenzen[1].eenheid === "punten");
+eis("de waarschuwing op ask 50", d.grenzen[2].waarde === 50 && d.grenzen[2].eenheid === "punten");
+eis("break-even ligt vast op de premie",
+    d.grenzen[3].waarde === 100 && d.grenzen[3].eenheid === "pct_premie");
+eis("het winstanker op 30 % van de premie open",
+    d.grenzen[5].waarde === 30 && d.grenzen[5].eenheid === "pct_premie");
 
 // Het voorbeeld uit BOUWSPEC §10.1: premie 18,0 → break-even ask 18,0,
 // winstanker 70 % → ask 5,4.
@@ -114,16 +117,24 @@ for (const ask of [0, 1, 5.4, 9, 14, 18, 30, 50, 60, 75]) {
 
 // Grenzen die door elkaar lopen zijn een inrichtingsfout. Ook dan hoort er een
 // bruikbare meter uit te komen.
-await db.prepare("update instelling set waarde = '70' where sleutel = 'waarschuwing_ask'").run();
+await db.prepare("update barometerdrempel set grens_waarde = 70 where stand = 2").run();
 d = await drempels(env);
-eis("een waarschuwing boven de stoploss valt terug op de standaard",
-    d.waarschuwing_ask === 50 && d.grenzen_rechtgezet === true);
-await db.prepare("update instelling set waarde = '50' where sleutel = 'waarschuwing_ask'").run();
+ijk = ijkpunten(38.5, 60, d);
+eis("een waarschuwing boven de stoploss valt terug op het midden",
+    ijk.waarschuwing > ijk.breakeven && ijk.waarschuwing < ijk.stoploss);
+await db.prepare("update barometerdrempel set grens_waarde = 50 where stand = 2").run();
 
-await db.prepare("update instelling set waarde = 'nogal wat' where sleutel = 'winstanker_pct'").run();
+await db.prepare("update barometerdrempel set grens_waarde = -3 where stand = 5").run();
 d = await drempels(env);
-eis("onzin in het winstanker valt terug op de standaard", d.winstanker_pct === 70);
-await db.prepare("update instelling set waarde = '70' where sleutel = 'winstanker_pct'").run();
+eis("onzin in het winstanker valt terug op de standaard",
+    d.grenzen[5].waarde === 30 && d.grenzen_rechtgezet === true);
+await db.prepare("update barometerdrempel set grens_waarde = 30 where stand = 5").run();
+
+// Break-even is geen instelling. Zet iemand hem toch, dan telt hij niet mee.
+await db.prepare("update barometerdrempel set grens_waarde = 80 where stand = 3").run();
+d = await drempels(env);
+eis("break-even blijft de premie, wat er ook in de tabel staat", d.grenzen[3].waarde === 100);
+await db.prepare("update barometerdrempel set grens_waarde = 100 where stand = 3").run();
 
 // ------------------------------------------------------------- de meting
 //
@@ -352,7 +363,8 @@ lijst = await kaarten(env, CYCLUS);
 eis("sluiten en openen vlak erna is één doorrol", lijst.length === 1 && lijst[0].soort === "doorrol");
 eis("de kaart zegt wat hij eerst was", /gesloten/i.test(lijst[0].was || ""));
 eis("en laadt het doorrolsjabloon", lijst[0].sjabloon === "doorrol");
-eis("met beide kanten erin", lijst[0].feiten.some(([l]) => l === "Uit") && lijst[0].feiten.some(([l]) => l === "In"));
+eis("met beide kanten erin", !!lijst[0].rol && !!lijst[0].rol.uit.contract && !!lijst[0].rol.in.contract);
+eis("en het netto resultaat van de beweging", typeof lijst[0].rol.netto === "string");
 
 // Het doorrolbericht dekt beide kanten. Zonder dat kwam de opening terug als
 // losse kaart zodra het bericht weg was, en vroeg de werkbank om een tweede
@@ -421,7 +433,7 @@ eis("en kan ook niet op 'niet melden'", !!(await nietMelden(env, ik, gewoon, "om
   await db.prepare("update positie set resultaat_pt = null, aantal = null where id = ?").bind(POSITIE).run();
   const k = (await kaarten(env, CYCLUS)).find((x) => x.id === open2);
   const feit = (naam) => (k.feiten.find(([l]) => l === naam) || [])[1];
-  eis("een onbekend aantal is een streepje, geen nul", feit("Aantal") === "\u2014");
+  eis("een onbekende inzet is een streepje, geen nul", feit("Inzet") === "\u2014");
   await db.prepare("update positie set aantal = 4 where id = ?").bind(POSITIE).run();
   await db.prepare("delete from gebeurtenis where id = ?").bind(open2).run();
 }
@@ -477,7 +489,7 @@ eis("de kaarten erbij", Array.isArray(w.kaarten));
 eis("en wat er verstuurd is", w.verstuurd.some((v) => v.soort === "opening" || v.titel));
 eis("het venster draagt zijn verloop", w.venster.verloop.length === 6);
 eis("de drempels gaan mee naar het scherm, zodat de legende ze kan tonen",
-    w.drempels.stoploss_ask === 60 && w.drempels.waarschuwing_ask === 50);
+    w.drempels.grenzen[1].waarde === 60 && w.drempels.grenzen[2].waarde === 50);
 eis("en de vakken van de balk ook, zodat de balk niet iets anders toont dan de meter rekent",
     Array.isArray(w.vakken) && w.vakken.length === 6);
 

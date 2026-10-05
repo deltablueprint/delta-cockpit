@@ -58,7 +58,7 @@ export async function kaarten(env, cyclusId, { nu = null } = {}) {
   const rijen = (await env.DB.prepare(
     `select g.id, g.soort, g.titel, g.moment, g.positie, g.feiten,
             g.beantwoord_op, g.antwoord,
-            p.contract, p.strike, p.aantal, p.ontvangen_premie_pt, p.resultaat_pt,
+            p.contract, p.strike, p.aantal, p.inzet_pct, p.ontvangen_premie_pt, p.resultaat_pt,
             p.uitkomst, p.doorgerold_naar,
             (select count(*) from publicatie u
               where u.gebeurtenis = g.id and u.archief = 0 and u.status = 'verstuurd') as gemeld,
@@ -116,11 +116,18 @@ export async function kaarten(env, cyclusId, { nu = null } = {}) {
       titel: "Doorrol herkend",
       was: `Positie gesloten${Number(r.resultaat_pt) < 0 ? " met verlies" : ""}`,
       moment: r.moment, positie: r.positie, tweede_positie: erna.positie,
-      feiten: [
-        ["Uit", `${r.contract || "?"} · ${getalMet(r.resultaat_pt)}`],
-        ["In", `${erna.contract || "?"} · +${getal(erna.ontvangen_premie_pt)}`],
-        ["Netto", getalMet((Number(r.resultaat_pt) || 0) + (Number(erna.ontvangen_premie_pt) || 0))],
-      ],
+      // Een doorrol is één beweging: eruit en er weer in. Het scherm tekent dat
+      // als twee kanten met een pijl ertussen, dus geeft de worker het ook zo —
+      // niet als drie losse regels waarin je zelf moet zien wat bij wat hoort.
+      rol: {
+        uit: { contract: r.contract || "?", getal: getalMet(r.resultaat_pt),
+               op: Number(r.resultaat_pt) < 0 ? "verlies" : "winst" },
+        in: { contract: erna.contract || "?", getal: `+${getal(erna.ontvangen_premie_pt)}`,
+              inzet: leeg(erna.inzet_pct) ? null : `${getal(erna.inzet_pct)} % van het kapitaal` },
+        netto: getalMet((Number(r.resultaat_pt) || 0) + (Number(erna.ontvangen_premie_pt) || 0)),
+        netto_op: ((Number(r.resultaat_pt) || 0) + (Number(erna.ontvangen_premie_pt) || 0)) < 0 ? "verlies" : "winst",
+      },
+      feiten: [],
       // Het concept dat de spiegel bij de sluiting klaarzette gaat over de
       // sluiting, niet over de doorrol. Dat is niet het bericht dat hier hoort,
       // dus bieden we het ook niet aan.
@@ -137,9 +144,12 @@ export async function kaarten(env, cyclusId, { nu = null } = {}) {
       ids: [r.id], meegegaan: null,
       titel: geopend ? "Positie geopend" : "Positie gesloten",
       moment: r.moment, positie: r.positie,
+      // Het aantal contracten zegt niets zonder de omvang van de portefeuille
+      // erbij; de inzet in procent van het kapitaal zegt precies wat een lid
+      // wil weten.
       feiten: geopend
         ? [["Contract", r.contract || "?"], ["Premie", getal(r.ontvangen_premie_pt)],
-           ["Aantal", leeg(r.aantal) ? "—" : String(r.aantal)]]
+           ["Inzet", leeg(r.inzet_pct) ? "—" : `${getal(r.inzet_pct)} %`]]
         : [["Contract", r.contract || "?"], ["Uitkomst", r.uitkomst || "gesloten"],
            ["Resultaat", getalMet(r.resultaat_pt)]],
       concept: r.concept_soort === (geopend ? "opening" : "sluiting") ? r.concept : null,
