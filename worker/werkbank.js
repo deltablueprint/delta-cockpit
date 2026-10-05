@@ -1,0 +1,332 @@
+// De werkbank: de positie bewaken, de stand zetten, en de leden bijhouden.
+//
+// Wat hier NIET staat is het belangrijkste: er is geen taakwachtrij meer. Werk
+// aan een cyclus — een analyse invullen, een voorwaarde meten, een besluit
+// afronden — gebeurt op het cyclusrecord en in zijn related lists, waar het
+// veld staat. Een kaart die daarnaar verwijst is een omweg, en twee plekken die
+// hetzelfde beweren lopen een keer uit elkaar. Zie BOUWSPEC §13b.
+//
+// Een kaart bestaat nog, maar alleen voor een positie die opent, sluit of
+// doorrolt. En hij wordt afgeleid, niet weggeschreven: de vraag is één query
+// over de stroom. Niets stempelt hier iets tot taak, er draait geen motor, en
+// een kaart kan dus ook niet blijven staan nadat het werk gedaan is — hij
+// verdwijnt doordat het bericht weg is.
+
+import { huidig as barometerstand, stelVast, VENSTERS } from "./barometer.js";
+import { metingen, drempels } from "./meting.js";
+import { stroom } from "./stroom.js";
+import { conceptUitKaart } from "./bericht.js";
+import { leesMoment } from "./tijd.js";
+
+// De vensterstand waarin de barometer iets te zeggen heeft. Daarvoor zitten wij
+// er niet in en vragen we de leden niets; daarna is de cyclus uit.
+export const IN_POSITIE = "in_positie";
+
+// Hoe ruim het doorrolvenster is voor déze sluiting. Staat er alleen een datum
+// op — wat spiegel.js schrijft bij een waardeloze expiratie — dan is het
+// tijdstip 00:00 en zou een doorrol later op de dag nooit binnen een uur
+// vallen. Dan geldt de hele dag.
+const vensterVoor = (r, d) =>
+  String(r.moment || "").trim().length <= 10 ? Math.max(d.doorrol_minuten, 24 * 60) : d.doorrol_minuten;
+
+const minutenTussen = (a, b) => {
+  const x = leesMoment(a), y = leesMoment(b);
+  if (!x || !y) return null;
+  return Math.abs(y - x) / 60000;
+};
+
+// ---------------------------------------------------------------- de kaarten
+//
+// Drie soorten, en alle drie uit een positie. Een kaart staat open zolang er
+// geen bericht over verstuurd is en niemand gezegd heeft dat het niet gemeld
+// wordt. Er is dus geen vlag die bijgewerkt moet worden.
+export async function kaarten(env, cyclusId, { nu = null } = {}) {
+  const d = await drempels(env);
+
+  const rijen = (await env.DB.prepare(
+    `select g.id, g.soort, g.titel, g.moment, g.positie, g.feiten,
+            g.beantwoord_op, g.antwoord,
+            p.contract, p.strike, p.aantal, p.ontvangen_premie_pt, p.resultaat_pt,
+            p.uitkomst, p.doorgerold_naar,
+            (select count(*) from publicatie u
+              where u.gebeurtenis = g.id and u.archief = 0 and u.status = 'verstuurd') as gemeld,
+            (select id from publicatie u
+              where u.gebeurtenis = g.id and u.archief = 0 order by u.id desc limit 1) as concept,
+            (select u.soort from publicatie u
+              where u.gebeurtenis = g.id and u.archief = 0 order by u.id desc limit 1) as concept_soort
+       from gebeurtenis g
+       left join positie p on p.id = g.positie
+      where g.cyclus = ? and g.archief = 0
+        and g.soort in ('positie_geopend', 'positie_gesloten')
+      order by g.moment, g.id`
+  ).bind(cyclusId).all()).results;
+
+  const open = rijen.filter((r) => !r.gemeld && !r.beantwoord_op);
+
+  // De doorrol. Sluit er een positie en gaat er kort daarna een nieuwe open in
+  // dezelfde cyclus, dan is dat één handeling en geen twee. De kaart van de
+  // sluiting verandert van vorm; er komt er geen bij.
+  // Eerst de doorrollen, en wel van dichtbij naar ver. Een lus die de lijst op
+  // volgorde afgaat koppelt de eerste sluiting aan de eerste opening erna, en
+  // dat is met drie gebeurtenissen vlak na elkaar de verkeerde: een sluiting om
+  // 13:00 pakte dan de opening van 13:30, terwijl die van 13:20 ernaast lag.
+  //
+  // Dus alle mogelijke paren, kortste afstand eerst, en wie al vergeven is doet
+  // niet meer mee.
+  const paren = [];
+  for (const r of open.filter((x) => x.soort === "positie_gesloten")) {
+    for (const x of open.filter((y) => y.soort === "positie_geopend")) {
+      if (x.id === r.id) continue;
+      const na = leesMoment(x.moment), van = leesMoment(r.moment);
+      if (!na || !van || na < van) continue;
+      const afstand = minutenTussen(r.moment, x.moment);
+      // Een sluiting met alleen een datum — wat een waardeloze expiratie
+      // oplevert — telt als het begin van die dag. Anders wordt precies de
+      // doorrol na expiratie, het normale maandelijkse geval, nooit herkend.
+      if (afstand === null || afstand > vensterVoor(r, d)) continue;
+      paren.push({ uit: r, in: x, afstand });
+    }
+  }
+  paren.sort((a2, b2) => a2.afstand - b2.afstand);
+
+  const gebruikt = new Set();
+  const uit = [];
+  for (const paar of paren) {
+    if (gebruikt.has(paar.uit.id) || gebruikt.has(paar.in.id)) continue;
+    gebruikt.add(paar.uit.id); gebruikt.add(paar.in.id);
+    const r = paar.uit, erna = paar.in;
+    uit.push({
+      id: r.id, soort: "doorrol", sjabloon: "doorrol",
+      // Beide kanten horen bij deze ene kaart. Zonder dat kwam de opening terug
+      // als losse kaart zodra het doorrolbericht verstuurd was, en vroeg de
+      // werkbank om een tweede bericht over dezelfde handeling.
+      ids: [r.id, erna.id], meegegaan: erna.id,
+      titel: "Doorrol herkend",
+      was: `Positie gesloten${Number(r.resultaat_pt) < 0 ? " met verlies" : ""}`,
+      moment: r.moment, positie: r.positie, tweede_positie: erna.positie,
+      feiten: [
+        ["Uit", `${r.contract || "?"} · ${getalMet(r.resultaat_pt)}`],
+        ["In", `${erna.contract || "?"} · +${getal(erna.ontvangen_premie_pt)}`],
+        ["Netto", getalMet((Number(r.resultaat_pt) || 0) + (Number(erna.ontvangen_premie_pt) || 0))],
+      ],
+      // Het concept dat de spiegel bij de sluiting klaarzette gaat over de
+      // sluiting, niet over de doorrol. Dat is niet het bericht dat hier hoort,
+      // dus bieden we het ook niet aan.
+      concept: null,
+    });
+  }
+
+  // En dan wat er los overblijft, in de volgorde waarin het gebeurde.
+  for (const r of open) {
+    if (gebruikt.has(r.id)) continue;
+    const geopend = r.soort === "positie_geopend";
+    uit.push({
+      id: r.id, soort: r.soort, sjabloon: geopend ? "nieuwe_positie" : "sluiting",
+      ids: [r.id], meegegaan: null,
+      titel: geopend ? "Positie geopend" : "Positie gesloten",
+      moment: r.moment, positie: r.positie,
+      feiten: geopend
+        ? [["Contract", r.contract || "?"], ["Premie", getal(r.ontvangen_premie_pt)],
+           ["Aantal", String(r.aantal ?? "?")]]
+        : [["Contract", r.contract || "?"], ["Uitkomst", r.uitkomst || "gesloten"],
+           ["Resultaat", getalMet(r.resultaat_pt)]],
+      concept: r.concept_soort === (geopend ? "opening" : "sluiting") ? r.concept : null,
+    });
+  }
+
+  // De kaarten in de volgorde waarin ze gebeurd zijn.
+  uit.sort((x, y) => String(x.moment).localeCompare(String(y.moment)) || x.id - y.id);
+  return uit;
+}
+
+const getal = (n) => (Number.isFinite(Number(n)) ? Number(n).toFixed(1).replace(".", ",") : "—");
+const getalMet = (n) => {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "—";
+  return `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(x).toFixed(1).replace(".", ",")}`;
+};
+
+// ------------------------------------------------------------- het hele beeld
+export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
+  const cycli = (await env.DB.prepare(
+    `select id, label, status, geopend_op from cyclus
+      where archief = 0 and status not in ('afgesloten', 'geannuleerd')
+      order by geopend_op desc`
+  ).all()).results;
+
+  const id = cyclus || (cycli[0] && cycli[0].id) || null;
+  if (!id) return { cycli, cyclus: null };
+
+  const [baro, meet, kaartlijst, verstuurd, gebeurtenissen] = await Promise.all([
+    barometerstand(env, id),
+    metingen(env, id, { nu }),
+    kaarten(env, id, { nu }),
+    env.DB.prepare(
+      `select id, titel, soort, tekst, verstuurd_op
+         from publicatie
+        where cyclus = ? and archief = 0 and status = 'verstuurd'
+        order by verstuurd_op desc, id desc limit 20`
+    ).bind(id).all().then((r) => r.results).catch(() => []),
+    stroom(env, id, 8).catch(() => []),
+  ]);
+
+  const cyclusrij = cycli.find((c) => c.id === id) || null;
+  const venster = baro.wij ? baro.wij.venster.waarde : "pre_analyse";
+
+  // De barometer slaapt tot wij erin zitten. Daarvoor is er geen positie om een
+  // stand over te hebben, en daarna is de cyclus uit.
+  const wakker = venster === IN_POSITIE;
+
+  return {
+    cycli, cyclus: cyclusrij,
+    barometer: {
+      ...baro,
+      wakker,
+      slaapt_waarom: wakker ? null
+        : VENSTERS.indexOf(venster) > VENSTERS.indexOf(IN_POSITIE)
+          ? "de cyclus is afgerond" : "wij zitten er nog niet in",
+      // Het systeem stelt alleen voor als het gemeten heeft. Kan het niet meten,
+      // dan zegt het waarom in plaats van een stand te gokken.
+      voorstel: wakker ? meet.voorstel : null,
+      voorstel_waarom_niet: wakker ? meet.waarom_niet : null,
+      // Een voorstel op de halve portefeuille ziet er hetzelfde uit als een
+      // voorstel op de hele. Dus zeggen we het.
+      ongemeten: meet.ongemeten,
+    },
+    venster: { nu: venster, verloop: VENSTERS, gepubliceerd: baro.leden ? baro.leden.venster.waarde : null },
+    posities: meet.posities,
+    zwakste: meet.zwakste,
+    drempels: meet.drempels,
+    kaarten: kaartlijst,
+    verstuurd,
+    stroom: gebeurtenissen,
+    // Wacht er iets op de leden? Drie dingen kunnen dat zijn, en ze staan los
+    // van elkaar: een kaart, een stand die wij wel kennen en zij niet, of een
+    // voorstel dat nog niet overgenomen is.
+    wacht: {
+      kaarten: kaartlijst.length,
+      stand_anders: !!baro.wij && !baro.gelijk,
+      voorstel: wakker && meet.voorstel !== null && baro.wij && Number(baro.wij.stand.waarde) !== meet.voorstel,
+    },
+  };
+}
+
+// --------------------------------------------------------------- publiceren
+//
+// Eén knop voor allebei. Je kunt in dezelfde beweging het venster en de
+// barometer verzetten, en dan gaat er één bericht over allebei uit. Dat is
+// precies wat we willen: een lid dat twee berichten krijgt over hetzelfde
+// moment leest het tweede niet meer.
+export async function publiceer(env, ik, { cyclus, stand = null, venster = null, reden }) {
+  if (!cyclus) return { fout: "Welke cyclus?", status: 400 };
+  if (stand === null && venster === null) return { fout: "Er is niets gekozen.", status: 400 };
+
+  const nu = await barometerstand(env, cyclus);
+  const staatStand = nu.wij ? Number(nu.wij.stand.waarde) : 1;
+  const staatVenster = nu.wij ? nu.wij.venster.waarde : "pre_analyse";
+
+  const naarVenster = venster === null ? staatVenster : venster;
+  const naarStand = stand === null ? staatStand : Number(stand);
+
+  // De barometer kan alleen verzet worden als hij wakker is. Anders zou je een
+  // stand kunnen publiceren over een positie die er niet is.
+  if (stand !== null && naarVenster !== IN_POSITIE) {
+    return { fout: "De barometer zegt pas iets zodra het venster op 'In positie' staat.", status: 409 };
+  }
+
+  return stelVast(env, ik, { cyclus, stand: naarStand, venster: naarVenster, reden });
+}
+
+// Van kaart naar concept. Dit gaat met opzet via de werkbank en niet
+// rechtstreeks naar bericht.js: alleen hier is bekend wélke gebeurtenissen een
+// kaart zijn, welk sjabloon erbij hoort, en dat een doorrol twee kanten heeft.
+// Zonder die laag kon elke willekeurige gebeurtenis een bericht aan de leden
+// worden, met het verkeerde sjabloon erbij.
+export async function conceptVoorKaart(env, ik, kaartId, cyclusId = null) {
+  const g = await env.DB.prepare(
+    "select id, cyclus, soort from gebeurtenis where id = ? and archief = 0"
+  ).bind(kaartId).first();
+  if (!g) return { fout: "Die kaart bestaat niet.", status: 404 };
+
+  const lijst = await kaarten(env, cyclusId || g.cyclus);
+  const kaart = lijst.find((k) => k.ids.includes(Number(kaartId)));
+  if (!kaart) {
+    return { fout: "Dat is geen openstaande kaart. Er is al over besloten, of het was er nooit een.", status: 409 };
+  }
+
+  // Een doorrol krijgt een doorrolbericht. Lag er een concept klaar over alleen
+  // de sluiting of alleen de opening, dan gaat dat van tafel — het is nooit
+  // verstuurd, en het beschrijft iets anders dan wat er gebeurd is.
+  if (kaart.soort === "doorrol") {
+    await env.DB.prepare(
+      `update publicatie set archief = 1
+        where gebeurtenis in (?, ?) and archief = 0 and status <> 'verstuurd'`
+    ).bind(kaart.ids[0], kaart.ids[1]).run();
+
+    // Het sjabloon vraagt om 'van' en 'naar'. Die staan niet op één van de twee
+    // gebeurtenissen — het is juist het paar dat de doorrol is — dus leggen we
+    // ze vast op de gebeurtenis waar het bericht aan hangt. Dat is geen nieuw
+    // feit: het is wat er gebeurd is, nu ook opgeschreven.
+    const feiten = kaart.feiten.reduce((o, [l, w]) => ({ ...o, [l.toLowerCase()]: w }), {});
+    const g0 = await env.DB.prepare("select feiten from gebeurtenis where id = ?").bind(kaart.id).first();
+    let oud = {};
+    try { oud = g0 && g0.feiten ? JSON.parse(g0.feiten) : {}; } catch { oud = {}; }
+    await env.DB.prepare("update gebeurtenis set feiten = ? where id = ?")
+      .bind(JSON.stringify({ ...oud, van: feiten.uit, naar: feiten.in, netto: feiten.netto }), kaart.id)
+      .run();
+  }
+
+  const uit = await conceptUitKaart(env, ik, kaart.id, kaart.sjabloon);
+  if (uit.fout) return uit;
+
+  // De tweede kant van een doorrol is meegegaan in dit ene bericht. Zonder deze
+  // regel komt hij terug als losse kaart zodra het bericht verstuurd is.
+  if (kaart.meegegaan) {
+    await env.DB.prepare(
+      `update gebeurtenis
+          set beantwoord_op = datetime('now'), antwoord = 'meegegaan in de doorrol',
+              beantwoord_door = ?
+        where id = ? and beantwoord_op is null`
+    ).bind(ik && ik.id ? ik.id : null, kaart.meegegaan).run();
+  }
+  return uit;
+}
+
+// Wat er met een kaart gebeurt als we besluiten hem niet te melden. Dat is een
+// echt besluit en geen wegklikken: het zegt dat de leden dit niet hoeven te
+// weten, en dat hoort met een reden in de stroom te staan.
+export async function nietMelden(env, ik, gebeurtenis, reden) {
+  if (!String(reden || "").trim()) {
+    return { fout: "Zeg waarom dit niet naar de leden gaat.", status: 400 };
+  }
+  const g = await env.DB.prepare(
+    "select id, cyclus, soort, beantwoord_op from gebeurtenis where id = ? and archief = 0"
+  ).bind(gebeurtenis).first();
+  if (!g) return { fout: "Die kaart bestaat niet.", status: 404 };
+  if (g.beantwoord_op) return { fout: "Daar is al over besloten.", status: 409 };
+
+  // Alleen een echte kaart. Zonder deze controle kon elke gebeurtenis in de
+  // stroom stil als afgehandeld gelden — ook een die nooit een kaart was.
+  const lijst = await kaarten(env, g.cyclus);
+  const kaart = lijst.find((k) => k.ids.includes(Number(gebeurtenis)));
+  if (!kaart) return { fout: "Dat is geen openstaande kaart.", status: 409 };
+
+  // Hoort er een tweede gebeurtenis bij deze kaart, dan gaat die mee: anders
+  // staat de helft van een doorrol morgen weer open.
+  if (kaart.meegegaan && Number(kaart.meegegaan) !== Number(gebeurtenis)) {
+    await env.DB.prepare(
+      `update gebeurtenis
+          set beantwoord_op = datetime('now'), antwoord = 'niet melden', beantwoord_door = ?
+        where id = ? and beantwoord_op is null`
+    ).bind(ik && ik.id ? ik.id : null, kaart.meegegaan).run();
+  }
+
+  await env.DB.prepare(
+    `update gebeurtenis
+        set beantwoord_op = datetime('now'), antwoord = 'niet melden',
+            beantwoord_door = ?, detail = ?
+      where id = ? and beantwoord_op is null`
+  ).bind(ik && ik.id ? ik.id : null, String(reden).trim().slice(0, 1000), gebeurtenis).run();
+
+  return { ok: true };
+}

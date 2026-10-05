@@ -20,8 +20,8 @@ import { onverdeeld, wijsToe, verstuurPublicatie, conceptberichten } from "./spi
 import { neemStand, stand as brugstand, zetInstellingen } from "./brug.js";
 import { favorieten, favorietToevoegen, favorietWijzigen, favorietWeg,
          favorietenVolgorde, bezoeken, bezoekBijzetten, bezoekenLeeg } from "./navigator.js";
-import { conceptUitKaart, vraagNalezen, geefVrij, stuurTerug } from "./bericht.js";
-import { huidig as barometer, stelVast } from "./barometer.js";
+import { vraagNalezen, geefVrij, stuurTerug } from "./bericht.js";
+import { werkbank, publiceer, nietMelden, conceptVoorKaart } from "./werkbank.js";
 import { stroom } from "./stroom.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
@@ -262,15 +262,42 @@ async function behandel(request, env, ctx) {
       }
 
 
-      // Welke cycli er lopen. De werkbank opent straks op één cyclus — de
-      // lopende — en dat hoort een scherm niet zelf uit een lijst te raden.
-      if (pad === "/api/werkbank/cycli" && request.method === "GET") {
-        const cycli = (await env.DB.prepare(
-          `select id, label, status, geopend_op from cyclus
-            where archief = 0 and status not in ('afgesloten', 'geannuleerd')
-            order by geopend_op desc`
-        ).all()).results;
-        return json({ cycli });
+      // De werkbank: één vraag, één antwoord. Alles wat het scherm toont komt
+      // uit deze ene route — de stand, de posities, de kaarten en wat er naar de
+      // leden ging. Het scherm stelt hem elke tien seconden opnieuw; er wordt
+      // niets opgeslagen, dus hij mag zo vaak gesteld worden als nodig.
+      if (pad === "/api/werkbank" && request.method === "GET") {
+        const c = url.searchParams.get("cyclus");
+        return json(await werkbank(env, ik, { cyclus: c ? Number(c) : null }));
+      }
+
+      // Publiceren: het venster, de barometer of allebei tegelijk. Dit is het
+      // enige dat een stand vastlegt.
+      if (pad === "/api/werkbank/publiceer" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const uit = await publiceer(env, ik, {
+          cyclus: Number(body.cyclus),
+          // Niet Number(): daar komt true als 1 doorheen, en [4] als 4. Een
+          // cliënt die {"stand": true} stuurt zou de barometer op Ruim zetten
+          // zonder dat iemand iets merkt.
+          stand: typeof body.stand === "number" ? body.stand
+               : typeof body.stand === "string" && body.stand.trim() !== "" && Number.isFinite(Number(body.stand))
+                 ? Number(body.stand) : null,
+          venster: body.venster || null,
+          reden: body.reden,
+        });
+        if (uit.fout) return json(uit, uit.status || 400);
+        return json(uit);
+      }
+
+      // Een kaart die niet naar de leden gaat. Met een reden, want dat is een
+      // besluit en geen wegklikken.
+      const nietMeldenPad = pad.match(/^\/api\/kaart\/(\d+)\/niet-melden$/);
+      if (nietMeldenPad && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const uit = await nietMelden(env, ik, Number(nietMeldenPad[1]), body.reden);
+        if (uit.fout) return json(uit, uit.status || 400);
+        return json(uit);
       }
 
       // De stroom van een cyclus: wat er gebeurde, nieuwste eerst.
@@ -280,32 +307,18 @@ async function behandel(request, env, ctx) {
         return json({ stroom: await stroom(env, Number(stroomRoute[1]), Math.min(n, 200)) });
       }
 
-      // De barometer van een cyclus: wat wij vastgesteld hebben, en wat de leden
-      // ervan weten. Twee velden, met opzet — zolang ze verschillen lopen de
-      // leden achter, en dat hoort niet weggerekend te worden tot één getal.
-      const baro = pad.match(/^\/api\/cyclus\/(\d+)\/barometer$/);
-      if (baro && request.method === "GET") {
-        return json(await barometer(env, Number(baro[1])));
-      }
-      if (baro && request.method === "POST") {
-        const body = await request.json().catch(() => ({}));
-        const uit = await stelVast(env, ik, {
-          cyclus: Number(baro[1]),
-          stand: body.stand, venster: body.venster, reden: body.reden,
-          gebeurtenis: body.gebeurtenis ? Number(body.gebeurtenis) : null,
-        });
-        if (uit.fout) return json(uit, uit.status || 400);
-        return json(uit);
-      }
+      // De barometer van een cyclus staat in /api/werkbank. Er was hier ook een
+      // GET en een POST, en die POST ging rechtstreeks naar stelVast — langs de
+      // regel dat de barometer slaapt tot het venster op 'In positie' staat.
+      // Twee wegen naar dezelfde handeling met één bewaking erop is geen
+      // bewaking. Zie BOUWSPEC §13c.
 
-      // Van kaart naar concept. Een kaart is een gebeurtenis die om een antwoord
-      // vraagt; welke dat zijn bepaalt de werkbank. Het sjabloon staat in
-      // beheer, niet in de code. Twee keer drukken levert hetzelfde concept op,
-      // geen tweede.
+      // Van kaart naar concept. Dit gaat via de werkbank: alleen daar is bekend
+      // wélke gebeurtenissen een kaart zijn, welk sjabloon erbij hoort, en dat
+      // een doorrol twee kanten heeft die allebei meegaan.
       const kaartConcept = pad.match(/^\/api\/kaart\/(\d+)\/concept$/);
       if (kaartConcept && request.method === "POST") {
-        const body = await request.json().catch(() => ({}));
-        const uit = await conceptUitKaart(env, ik, Number(kaartConcept[1]), body.sjabloon || null);
+        const uit = await conceptVoorKaart(env, ik, Number(kaartConcept[1]));
         if (uit.fout) return json(uit, uit.status || 400);
         return json(uit);
       }
@@ -324,9 +337,7 @@ async function behandel(request, env, ctx) {
         return json(uit);
       }
 
-      // De posities die bij geen cyclus horen, en het toewijzen ervan. Dat is
-      // het enige wat een mens nog doet aan de brokerkant: zeggen waar een
-      // contract bij hoort, of dat het er niet bij hoort.
+      // De posities die bij geen cyclus horen, en het toewijzen ervan.
       if (pad === "/api/posities/onverdeeld" && request.method === "GET") {
         const cycli = (await env.DB.prepare(
           `select id, label, status from cyclus

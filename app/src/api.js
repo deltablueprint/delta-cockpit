@@ -141,18 +141,22 @@ export const brugFlex = () => haal("/api/brug/flex");
 
 // ---- de leden: de barometer en de berichten ----
 //
-// Drie functies hieronder hebben op dit moment geen aanroeper: conceptUitKaart,
-// werkbankCycli en haalStroom. Ze wachten op de nieuwe werkbank, en hun routes
-// bestaan en worden door scripts/proef/schermen.mjs gecontroleerd. Staat dit
-// over een week nog zo, dan is het geen wachten meer maar dode code.
+// De werkbank haalt alles in één vraag op. Dat is met opzet: het scherm toont
+// één samenhangend beeld, en drie losse vragen zouden drie momenten opleveren
+// die niet bij elkaar horen.
+export const haalWerkbank = (cyclus = null) =>
+  haal(`/api/werkbank${cyclus ? `?cyclus=${cyclus}` : ""}`);
+export const publiceerStand = (body) =>
+  haal("/api/werkbank/publiceer", { methode: "POST", body });
+export const nietMelden = (kaart, reden) =>
+  haal(`/api/kaart/${kaart}/niet-melden`, { methode: "POST", body: { reden } });
 // Van kaart naar concept. Welke gebeurtenis een kaart is, bepaalt de werkbank;
 // deze route maakt er een bericht van, met het sjabloon uit beheer.
-export const conceptUitKaart = (id, body = {}) =>
-  haal(`/api/kaart/${id}/concept`, { methode: "POST", body });
+// Welk sjabloon erbij hoort weet de werkbank, niet het scherm: de soort kaart
+// bepaalt het, en een doorrol heeft twee kanten die allebei meegaan.
+export const conceptUitKaart = (id) =>
+  haal(`/api/kaart/${id}/concept`, { methode: "POST", body: {} });
 
-export const haalBarometer = (cyclus) => haal(`/api/cyclus/${cyclus}/barometer`);
-export const zetBarometer = (cyclus, body) =>
-  haal(`/api/cyclus/${cyclus}/barometer`, { methode: "POST", body });
 
 export const vraagNalezen = (publicatie, lezer) =>
   haal(`/api/publicatie/${publicatie}/nalezen`, { methode: "POST", body: { lezer } });
@@ -161,6 +165,5 @@ export const geefVrij = (publicatie) =>
 export const stuurTerug = (publicatie, reden) =>
   haal(`/api/publicatie/${publicatie}/terug`, { methode: "POST", body: { reden } });
 
-export const werkbankCycli = () => haal("/api/werkbank/cycli");
 export const haalStroom = (cyclus, limiet = 40) =>
   haal(`/api/cyclus/${cyclus}/stroom?limiet=${limiet}`);

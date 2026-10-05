@@ -40,6 +40,10 @@ const ZONDER_SCHERM = new Set([
   "favoriet", "bezoek", "gebruiker_voorkeur", "inzending", "audit",
   "brokerpositie", "brokergebeurtenis", "brokerverbinding", "brokerinstelling",
   "lynx_rapport", "handelsdag", "cyclus_event",
+  // De stand van de onderliggende. Eén rij per index, overschreven bij elke
+  // hartslag van de brug: een momentopname, geen vastlegging. Wat bewaard moet
+  // blijven staat in de gebeurtenissenstroom.
+  "marktstand",
 ]);
 
 const tabellen = (await q(
@@ -257,10 +261,10 @@ eis("de twaalf kaartdefinities staan op archief",
     (await q("select count(*) n from processtap where kaartsoort is not null and archief = 0"))[0].n === 0);
 eis("het proces 'Wachtrij' ook",
     (await q("select archief from proces where id = 4"))[0].archief === 1);
-for (const label of ["Werkbank", "Motorrondes"]) {
-  eis(`'${label}' staat niet meer in het menu`,
-      (await q("select count(*) n from db_module where label = ? and actief = 1", label))[0].n === 0);
-}
+eis("'Motorrondes' staat niet meer in het menu",
+    (await q("select count(*) n from db_module where label = 'Motorrondes' and actief = 1"))[0].n === 0);
+eis("de werkbank staat weer in het menu",
+    (await q("select count(*) n from db_module where route = '/werkbank' and actief = 1"))[0].n === 1);
 eis("de tabel 'motorronde' staat niet meer in de definitielaag",
     (await q("select count(*) n from db_table where naam = 'motorronde' and actief = 1"))[0].n === 0);
 eis("en haar velden en keuzes ook niet",

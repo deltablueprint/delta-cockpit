@@ -57,19 +57,28 @@ async function gegevensVoor(env, g) {
 // geen twee concepten opleveren: dan staan er twee halve berichten en gaat er
 // een de deur uit die iemand anders nog aan het schrijven was.
 export async function conceptUitKaart(env, ik, kaartId, sjabloonnaam = null) {
+  // Een kaart is een gebeurtenis die nog om een antwoord vraagt. Welke dat zijn
+  // is een vraag over de stroom en geen vlag op een rij (BOUWSPEC §13b), dus er
+  // wordt hier niet op een vlag gefilterd. Wat wel geldt: waar al over besloten
+  // is — gemeld, of bewust niet gemeld — levert geen tweede bericht op.
   const g = await env.DB.prepare(
-    "select * from gebeurtenis where id = ? and vraagt_antwoord = 1"
+    "select * from gebeurtenis where id = ? and archief = 0"
   ).bind(kaartId).first();
   if (!g) return { fout: "Die kaart bestaat niet.", status: 404 };
+  if (g.beantwoord_op) {
+    return { fout: `Daar is al over besloten: ${g.antwoord || "afgehandeld"}.`, status: 409 };
+  }
 
   const bestaat = await env.DB.prepare(
     "select * from publicatie where gebeurtenis = ? and archief = 0 limit 1"
   ).bind(kaartId).first();
   if (bestaat) return { ok: true, publicatie: bestaat.id, bestond_al: true };
 
-  const d = await env.DB.prepare("select * from processtap where id = ?").bind(g.processtap).first();
-  const naam = sjabloonnaam || (d && d.knop1_sjabloon);
-  if (!naam) return { fout: "Deze kaart wijst geen sjabloon aan.", status: 400 };
+  // Welk sjabloon erbij hoort zegt de aanroeper. Dat stond ooit in de
+  // kaartdefinitie; die laag is weg, en de werkbank weet het beter: zij kent de
+  // soort gebeurtenis waar de knop onder staat.
+  const naam = sjabloonnaam;
+  if (!naam) return { fout: "Er is geen sjabloon gekozen.", status: 400 };
 
   const sjabloon = await env.DB.prepare(
     "select * from berichtsjabloon where naam = ? and archief = 0"
@@ -85,7 +94,7 @@ export async function conceptUitKaart(env, ik, kaartId, sjabloonnaam = null) {
   // Een vaste nalezer die jijzelf blijkt te zijn, is geen nalezer. Dan ligt het
   // bericht bij jou, geef je het zelf vrij, en lijkt het alsof er iemand
   // meegekeken heeft.
-  const gevraagd = sjabloon.vaste_nalezer || (d && d.tweede_lezer) || null;
+  const gevraagd = sjabloon.vaste_nalezer || null;
   const nalezer = gevraagd && ik && gevraagd === ik.id ? null : gevraagd;
 
   const gemaakt = await env.DB.prepare(
@@ -103,7 +112,10 @@ export async function conceptUitKaart(env, ik, kaartId, sjabloonnaam = null) {
     // later, dan verandert een verstuurd bericht niet mee: wat eruit ging, ging
     // eruit.
     positie.contract || null, positie.strike || null, positie.expiratiedatum || null,
-    positie.aantal || null, positie.premie_pt || null, positie.resultaat_pt || null,
+    // De kolom op positie heet ontvangen_premie_pt. 'premie_pt' bestaat daar
+    // niet, dus hier stond altijd null — en in het bericht stond "Premie:
+    // punten".
+    positie.aantal || null, positie.ontvangen_premie_pt ?? null, positie.resultaat_pt ?? null,
     // Niet terugvallen op het ruwe sjabloon: daar staan de accolades nog in, en
     // dan gaat er een bericht met {{positie.naam}} erin de deur uit.
     vulIn(sjabloon.tekst, gegevens) || "",

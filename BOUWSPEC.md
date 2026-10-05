@@ -1617,6 +1617,42 @@ Die laatste zijn de ene plek waar wél verwijderd wordt, en dat is precies zoals
 
 **Een kaart blijft bestaan, maar alleen voor een positie.** Open, gesloten, doorgerold — dat zijn de enige drie. De doorrol wordt herkend: sluit een positie en gaat er kort daarna een nieuwe open, dan verandert de kaart van de sluiting van vorm en laadt het doorrolsjabloon met beide contracten erin. De mapping staat in code, niet als ingerichte SQL.
 
+## 13c. De nieuwe werkbank (migratie 0128, 5 okt 2026)
+
+Het scherm waarop je begint, herbouwd uit `docs/mockup-werkbank.html`. Vier vakken, in deze volgorde, en niets anders.
+
+**1. Stand naar de leden.** Het venster boven, de barometer eronder, en **één knop Publiceren voor allebei**. Kies je er twee, dan gaat er één bericht uit over allebei — een lid dat twee berichten krijgt over hetzelfde moment leest het tweede niet meer. De barometer **slaapt** tot het venster op *In positie* staat: daarvoor zitten wij er niet in en vragen we de leden niets, daarna is de cyclus uit. Hij is dan grijs en onklikbaar, met één regel waarom.
+
+**2. De barometer wordt gemeten.** De vijf treden heten nu naar wat ze meten, met grenzen uit beheer:
+
+| Stand | Wanneer | Grens in beheer |
+|---|---|---|
+| 1 Ruim | > 6 % boven de strike | `barometer_comfortabel_pct` |
+| 2 Comfortabel | 4 – 6 % | `barometer_comfortabel_pct` |
+| 3 Let op | 2 – 4 % | `barometer_letop_pct` |
+| 4 Krap | 0 – 2 % | `barometer_krap_pct` |
+| 5 Onder de strike | spot < strike | — |
+
+1 blijft het rustigst; de schaal zelf verandert niet, alleen wat hij betekent en wie hem invult. **De zwakste open positie bepaalt de stand** — niet het gemiddelde: één positie onder de strike vraagt iets van een lid, ook als de twee andere ruim staan.
+
+**Het systeem stelt voor, een mens publiceert.** Het voorstel staat als stippellijn om de stand; je klikt hem aan en drukt op publiceren. Er wordt niets automatisch vastgesteld.
+
+**Meten kan ook niet lukken, en dan zegt het dat.** De meting heeft de stand van de onderliggende nodig. Die stuurt de brug mee (`marktstand`, overschreven bij elke hartslag). Is er geen koers, of is hij ouder dan `koers_vers_minuten`, dan stelt het systeem **niets** voor en staat op het scherm waarom. Een stand op een koers van gisteren is erger dan geen stand: hij ziet er even stellig uit.
+
+**3. De posities.** Per positie een balk met de vijf standen en een merkteken waar hij staat. De vakjes hebben de breedte van hun eigen bereik — even brede vakjes zouden het merkteken in een ander vakje zetten dan het label ernaast. Uitklappen geeft zes cijfers: premie, ask (de laatprijs; ontbreekt die, dan de marktprijs, en dat staat erbij), open resultaat, break-even met de buffer, stoploss met wat er nog te gaan is, en de dagen.
+
+**4. Ledencommunicatie.** Twee kolommen in één kader: links de kaarten, rechts wat verstuurd is.
+
+**Een kaart komt alleen uit een positie** — open, gesloten, doorgerold — **en wordt afgeleid, niet weggeschreven.** Er is geen vlag en geen motor: een kaart staat open zolang er geen bericht over verstuurd is en niemand gezegd heeft dat het niet gemeld wordt. Daardoor kán hij niet blijven staan nadat het werk gedaan is; hij verdwijnt doordat het bericht weg is. Dat was de fout die de vorige werkbank maakte.
+
+**De doorrol wordt herkend.** Sluit een positie en gaat er binnen `doorrol_minuten` een nieuwe open in dezelfde cyclus, dan is dat één handeling: de kaart van de sluiting verandert van vorm, laadt het doorrolsjabloon en draagt beide contracten met het nettoresultaat. Er komt geen kaart bij.
+
+**Niet melden is een besluit, geen wegklikken.** Het vraagt een reden, en die komt op de gebeurtenis te staan met wie het besloot.
+
+**Routes:** `GET /api/werkbank` (alles in één vraag — het scherm toont één samenhangend beeld, en drie losse vragen zouden drie momenten opleveren die niet bij elkaar horen), `POST /api/werkbank/publiceer`, `POST /api/kaart/:id/niet-melden`, `POST /api/kaart/:id/concept`.
+
+**Wat de brug erbij kreeg:** één `reqMktData` per onderliggende index, en `marktstanden` in de zending. Dat vraagt een herstart van de brug op de VPS; zonder die herstart meet de barometer niets en zegt hij dat.
+
 ## 14. Openstaande punten
 
 *Opgelost in versie 1.0: versiebeheer van de rekenlaag (3.4), blootstelling en sizing op portefeuilleniveau (6.1), de handelskalender als tabel (3.2), het splitsen van voorgenomen en uitgevoerde posities (3.3), registratie van afwijking tussen besluit en uitvoering (6), plus de vier standen met "niet gemeten" (4.4), de chartanalyse volgens de metadata-lijn (4.3b) en aanmelden per persoon (1, 11).*

@@ -142,5 +142,37 @@ for (const s of sjablonen) {
       (await q("select count(*) n from db_choice where tabel='publicatie' and kolom='soort' and waarde=?", s.soort))[0].n === 1);
 }
 
+// ------------------------------------- elk sjabloon vult ook echt in
+//
+// Wat niet ingevuld kan worden valt weg. Dat is met opzet — accolades in een
+// bericht lezen als een storing — maar het betekent ook dat een plaatshouder
+// die naar een kolom wijst die niet bestaat stil een gat achterlaat. Er is zo
+// een bericht de deur uit gegaan met "Premie: punten" erin.
+const kolommenVan = async (tabel) =>
+  new Set((await q(`select name from pragma_table_info('${tabel}')`)).map((k) => k.name));
+const kolommen = {
+  positie: await kolommenVan("positie"),
+  cyclus: new Set([...await kolommenVan("cyclus"), "naam"]),
+  beoordelingsmoment: await kolommenVan("beoordelingsmoment"),
+};
+for (const sj of await q("select naam, titel, tekst from berichtsjabloon where archief = 0")) {
+  for (const m of `${sj.titel} ${sj.tekst}`.matchAll(/\{\{\s*([a-z0-9_]+)\.([a-z0-9_]+)\s*\}\}/gi)) {
+    const [, groep, veld] = m;
+    // 'feiten' komt van de gebeurtenis en is vrij; de rest is een tabel.
+    if (groep === "feiten") continue;
+    eis(`${sj.naam}: {{${groep}.${veld}}} wijst naar een groep die bestaat`, !!kolommen[groep]);
+    if (kolommen[groep]) {
+      eis(`${sj.naam}: ${groep} heeft een kolom ${veld}`,
+          kolommen[groep].has(veld) || (groep === "positie" && veld === "naam"));
+    }
+  }
+}
+
+// En in de praktijk: er staat echt een premie in.
+const vol = (await q("select tekst from publicatie where id = ?", pid))[0];
+eis("de premie staat in het verstuurde bericht", /38,5|38\.5/.test(vol.tekst) || !/Premie:\s*punten/.test(vol.tekst));
+eis("en de publicatie legde de premie vast",
+    (await q("select premie_pt from publicatie where id = ?", pid))[0].premie_pt !== null);
+
 console.log(fouten === 0 ? "alles klopt." : `${fouten} fout(en).`);
 process.exit(fouten === 0 ? 0 : 1);

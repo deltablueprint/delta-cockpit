@@ -8,7 +8,7 @@
 import { readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
-const DOEN = ["migraties", "record", "navigator", "aanmaken", "brug", "spiegel", "stroom", "bericht", "barometer", "inrichting", "schermen", "hersteld"];
+const DOEN = ["migraties", "record", "navigator", "aanmaken", "brug", "spiegel", "stroom", "bericht", "barometer", "werkbank", "inrichting", "schermen", "hersteld"];
 const bestaat = new Set(readdirSync("scripts/proef").filter((f) => f.endsWith(".mjs")).map((f) => f.slice(0, -4)));
 
 // En andersom: een proef die wel bestaat maar niet in de lijst staat, draait

@@ -1525,6 +1525,197 @@ body.sleept .lijsttabel { pointer-events: none; }
 .berichtklaar { grid-column: 1 / -1; margin: 0; padding: 8px 0; font-size: 12.5px; color: var(--ink2); }
 @media (max-width: 900px) { .berichtinhoud { grid-template-columns: minmax(0, 1fr); gap: 14px; } }
 
+/* =========================================================== de werkbank ===
+   Vier vakken onder elkaar: de stand naar de leden, de posities, wat er nog
+   gemeld moet worden en wat er gemeld is. Geen taken — die horen op het
+   cyclusrecord. Zie BOUWSPEC §13b.
+
+   De vijf standen van de barometer hebben hun eigen, fellere kleuren. Dat is
+   met opzet: dit is de ene meter die in één oogopslag moet kloppen, en de rest
+   van het scherm blijft gedempt zodat hij eruit springt. */
+:root {
+  --s1: #0A9D4E;  --s2: #8DC63F;  --s3: #FBC02D;  --s4: #F26A21;  --s5: #D7261E;
+}
+
+.werkbank { padding: 18px 20px 48px; max-width: 1020px; display: flex; flex-direction: column; gap: 16px; }
+.wbtop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cycluskies {
+  height: 30px; padding: 0 10px; border: 1px solid #D8D5CE; background: #fff; border-radius: 2px;
+  font-family: inherit; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer;
+}
+.wbachter { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+.wbachter .stip { width: 9px; height: 9px; border-radius: 50%; background: var(--grn); flex-shrink: 0; }
+.wbachter.wacht { color: var(--amb); } .wbachter.wacht .stip { background: var(--amb); }
+.wbachter.bij { color: var(--grn); }
+.wbleeg { margin: 0; padding: 16px 14px; font-size: 12.5px; color: var(--mut); }
+.wbnoot { margin: 10px 0 0; font-size: 11.5px; color: var(--mut); }
+.wbnoot.wblet { color: var(--amb); font-weight: 600; }
+.wbmelding { font-size: 12.5px; color: var(--red); }
+
+/* Het systeem stelt iets voor. Een stippellijn, want het is een voorstel en
+   geen stand: wat het systeem meet is niet wat wij vaststellen. */
+.suggestie {
+  display: flex; align-items: center; gap: 10px; padding: 9px 14px;
+  background: var(--ambbg); border-bottom: 1px solid #E6D3A8;
+  font-size: 12.5px; color: var(--amb); font-weight: 600;
+}
+.suggestie .vk { width: 13px; height: 13px; border: 2px dashed currentColor; border-radius: 2px; flex-shrink: 0; }
+
+/* --- het venster: zes vakjes naast elkaar --- */
+.deel { padding-bottom: 16px; }
+.deel + .deel { padding-top: 16px; border-top: 1px solid var(--b2); }
+.deel:last-child { padding-bottom: 0; }
+.deelkop { display: flex; align-items: baseline; gap: 9px; margin-bottom: 10px; flex-wrap: wrap; }
+.dtitel { font-size: 13px; font-weight: 700; }
+.dmeta { font-size: 11.5px; color: var(--mut); }
+.dkent { margin-left: auto; font-size: 11.5px; color: var(--mut); }
+
+.vensterrij { display: flex; gap: 6px; }
+.vhok {
+  flex: 1 1 0; min-width: 0; border: 1px solid var(--b1); background: var(--soft); border-radius: 3px;
+  padding: 11px 10px 12px; cursor: pointer; text-align: left; font-family: inherit;
+}
+.vhok .nm { font-size: 12px; font-weight: 600; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.vhok:hover { border-color: var(--blue); }
+.vhok.gehad { background: #fff; } .vhok.gehad .nm { color: var(--mut); }
+.vhok.nu { background: var(--navbg); border-color: var(--navbg); }
+.vhok.nu .nm { color: #fff; font-weight: 700; }
+.vhok.gekozen { border: 2px solid var(--blue); background: var(--bluebg); }
+.vhok.gekozen .nm { color: var(--blue); font-weight: 700; }
+
+/* De barometer slaapt tot wij in positie zitten. Niet verborgen — je moet
+   kunnen zien dat hij bestaat en waarom hij nog niets zegt. */
+.slaapt { display: none; font-size: 12.5px; color: var(--mut); background: var(--soft);
+  border: 1px solid var(--b1); border-radius: 3px; padding: 9px 12px; margin-bottom: 10px; }
+.deel.uit .slaapt { display: block; }
+.deel.uit .meterrij { opacity: .32; filter: grayscale(1); pointer-events: none; }
+.deel.uit .dkent { display: none; }
+
+.meterrij { display: grid; grid-template-columns: 310px 1fr; gap: 18px; align-items: center; }
+.gauge { position: relative; }
+.gauge svg { display: block; width: 100%; height: auto; }
+.gauge .seg { cursor: pointer; }
+.gauge .seg:hover { opacity: .82; }
+.gaugetekst { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; }
+.gaugenaam { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.gaugeonder { font-size: 11px; color: var(--mut); }
+
+.legenda { display: flex; flex-direction: column; gap: 5px; }
+.lreg { display: flex; align-items: center; gap: 9px; padding: 5px 8px; border-radius: 3px;
+  border: 1px solid transparent; cursor: pointer; font-size: 12.5px; color: var(--ink2);
+  font-family: inherit; background: none; text-align: left; }
+.lreg:hover { background: var(--soft); }
+.lreg .vlak { width: 15px; height: 15px; border-radius: 3px; flex-shrink: 0; }
+.lreg .nm { font-weight: 600; min-width: 118px; }
+.lreg .om { color: var(--mut); font-size: 12px; }
+.lreg.nu { background: var(--b2); }
+.lreg.tip { border-color: var(--amb); border-style: dashed; }
+.lreg.gekozen { border-color: var(--blue); border-style: solid; background: var(--bluebg); }
+
+.publiceerbalk { display: flex; align-items: center; gap: 12px; padding: 11px 14px;
+  background: var(--soft); border-top: 1px solid var(--b1); }
+.pubtekst { flex: 1 1 auto; min-width: 0; font-size: 12.5px; color: var(--mut); }
+.pubtekst b { color: var(--ink); font-weight: 600; }
+
+/* --- de posities --- */
+.posblok { border-bottom: 1px solid var(--b2); }
+.posblok:last-child { border-bottom: none; }
+.posblok.uitgeklapt { background: var(--soft); }
+.pos { width: 100%; border: 0; background: none; font-family: inherit; text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: 210px 1fr 108px; gap: 14px; align-items: center; padding: 12px 14px; }
+.pos:hover { background: var(--soft); }
+.posdicht { opacity: .5; }
+.poslinks { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.chev { color: var(--dim); font-size: 11px; width: 10px; flex-shrink: 0; }
+.posnaam { font-size: 13px; font-weight: 600; }
+.posonder { font-size: 11px; color: var(--mut); font-variant-numeric: tabular-nums; }
+.posstand { text-align: right; }
+
+/* Vijf standen, vijf vakjes — met lucht ertussen, net als de venstervakjes.
+   Aaneengesloten lezen ze als één verloop; los lezen ze als vijf standen, en
+   dat is wat ze zijn. De breedte van een vakje is zijn eigen bereik: even brede
+   vakjes zouden het merkteken in een ander vakje zetten dan het label ernaast. */
+.spoorbalk { position: relative; height: 22px; display: flex; gap: 4px; }
+.spoorbalk .z { border-radius: 3px; }
+.merker { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--ink);
+  border-radius: 2px; box-shadow: 0 0 0 2px #fff; }
+.merkerlab { position: absolute; top: -19px; transform: translateX(-50%); font-size: 10.5px;
+  font-weight: 700; white-space: nowrap; color: var(--ink); }
+.zwakste { padding: 10px 14px; border-top: 1px solid var(--b2); font-size: 12.5px;
+  color: var(--ink3); background: var(--soft); }
+
+/* --- het detail onder een positie: zes cijfers, een balk, en wat eraan hangt --- */
+.detail { padding: 0 14px 16px 36px; }
+.dvak { background: #fff; border: 1px solid var(--b1); border-radius: 4px; padding: 14px 16px 15px;
+  display: flex; flex-direction: column; gap: 14px; }
+.dfeiten { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+.dfeit { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.dlab { font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); }
+.dwaarde { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.dnoot { font-size: 11px; color: var(--mut); }
+.dbalken { display: flex; flex-direction: column; gap: 6px; max-width: 420px; }
+.dbalkrij { display: grid; grid-template-columns: 96px 1fr 38px; gap: 10px; align-items: center; }
+.dbalklab { font-size: 11px; color: var(--mut); }
+.dbalk { height: 7px; border-radius: 4px; background: var(--b2); overflow: hidden; }
+.dbalk i { display: block; height: 100%; border-radius: 4px; }
+.dbalkpct { font-size: 11px; color: var(--ink2); text-align: right; font-variant-numeric: tabular-nums; }
+.dmerken { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 13px; border-top: 1px solid var(--b2); }
+.dmerken .knop { margin-left: auto; }
+.dmerk { font-size: 11.5px; color: var(--mut); background: var(--soft); border: 1px solid var(--b1);
+  border-radius: 3px; padding: 4px 9px; line-height: 1.3; }
+.dmerk.dlet { color: var(--amb); background: var(--ambbg); border-color: #E6D3A8; font-weight: 600; }
+.dmerk.dblauw { color: var(--blue); background: var(--bluebg); border-color: #CFE0EA; }
+
+/* --- kaarten en verstuurd, één kader met twee kolommen ---
+   Alles hieronder staat onder .werkbank. Zonder dat overschreef .kaart de
+   bestaande kaartopmaak op zes andere schermen, en .feiten het grid op het
+   go/no-go-scherm: niets viel om, het zag er alleen ergens anders anders uit. */
+.werkbank .tweekolom { display: grid; grid-template-columns: 1fr 1fr; }
+.werkbank .kol { border-right: 1px solid var(--b1); }
+.werkbank .kol:last-child { border-right: none; }
+.werkbank .kolkop { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: var(--head);
+  border-bottom: 1px solid var(--b1); font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--mut); }
+.werkbank .kolkop .n { margin-left: auto; font-weight: 600; color: var(--dim); letter-spacing: 0; text-transform: none; font-size: 11px; }
+
+.werkbank .kaart { padding: 12px 14px; border-bottom: 1px solid var(--b2); display: flex; flex-direction: column; gap: 8px; }
+.werkbank .kaart:last-child { border-bottom: none; }
+.werkbank .kaartkop { display: flex; align-items: center; gap: 8px; }
+.werkbank .kaartkop h3 { margin: 0; font-size: 14px; font-weight: 600; flex: 1 1 auto; min-width: 0; }
+.werkbank .pt { font-size: 9.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 3px; white-space: nowrap; }
+.werkbank .p-hoog { color: var(--red); background: var(--redbg); }
+.werkbank .p-med { color: var(--amb); background: var(--ambbg); }
+.werkbank .p-laag { color: var(--mut); background: var(--b2); }
+.werkbank .omgezet { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--blue);
+  background: var(--bluebg); border-radius: 3px; padding: 6px 9px; }
+.werkbank .feiten { display: flex; flex-wrap: wrap; gap: 3px 20px; background: var(--soft);
+  border: 1px solid var(--b1); border-radius: 3px; padding: 8px 11px; }
+.werkbank .feit { display: flex; flex-direction: column; gap: 1px; }
+.werkbank .flab { font-size: 9.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.werkbank .fwaarde { font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.werkbank .kaartknoppen { display: flex; justify-content: flex-end; gap: 8px; }
+
+.werkbank .vreg { display: flex; align-items: flex-start; gap: 9px; padding: 10px 14px;
+  border-bottom: 1px solid var(--b2); font-size: 12.5px; }
+.werkbank .vreg:last-child { border-bottom: none; }
+.werkbank .vreg .vink { color: var(--grn); font-weight: 700; line-height: 1.4; }
+.werkbank .vreg .kern { flex: 1 1 auto; min-width: 0; }
+.werkbank .vreg .kern b { display: block; font-weight: 600; color: var(--ink); font-size: 13px; }
+.werkbank .vreg .kern span { color: var(--mut); }
+.werkbank .vreg .tijd { font-size: 11px; color: var(--faint); white-space: nowrap; }
+
+@media (max-width: 1100px) {
+  .meterrij { grid-template-columns: 1fr; }
+  .tweekolom { grid-template-columns: 1fr; }
+  .kol { border-right: none; border-bottom: 1px solid var(--b1); }
+  .dfeiten { grid-template-columns: repeat(3, 1fr); }
+  .pos { grid-template-columns: 1fr; }
+  .detail { padding-left: 14px; }
+  .vensterrij { flex-wrap: wrap; }
+  .vhok { flex: 1 1 30%; }
+}
+
 /* ========================================================== de opsteller ===
    Eén bericht, één kolom. De volgorde van het scherm is de volgorde van het
    werk: wat er gebeurd is, wat wij erover schrijven, en dan pas de deur. */

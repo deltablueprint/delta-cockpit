@@ -10,10 +10,10 @@ import { favorietenscherm } from "./favorieten.js";
 import { koppelingscherm } from "./koppeling.js";
 import { onverdeeldscherm } from "./onverdeeld.js";
 import { berichtenscherm } from "./berichten.js";
+import { werkbankscherm } from "./werkbank.js";
 import { zetBezoek } from "./api.js";
 import { stopLive } from "./live.js";
 import { opstellerscherm } from "./opsteller.js";
-import { barometerscherm } from "./barometerscherm.js";
 
 let persoon = null;
 let meta = null;
@@ -35,8 +35,8 @@ function soortVanRoute(route) {
     const tabel = (meta && meta.tabellen || []).find((x) => x.naam === t[1]);
     return tabel ? tabel.label : t[1].replace(/_/g, " ");
   }
+  if (route === "/werkbank") return "werkbank";
   if (route.startsWith("/bericht/")) return "bericht";
-  if (route.startsWith("/barometer/")) return "barometer";
   if (route.startsWith("/uitkomst/")) return "gesprek";
   if (route.startsWith("/gonogo/")) return "go / no-go";
   return null;
@@ -65,6 +65,13 @@ function teken() {
     zetBezoek({ route, titel, soort: soortVanRoute(route) }).catch(() => {});
   }, 1200);
 
+  if (pad === "/werkbank") {
+    huidigeLijst.tabelnaam = null;
+    huidigeLijst.url = null;
+    werkbankscherm(inhoud, kruimel);
+    return;
+  }
+
   if (pad === "/berichten") {
     huidigeLijst.tabelnaam = null;
     huidigeLijst.url = null;
@@ -81,14 +88,6 @@ function teken() {
     return;
   }
 
-  // De barometer van één cyclus.
-  const baroRoute = pad.match(/^\/barometer\/(\d+)$/);
-  if (baroRoute) {
-    huidigeLijst.tabelnaam = null;
-    huidigeLijst.url = null;
-    barometerscherm(inhoud, kruimel, Number(baroRoute[1]));
-    return;
-  }
 
   if (pad === "/onverdeeld") {
     huidigeLijst.tabelnaam = null;

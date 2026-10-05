@@ -130,16 +130,19 @@ body { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif
 /* ── posities ── */
 .posnaam { font-size: 13px; font-weight: 600; }
 .posonder { font-size: 11px; color: var(--mut); font-variant-numeric: tabular-nums; }
-.spoorbalk { position: relative; height: 22px; border-radius: 3px; overflow: visible; display: flex; gap: 0; }
-.spoorbalk .z { flex: 1 1 0; }
-.spoorbalk .z:first-child { border-radius: 3px 0 0 3px; } .spoorbalk .z:last-child { border-radius: 0 3px 3px 0; }
+/* Vijf standen, vijf vakjes — met lucht ertussen, net als de venstervakjes.
+   Aaneengesloten lezen ze als één verloop; los lezen ze als vijf standen, en
+   dat is wat ze zijn. */
+.spoorbalk { position: relative; height: 22px; display: flex; gap: 4px; }
+.spoorbalk .z { border-radius: 3px; }
 .merker { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--ink); border-radius: 2px; box-shadow: 0 0 0 2px #fff; }
 .merkerlab { position: absolute; top: -20px; transform: translateX(-50%); font-size: 10.5px; font-weight: 700; white-space: nowrap; color: var(--ink); }
 .posstand { text-align: right; }
 .badge { display: inline-flex; align-items: center; height: 19px; padding: 0 8px; border-radius: 3px; font-size: 10.5px; font-weight: 700; color: #fff; white-space: nowrap; }
 .posdicht { opacity: .4; }
 .schaalrij { display: grid; grid-template-columns: 210px 1fr 92px; gap: 14px; padding: 2px 14px 10px; }
-.schaal { display: flex; justify-content: space-between; font-size: 10px; color: var(--faint); grid-column: 2; }
+.schaal { display: flex; gap: 4px; font-size: 10px; color: var(--faint); grid-column: 2; }
+.schaal span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .zwakste { padding: 10px 14px; border-top: 1px solid var(--b2); font-size: 12.5px; color: var(--ink3); background: var(--soft); }
 .zwakste b { font-weight: 600; }
 
@@ -147,45 +150,43 @@ body { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif
 .posblok { border-bottom: 1px solid var(--b2); }
 .posblok:last-child { border-bottom: none; }
 .posblok.uitgeklapt { background: var(--soft); }
-.pos { width: 100%; border: 0; background: none; font-family: inherit; text-align: left; cursor: pointer; }
-.pos { display: grid; grid-template-columns: 210px 1fr 92px; gap: 14px; align-items: center; padding: 12px 14px; border-bottom: none; }
+.pos { width: 100%; border: 0; background: none; font-family: inherit; text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: 210px 1fr 92px; gap: 14px; align-items: center; padding: 12px 14px; }
 .pos:hover { background: var(--soft); }
 .poslinks { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .chev { color: var(--dim); font-size: 11px; width: 10px; flex-shrink: 0; }
 
-.detail { padding: 2px 14px 16px 36px; }
-.dkolommen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--b1); border: 1px solid var(--b1); border-radius: 4px; overflow: hidden; }
-.dvak { background: #fff; padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
-.dkop { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
-.dfeiten { display: grid; grid-template-columns: 1fr 1fr; gap: 11px 16px; }
-.dfeiten.dkolom { grid-template-columns: 1fr; gap: 8px; }
+/* Eén vak, drie dingen: de cijfers, de twee balken, en wat eraan hangt. */
+.detail { padding: 0 14px 16px 36px; }
+.dvak { background: #fff; border: 1px solid var(--b1); border-radius: 4px; padding: 14px 16px 15px;
+  display: flex; flex-direction: column; gap: 14px; }
+
+.dfeiten { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
 .dfeit { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .dlab { font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); }
-.dwaarde { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.dwaarde { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .dnoot { font-size: 11px; color: var(--mut); }
-.dtekst { font-size: 13px; font-weight: 600; color: var(--ink); }
 
-.dbalkrij { display: grid; grid-template-columns: 86px 1fr 34px; gap: 9px; align-items: center; }
+.dbalken { display: flex; flex-direction: column; gap: 6px; max-width: 420px; }
+.dbalkrij { display: grid; grid-template-columns: 86px 1fr 34px; gap: 10px; align-items: center; }
 .dbalklab { font-size: 11px; color: var(--mut); }
 .dbalk { height: 7px; border-radius: 4px; background: var(--b2); overflow: hidden; }
 .dbalk i { display: block; height: 100%; border-radius: 4px; }
 .dbalkpct { font-size: 11px; color: var(--ink2); text-align: right; font-variant-numeric: tabular-nums; }
 
-.duitleg { margin: 0; font-size: 12px; color: var(--ink3); line-height: 1.5; }
-.duitleg b { font-weight: 600; }
-.dgrens { padding-top: 9px; border-top: 1px solid var(--b2); color: var(--mut); }
-.dlet { color: var(--amb); }
-.dmerk { font-size: 11.5px; color: var(--mut); background: var(--soft); border: 1px solid var(--b1); border-radius: 3px; padding: 6px 9px; line-height: 1.4; }
-.dmerk.dlet { color: var(--amb); background: var(--ambbg); border-color: #E6D3A8; }
+.dmerken { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding-top: 13px; border-top: 1px solid var(--b2); }
+.dmerken .knop { margin-left: auto; }
+.dmerken .knop + .knop { margin-left: 0; }
+.dmerk { font-size: 11.5px; color: var(--mut); background: var(--soft); border: 1px solid var(--b1);
+  border-radius: 3px; padding: 4px 9px; line-height: 1.3; }
+.dmerk.dlet { color: var(--amb); background: var(--ambbg); border-color: #E6D3A8; font-weight: 600; }
 .dmerk.dblauw { color: var(--blue); background: var(--bluebg); border-color: #CFE0EA; }
 
-.dregels { display: flex; flex-direction: column; gap: 5px; margin-top: 2px; padding-top: 9px; border-top: 1px solid var(--b2); }
-.dregel { display: flex; gap: 9px; font-size: 11.5px; color: var(--ink2); line-height: 1.4; }
-.dtijd { flex-shrink: 0; width: 76px; color: var(--faint); font-variant-numeric: tabular-nums; }
-.dregel.dmist { color: var(--amb); } .dregel.dmist .dtijd { color: var(--amb); font-weight: 600; }
-.dknoppen { display: flex; gap: 8px; margin-top: auto; padding-top: 4px; }
-
-@media (max-width: 1180px) { .dkolommen { grid-template-columns: 1fr; } .detail { padding-left: 14px; } }
+@media (max-width: 1180px) {
+  .dfeiten { grid-template-columns: repeat(3, 1fr); }
+  .detail { padding-left: 14px; }
+}
 
 /* ── kaarten + verstuurd, één kader, twee kolommen ── */
 .tweekolom { display: grid; grid-template-columns: 1fr 1fr; }
@@ -312,7 +313,7 @@ body { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif
         <section class="paneel">
           <div class="paneelkop">Posities<span class="meta">spot 5 412 · 14:28 · de zwakste bepaalt de barometer</span></div>
           <div id="posities"></div>
-          <div class="schaalrij"><span class="schaal"><span>onder de strike</span><span>+2 %</span><span>+4 %</span><span>+6 %</span><span>ruim</span></span></div>
+          <div class="schaalrij"><span class="schaal" id="schaal"></span></div>
           <div class="zwakste" id="zwakste"></div>
         </section>
 
@@ -436,12 +437,13 @@ function tekenMeter() {
   let svg = "";
   STANDEN.forEach((st, i) => {
     const a0 = 180 - i * 36, a1 = a0 - 36;
+    const lucht = 2.2;                       // graden tussenruimte per kant
     const geselecteerd = S.baro.gekozen === i;
     const voorgesteld = wakker && S.baro.tip === i && S.baro.gekozen === null && S.baro.tip !== S.baro.nu;
-    svg += `<path class="seg" data-stand="${i}" d="${sector(a0 - 1, a1 + 1, RO, RI)}" fill="${st.kl}"
+    svg += `<path class="seg" data-stand="${i}" d="${sector(a0 - lucht, a1 + lucht, RO, RI)}" fill="${st.kl}"
              opacity="${geselecteerd || voorgesteld || (S.baro.gekozen === null && i === toon) ? 1 : .72}"></path>`;
-    if (voorgesteld) svg += `<path d="${sector(a0 - 1, a1 + 1, RO + 5, RI - 5)}" fill="none" stroke="#8A5A12" stroke-width="2.5" stroke-dasharray="6 4"></path>`;
-    if (geselecteerd) svg += `<path d="${sector(a0 - 1, a1 + 1, RO + 5, RI - 5)}" fill="none" stroke="#136289" stroke-width="3"></path>`;
+    if (voorgesteld) svg += `<path d="${sector(a0 - lucht, a1 + lucht, RO + 5, RI - 5)}" fill="none" stroke="#8A5A12" stroke-width="2.5" stroke-dasharray="6 4"></path>`;
+    if (geselecteerd) svg += `<path d="${sector(a0 - lucht, a1 + lucht, RO + 5, RI - 5)}" fill="none" stroke="#136289" stroke-width="3"></path>`;
   });
   const h = 180 - (S.baro.nu + 0.5) * 36;
   const [nx, ny] = punt(h, RO - 14);
@@ -545,63 +547,44 @@ function detail(p) {
   const verstreken = ((p.looptijd - p.dagen) / p.looptijd) * 100;
   const breakeven = p.strike - p.premie;
   const buffer = ((SPOT - breakeven) / SPOT) * 100;
-  const euro = (pt) => "€ " + Math.round(pt * 10 * p.aantal).toLocaleString("nl-BE");
   const getal = (n) => n.toLocaleString("nl-BE");
 
   const m = (l, w, n) => `<span class="dfeit"><span class="dlab">${l}</span><span class="dwaarde">${w}</span>${n ? `<span class="dnoot">${n}</span>` : ""}</span>`;
-  const t = (l, w) => `<span class="dfeit"><span class="dlab">${l}</span><span class="dtekst">${w}</span></span>`;
   const balk = (lab, pct, kl, rechts) => `
     <div class="dbalkrij"><span class="dbalklab">${lab}</span>
       <span class="dbalk"><i style="width:${Math.max(0, Math.min(100, pct))}%;background:${kl}"></i></span>
       <span class="dbalkpct">${rechts}</span></div>`;
 
-  return `<div class="detail">
-    <div class="dkolommen">
+  // Wat er aan dit contract hangt en wat eraan afwijkt. Kort — het volledige
+  // record staat één klik verderop.
+  const merken = [
+    p.doorrolUit ? ["dblauw", "Doorrol uit " + p.doorrolUit] : null,
+    p.afwijking ? ["dlet", "Afwijking · " + p.afwijkingKort] : null,
+    p.gemeld ? ["", "Gemeld " + p.gemeld.split(" \u2014 ")[0]] : ["dlet", "Nog niet gemeld aan de leden"],
+    ["", p.besluit + " · " + p.wieVolgt],
+  ].filter(Boolean);
 
-      <div class="dvak">
-        <div class="dkop">Geld</div>
-        <div class="dfeiten">
-          ${m("Premie ontvangen", kom(p.premie), euro(p.premie))}
-          ${m("Ask nu", kom(p.ask), euro(p.ask))}
-          ${m("Bod", kom(p.bod), "spread " + kom(p.ask - p.bod))}
-          ${m("Open resultaat", (resultaat >= 0 ? "+" : "\u2212") + kom(Math.abs(resultaat)), euro(resultaat))}
-        </div>
+  return `<div class="detail">
+    <div class="dvak">
+      <div class="dfeiten">
+        ${m("Premie", kom(p.premie), p.aantal + " contract" + (p.aantal > 1 ? "en" : ""))}
+        ${m("Ask nu", kom(p.ask), "bod " + kom(p.bod))}
+        ${m("Open resultaat", (resultaat >= 0 ? "+" : "\u2212") + kom(Math.abs(resultaat)), "€ " + getal(Math.round(resultaat * 10 * p.aantal)))}
+        ${m("Break-even", getal(Math.round(breakeven)), kom(buffer) + " % buffer")}
+        ${m("Stoploss", kom(p.stoploss), kom(p.stoploss - p.ask) + " te gaan")}
+        ${m("Dagen", String(p.dagen), p.expiratie)}
+      </div>
+
+      <div class="dbalken">
         ${balk("Looptijd om", verstreken, "var(--blue)", Math.round(verstreken) + " %")}
         ${balk("Premie binnen", binnen, binnen >= verstreken ? "var(--s5)" : "var(--s2)", Math.round(binnen) + " %")}
       </div>
 
-      <div class="dvak">
-        <div class="dkop">Markt</div>
-        <div class="dfeiten">
-          ${m("Strike", getal(p.strike), p.aantal + " contract" + (p.aantal > 1 ? "en" : ""))}
-          ${m("Spot", getal(SPOT), p.afstand === null ? "" : "+" + getal(Math.round(SPOT - p.strike)) + " pt")}
-          ${m("Afstand", p.afstand === null ? "—" : kom(p.afstand) + " %", STANDEN[standVan(p.afstand) ?? 4].nm)}
-          ${m("Delta", String(p.delta).replace("-", "\u2212").replace(".", ","), Math.round(Math.abs(p.delta) * 100) + " % toewijzing")}
-          ${m("Break-even", getal(Math.round(breakeven)), "strike \u2212 premie")}
-          ${m("Buffer", kom(buffer) + " %", "tot break-even")}
-          ${m("Dagen", String(p.dagen), "expireert " + p.expiratie)}
-          ${m("IV", kom(p.iv) + " %", "bij opening " + kom(p.ivOpen) + " %")}
-        </div>
+      <div class="dmerken">
+        ${merken.map(([kl, t]) => `<span class="dmerk ${kl}">${t}</span>`).join("")}
+        <a class="knop tweede" href="#">Positierecord</a>
+        ${p.gemeld ? "" : `<button class="knop">Bericht opstellen</button>`}
       </div>
-
-      <div class="dvak">
-        <div class="dkop">Afspraak en leden</div>
-        <div class="dfeiten">
-          ${m("Stoploss", kom(p.stoploss), "2× premie")}
-          ${m("Tot stoploss", kom(p.stoploss - p.ask), "op ask")}
-          ${t("Wie volgt", p.wieVolgt)}
-          ${t("Uit", p.besluit)}
-          ${t("Geopend", p.geopend)}
-          ${t("Gemeld", p.gemeld ? p.gemeld.split(" \u2014 ")[0] : "nee")}
-        </div>
-        ${p.afwijking ? `<div class="dmerk dlet">Afwijking · ${p.afwijkingKort}</div>` : ""}
-        ${p.doorrolUit ? `<div class="dmerk dblauw">Doorrol uit ${p.doorrolUit}</div>` : ""}
-        <div class="dknoppen">
-          <a class="knop tweede" href="#">Positierecord</a>
-          ${p.gemeld ? "" : `<button class="knop">Bericht opstellen</button>`}
-        </div>
-      </div>
-
     </div>
   </div>`;
 }
@@ -609,10 +592,23 @@ function detail(p) {
 /* ───────────────────────── de posities ───────────────────────── */
 // De balk loopt van −2 % (links, onder de strike) tot +10 % (rechts, ruim).
 const LINKS = -2, RECHTS = 10;
+// De grenzen van de vijf standen op diezelfde schaal. Vijf even brede vakjes
+// zouden liegen: het merkteken op 4,8 % stond dan in 'let op' terwijl het label
+// ernaast 'comfortabel' zei.
+const GRENZEN = [LINKS, 0, 2, 4, 6, RECHTS];
 function tekenPosities() {
+  // De schaal eronder staat op dezelfde grenzen als de vakjes.
+  document.getElementById("schaal").innerHTML = GRENZEN.slice(0, -1).map((g, i) => {
+    const breed = (GRENZEN[i + 1] - GRENZEN[i]) / (RECHTS - LINKS);
+    return `<span style="flex:0 0 calc(${(breed * 100).toFixed(2)}% - 4px)">${
+      i === 0 ? "onder de strike" : GRENZEN[i] === 0 ? "de strike" : "+" + GRENZEN[i] + " %"}</span>`;
+  }).join("");
   document.getElementById("posities").innerHTML = POSITIES.map((p) => {
     const st = standVan(p.afstand);
-    const zones = STANDEN.map((s) => `<span class="z" style="background:${s.kl};opacity:${p.open ? .9 : .5}"></span>`).join("");
+    const zones = STANDEN.map((s, i) => {
+      const breed = (GRENZEN[i + 1] - GRENZEN[i]) / (RECHTS - LINKS);
+      return `<span class="z" style="flex:0 0 calc(${(breed * 100).toFixed(2)}% - 4px);background:${s.kl};opacity:${p.open ? .9 : .5}"></span>`;
+    }).join("");
     const pct = p.afstand === null ? null : Math.max(2, Math.min(98, ((p.afstand - LINKS) / (RECHTS - LINKS)) * 100));
     const merker = pct === null ? "" :
       `<span class="merkerlab" style="left:${pct}%">${kom(p.afstand)} %</span><span class="merker" style="left:calc(${pct}% - 1.5px)"></span>`;

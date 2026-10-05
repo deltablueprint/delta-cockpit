@@ -23,16 +23,14 @@ let fouten = 0;
 const eis = (wat, goed) => { if (!goed) { fouten++; console.log(`FOUT  ${wat}`); } };
 
 const opsteller = readFileSync("app/src/opsteller.js", "utf8");
-const baro = readFileSync("app/src/barometerscherm.js", "utf8");
 const api = readFileSync("app/src/api.js", "utf8");
 const main = readFileSync("app/src/main.js", "utf8");
 const css = readFileSync("app/src/stijl.css", "utf8");
 
 // ------------------------------------------------------------- de routes
 eis("main.js kent /bericht/:id", main.includes("berichtRoute"));
-eis("main.js kent /barometer/:id", main.includes("baroRoute"));
+eis("main.js kent /werkbank", main.includes('pad === "/werkbank"'));
 eis("main.js roept de opsteller aan", main.includes("opstellerscherm(inhoud, kruimel,"));
-eis("main.js roept het barometerscherm aan", main.includes("barometerscherm(inhoud, kruimel,"));
 
 // Een scherm dat nergens vandaan te bereiken is, bestaat niet.
 
@@ -106,7 +104,6 @@ for (const paden of aanroepen) {
 const GEEN_SCHERM = {
   "/api/lynx/rapport": "de brug levert hier het Flex-rapport af",
   "/api/lynx/diagnose": "diagnose, met de hand opgevraagd",
-  "/api/werkbank/cycli": "wacht op de nieuwe werkbank",
 };
 for (const pad of letterlijk) {
   if (pad.startsWith("/api/brug")) continue;        // de brug is geen scherm
@@ -116,7 +113,7 @@ for (const pad of letterlijk) {
 }
 
 // Elke api-functie die een scherm importeert, bestaat.
-for (const [naam, tekst] of [["opsteller", opsteller], ["barometerscherm", baro]]) {
+for (const [naam, tekst] of [["opsteller", opsteller], ["werkbank", readFileSync("app/src/werkbank.js", "utf8")]]) {
   const stuk = (tekst.match(/import \{([^}]+)\} from "\.\/api\.js"/s) || [])[1] || "";
   for (const f of stuk.split(",").map((x) => x.trim().split(" as ")[0]).filter(Boolean)) {
     eis(`${naam}: api.js exporteert ${f}`, new RegExp(`export const ${f}\\b`).test(api));
@@ -171,33 +168,33 @@ eis("de opsteller zet alles vast als het verstuurd is", opsteller.includes("cons
 eis("en toont wanneer en door wie", opsteller.includes("verstuurdRegel"));
 eis("er is geen wisknop op de opsteller", !/wissen|verwijder/i.test(opsteller.replace(/^\/\/.*$/gm, "")));
 
-// ------------------------------------------------------ het barometerscherm
+// ------------------------------------------------------ de barometer
+// Het losse barometerscherm is weg: het was een tweede weg om een stand te
+// zetten, langs de regel dat de barometer slaapt tot het venster op 'In
+// positie' staat. Eén handeling, één weg. De werkbank doet het nu.
 const b = await huidig(env, CYCLUS);
 eis("het scherm krijgt de schaal mee", b.schaal.length === 5);
 eis("en de vensters", b.vensters.length === 6);
-eis("het scherm bouwt de schaal uit wat het kreeg, niet uit een eigen lijst",
-    baro.includes("b.schaal.map") && baro.includes("b.vensters.map"));
+const wb = readFileSync("app/src/werkbank.js", "utf8");
+eis("de werkbank bouwt de namen uit wat ze kreeg, niet uit een eigen lijst",
+    wb.includes("data.barometer.schaal") && wb.includes("data.venster.verloop"));
 eis("er staat geen vaste standnaam in het scherm",
-    !/Niets|Meekijken|Paraat|Dichtbij blijven/.test(baro));
+    !/Niets|Meekijken|Paraat|Dichtbij blijven|Comfortabel|Onder de strike/.test(wb));
 
 await stelVast(env, simon, { cyclus: CYCLUS, stand: 2, venster: "open", reden: "Rustig." });
 const herhaald = await stelVast(env, simon, { cyclus: CYCLUS, stand: 2, venster: "open", reden: "Nog eens." });
 eis("dezelfde stand nog eens vastleggen kan niet", !!herhaald.fout);
-eis("het scherm weet dat ook vooraf", baro.includes("Dit is de huidige stand"));
-eis("en laat de knop uit tot er een reden staat", baro.includes("knop.disabled = bezig || !vol || !anders"));
 
 const na = await huidig(env, CYCLUS);
 eis("vastleggen is niet melden", na.gelijk === false);
-eis("het scherm zegt dat ook", baro.includes("De leden weten het nog niet"));
-eis("en toont beide standen naast elkaar als ze uiteenlopen", baro.includes("uiteen"));
 
 // ------------------------------------------------------------- de opmaak
-for (const klasse of ["opsteller", "opfeiten", "opacties", "baroschaal", "barovensters", "baroverloop"]) {
+for (const klasse of ["opsteller", "opfeiten", "opacties", "werkbank", "vensterrij", "meterrij", "spoorbalk", "publiceerbalk"]) {
   eis(`de opmaak kent .${klasse}`, css.includes(`.${klasse}`));
 }
 // Alles wat in de schermen een klasse krijgt, moet ook opmaak hebben; anders
 // staat er een vak zonder rand of een knop zonder knopvorm.
-for (const tekst of [opsteller, baro]) {
+for (const tekst of [opsteller, readFileSync("app/src/werkbank.js", "utf8")]) {
   const klassen = [...tekst.matchAll(/class="(op|baro)([a-z]*)"/g)].map((m) => m[1] + m[2]);
   for (const k of [...new Set(klassen)]) {
     eis(`.${k} heeft opmaak`, css.includes(`.${k}`));
@@ -206,18 +203,43 @@ for (const tekst of [opsteller, baro]) {
 
 // ------------------------------- een scherm dat weg is, schrijft niet meer
 //
-// Een scherm dat peilt en intussen verlaten wordt, tekende zichzelf over het
+// De werkbank peilt elke tien seconden. Klik je intussen door naar een ander
+// scherm, dan tikt die klok gewoon door — en tekende hij zichzelf over het
 // scherm waar je inmiddels was. Dat zag eruit als een omleiding, maar het was
 // erger: op een formulier waar je in zat te typen was je je werk kwijt.
 //
-// Elk scherm dat een timer of een luisteraar op het document zet, moet kunnen
-// zeggen of het nog van deze wereld is. De werkbank die dit het hardst nodig
-// had wordt opnieuw gebouwd; deze regel geldt dan weer, en de proeven erbij
-// staan in de git-tak 'voor-de-herbouw'.
+// Niet 'komt de wacht ergens voor' — dat is te makkelijk waar. De wacht moet de
+// eerste regel zijn van alles wat later nog iets tekent: de klok die afgaat, en
+// het antwoord dat terugkomt. Een eerdere versie van deze proef telde alleen
+// vóórkomens, en liet daardoor precies de fout door die hij moest vangen.
+const werkbank = readFileSync("app/src/werkbank.js", "utf8");
+
+eis("de werkbank weet of hij nog de levende is", werkbank.includes("leeftNog"));
+eis("de controle kijkt naar de route",
+    werkbank.includes('location.hash.slice(1).split("?")[0] === "/werkbank"'));
+eis("en naar het bezoek, zodat twee werkbanken elkaar niet overschrijven",
+    werkbank.includes("dit === bezoek"));
+
+const naSetTimeout = werkbank.split(/await new Promise\(\(r\) => setTimeout\(r, \d+\)\);/)[1] || "";
+eis("de klok kijkt als eerste of dit scherm nog bestaat",
+    /^\s*if \(!leeftNog\(\)\) return;/.test(naSetTimeout));
+
+const naHetAntwoord = werkbank.split(/const uit = await haalWerkbank\([^)]*\);/)[1] || "";
+eis("en na het antwoord opnieuw, want ondertussen kan er geklikt zijn",
+    /^\s*if \(!leeftNog\(\)\) return;/.test(naHetAntwoord));
+
+const naTeken = werkbank.split(/\n  function teken\(\) \{/)[1] || "";
+eis("tekenen gebeurt niet meer na vertrek",
+    /^\s*if \(!leeftNog\(\)\) return;/.test(naTeken));
+
+// En het scherm mag niet onder je handen vandaan hertekenen terwijl je een
+// stand aan het kiezen bent.
+eis("een peiling laat een lopende keuze met rust",
+    /if \(kiesStand === null && kiesVenster === null\) await haal\(\);/.test(werkbank));
 
 // Elke luisteraar op het document moet zichzelf opruimen, anders peilen er na
 // tien keer openen tien tegelijk.
-for (const bestand of ["opsteller.js", "barometerscherm.js"]) {
+for (const bestand of ["werkbank.js", "opsteller.js"]) {
   const t = readFileSync(`app/src/${bestand}`, "utf8");
   const erbij = (t.match(/document\.addEventListener\(/g) || []).length;
   const eraf = (t.match(/document\.removeEventListener\(/g) || []).length;
@@ -225,11 +247,15 @@ for (const bestand of ["opsteller.js", "barometerscherm.js"]) {
       erbij === 0 || eraf >= 1);
 }
 
-// Een scherm met een timer moet die ook kunnen stoppen.
-for (const bestand of ["opsteller.js", "barometerscherm.js"]) {
+// Een scherm met een timer moet die kunnen stoppen, óf na elke tik controleren
+// of het nog bestaat. Dat tweede is hier het sterkere: een clearTimeout werkt
+// alleen als iemand hem aanroept op de goede plek, terwijl een lus die zichzelf
+// elke ronde afvraagt of hij nog mag bestaan niet vergeten kan worden.
+for (const bestand of ["werkbank.js", "opsteller.js"]) {
   const t = readFileSync(`app/src/${bestand}`, "utf8");
   if (!/setTimeout|setInterval/.test(t)) continue;
-  eis(`${bestand}: een timer wordt ook weer gestopt`, /clearTimeout|clearInterval/.test(t));
+  eis(`${bestand}: een timer wordt gestopt of kijkt na elke tik of het scherm nog bestaat`,
+      /clearTimeout|clearInterval/.test(t) || /leeftNog\(\)/.test(t));
 }
 
 // ------------------------------------------- elke import bestaat ook echt
