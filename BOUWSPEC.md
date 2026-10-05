@@ -1743,6 +1743,10 @@ Een vakje per dag toont wat een getal niet kan: niet alleen wat er staat, maar h
 
 **Dispatch zet de cyclus die in de markt staat bovenaan**, ook als er daarna een nieuwe geopend is die nog in de pre-analyse zit. Er is geen keuzelijst meer, dus de volgorde ís de keuze.
 
+**2b. Looptijd.** Tussen de stand en de posities staat de tijdas van de cyclus met de events erop: eerst wat we de leden vertellen, dan wat er in de weken voor ons ligt, dan de tranches zelf. Een event dat over drie dagen komt verandert hoe je naar die tranches kijkt, dus hoort het ervóór te staan.
+
+Het is dezelfde as als op *Uitkomst samen bepalen*, uit hetzelfde bestand (`app/src/tijdas.js`) en dezelfde vraag aan de database. Twee keer dezelfde as tekenen zou betekenen dat een event op het ene scherm een andere week krijgt dan op het andere, en dan vergelijkt iemand het verkeerde. In Dispatch staat er niets links van de as, dus krijgt hij daar de volle breedte; op het besluitscherm staat er links wie wat zou schrijven.
+
 **5. Geschiedenis (rechts, 0149).** Een scherm dat alleen het nu toont beantwoordt de vraag niet die een lid stelt: wordt het beter of slechter? Rechts staat daarom wat er gebeurd is: de standen die wij achter elkaar zetten, met de reden, wie het deed en of het gemeld is.
 
 Het verloop per tranche wordt wél vastgelegd — `brokerpositie` kan het niet dragen, want de brug overschrijft de prijs bij elke hartslag — in `positiemeting`, en alleen als er iets te zien is: de stand verandert, of `meting_minuten` (60) is voorbij. Elke hartslag wegschrijven zou een tabel opleveren die honderd keer zo groot is en geen regel extra vertelt. Een lijntje naast de positieregel stond er even bij en is er weer uit (5 okt 2026): het herhaalde wat de uitklap al toont. De vastlegging blijft, zodat het verloop later alsnog ergens kan landen.

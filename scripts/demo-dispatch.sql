@@ -163,6 +163,20 @@ insert into barometerstand (cyclus, stand, venster, reden, herkomst, vastgesteld
 select id, 4, 'in_positie', 'Demo: de 5600 liep op.', 'voorstel', datetime('now', '-26 hours'), 'jacqueline'
   from cyclus where label = 'DEMO · dispatch';
 
+-- ---------- een paar events in de looptijd ----------
+delete from cyclus_event where cyclus in (select id from cyclus where label = 'DEMO · dispatch');
+delete from event where naam like 'DEMO · %';
+
+insert into event (naam, soort, datum, tijdstip, tijdzone, zwaarte, notities) values
+  ('DEMO · ECB-rentebesluit','macro', date('now', '+3 days'), '14:15','CET','zwaar','Persconferentie om 14:45.'),
+  ('DEMO · Duitse ZEW','macro', date('now', '-4 days'), '11:00','CET','licht',null),
+  ('DEMO · Amerikaanse inflatie','macro', date('now', '+10 days'), '14:30','CET','zwaar',null),
+  ('DEMO · Expiratie weekopties','markt', date('now', '+5 days'), '17:30','CET','middel',null);
+
+insert into cyclus_event (cyclus, event)
+select c.id, e.id from cyclus c, event e
+ where c.label = 'DEMO · dispatch' and e.naam like 'DEMO · %';
+
 -- ---------- de koersen ----------
 -- Dit blok mag je los opnieuw draaien zodra de balk grijs wordt: het zet alleen
 -- de prijzen en hun tijdstip terug op nu.

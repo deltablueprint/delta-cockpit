@@ -542,6 +542,13 @@ td.bewerkt input, td.bewerkt select {
 td.bezigcel { opacity: .6; }
 td.zojuist { background: var(--grnbg); transition: background 1s; }
 
+/* In Dispatch staat er niets links van de as — geen namen, geen balken — dus
+   krijgt de as de volle breedte. Een lege kolom van 230 px zou de as in de
+   rechterhelft duwen en de weken onleesbaar dicht op elkaar zetten. */
+.werkbank .tijdblok.breed { padding: 14px 20px 10px; }
+.werkbank .tijdblok.breed .tijdrij { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.werkbank .tijdblok.breed .tijdnaam { display: none; }
+
 /* De strook handelsdagen onder het venster en onder de barometer. Een spleet
    tussen de weken: zo tel je weken zonder dat er een label bij hoeft. */
 /* Het vak krimpt mee met de strook, zodat de datum rechts onder het laatste

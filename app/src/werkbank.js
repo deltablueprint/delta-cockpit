@@ -23,6 +23,7 @@ import { ontsnap } from "./veld.js";
 // Stand 1..5: 1 is onder druk, 5 is vrijwel afgerond (BOUWSPEC §10.1). De balk
 // loopt van verlies links naar winst rechts, dus van rood naar groen.
 import { KLEUR, DIEPROOD, balkHtml, schaalHtml, standBadge, metriekHtml } from "./positiebalk.js";
+import { tijdas, plaatsTijdkaarten } from "./tijdas.js";
 
 // Elk bezoek krijgt een nummer. Klik je weg terwijl de peiling loopt, dan tekent
 // het antwoord dat daarna binnenkomt niet meer over het scherm waar je inmiddels
@@ -74,12 +75,17 @@ export async function werkbankscherm(inhoud, kruimel) {
       <div class="wbkolommen">
         <div class="wbhoofd">
           ${standvak()}
+          ${looptijdvak()}
           ${positievak()}
           ${ledenvak()}
         </div>
         ${geschiedenisvak()}
       </div>
     </div>`;
+
+    // De hoverkaarten op de tijdas zweven boven alles; waar ze komen te staan is
+    // pas te weten als het scherm er staat.
+    plaatsTijdkaarten(inhoud);
   }
 
   // ------------------------------------------------------- de geschiedenis
@@ -384,6 +390,28 @@ export async function werkbankscherm(inhoud, kruimel) {
       <div class="strookdata"><span>${ontsnap(kortedatum(rijen[0].dag))}</span><span>${
         ontsnap(kortedatum(rijen[rijen.length - 1].dag))}</span></div>
     </div>`;
+  }
+
+  // De looptijd met de events erop, tussen de stand en de posities: eerst wat we
+  // de leden vertellen, dan wat er in de weken voor ons ligt, dan de tranches
+  // zelf. Een event dat over drie dagen komt verandert hoe je naar die tranches
+  // kijkt, dus hoort het ervóór te staan.
+  function looptijdvak() {
+    const c = data.cyclus || {};
+    const laatste = data.posities
+      .map((p) => p.expiratiedatum).filter(Boolean).sort().pop();
+    const as = tijdas({
+      van: c.geopend_op,
+      tot: c.doelexpiratie || laatste,
+      events: data.events || [],
+      extra: data.posities.map((p) => p.expiratiedatum).filter(Boolean),
+    });
+
+    return `<section class="paneel">
+      <div class="paneelkop">Looptijd<span class="meta">${
+        (data.events || []).length} ${(data.events || []).length === 1 ? "event" : "events"}</span></div>
+      <div class="tijdblok breed">${as.asHtml}</div>
+    </section>`;
   }
 
   // --------------------------------------------------------- de posities

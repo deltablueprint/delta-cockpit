@@ -189,6 +189,15 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
     stroom(env, id, 8).catch(() => []),
   ]);
 
+  // De events in de looptijd, voor de tijdas. Dezelfde vraag als op het
+  // besluitscherm: één bron, zodat een event op beide schermen op dezelfde dag
+  // ligt.
+  const events = await env.DB.prepare(
+    `select ce.id, e.zwaarte, e.notities, e.datum, e.tijdstip, e.tijdzone, e.naam, e.soort
+       from cyclus_event ce join event e on e.id = ce.event
+      where ce.cyclus = ? order by e.datum, e.tijdstip`
+  ).bind(id).all().then((r) => r.results).catch(() => []);
+
   // De geschiedenis: wat wij achter elkaar besloten, en hoe elke tranche zich
   // ondertussen ontwikkelde. Zonder dat is elk scherm een momentopname — en de
   // vraag die een lid stelt is juist: wordt het beter of slechter?
@@ -278,6 +287,7 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
     kaarten: kaartlijst,
     verstuurd,
     stroom: gebeurtenissen,
+    events,
     geschiedenis: { standen, verloop, dagen: await dagstanden(env, id, { nu }) },
     // Wacht er iets op de leden? Drie dingen kunnen dat zijn, en ze staan los
     // van elkaar: een kaart, een stand die wij wel kennen en zij niet, of een
