@@ -94,36 +94,39 @@ select c.id, datetime('now', '-66 minutes'), 'ibkr', 'positie_geopend',
 delete from positiemeting where positie in (select id from positie where cyclus in
   (select id from cyclus where label = 'DEMO · dispatch'));
 
+-- D1 staat maar een handvol termen in een compound select toe; een rij per uur
+-- maak je dus met een recursieve CTE, niet met twaalf keer union all.
+with recursive v(n) as (select 0 union all select n + 1 from v where n < 11)
 insert into positiemeting (positie, moment, ask, bod, stand, binnen)
 select p.id, datetime('now', '-' || (v.n * 6) || ' hours'),
        round(52.0 + (v.n * 1.4) + ((v.n % 3) * 1.1), 1), round(51.0 + (v.n * 1.4), 1),
        case when 52.0 + (v.n * 1.4) > 50 then 1 else 2 end,
        round((38.5 - (52.0 + v.n * 1.4 + (v.n % 3) * 1.1)) / 38.5 * 100, 1)
   from positie p join cyclus c on c.id = p.cyclus
-  join (select 0 as n union all select 1 union all select 2 union all select 3
-        union all select 4 union all select 5 union all select 6 union all select 7
-        union all select 8 union all select 9 union all select 10 union all select 11) v
+  join v
  where c.label = 'DEMO · dispatch' and p.tranche = 1;
 
+-- D1 staat maar een handvol termen in een compound select toe; een rij per uur
+-- maak je dus met een recursieve CTE, niet met twaalf keer union all.
+with recursive v(n) as (select 0 union all select n + 1 from v where n < 11)
 insert into positiemeting (positie, moment, ask, bod, stand, binnen)
 select p.id, datetime('now', '-' || (v.n * 6) || ' hours'),
        round(14.5 + (v.n * 0.7) - ((v.n % 4) * 0.5), 1), round(14.0 + (v.n * 0.7), 1), 3,
        round((19.0 - (14.5 + v.n * 0.7 - (v.n % 4) * 0.5)) / 19.0 * 100, 1)
   from positie p join cyclus c on c.id = p.cyclus
-  join (select 0 as n union all select 1 union all select 2 union all select 3
-        union all select 4 union all select 5 union all select 6 union all select 7
-        union all select 8 union all select 9 union all select 10 union all select 11) v
+  join v
  where c.label = 'DEMO · dispatch' and p.tranche = 2;
 
+-- D1 staat maar een handvol termen in een compound select toe; een rij per uur
+-- maak je dus met een recursieve CTE, niet met twaalf keer union all.
+with recursive v(n) as (select 0 union all select n + 1 from v where n < 11)
 insert into positiemeting (positie, moment, ask, bod, stand, binnen)
 select p.id, datetime('now', '-' || (v.n * 6) || ' hours'),
        round(1.5 + (v.n * 0.6) + ((v.n % 5) * 0.4), 1), round(1.2 + (v.n * 0.6), 1),
        case when 1.5 + (v.n * 0.6) < 3.3 then 5 else 4 end,
        round((11.0 - (1.5 + v.n * 0.6 + (v.n % 5) * 0.4)) / 11.0 * 100, 1)
   from positie p join cyclus c on c.id = p.cyclus
-  join (select 0 as n union all select 1 union all select 2 union all select 3
-        union all select 4 union all select 5 union all select 6 union all select 7
-        union all select 8 union all select 9 union all select 10 union all select 11) v
+  join v
  where c.label = 'DEMO · dispatch' and p.tranche = 3;
 
 -- Een paar standwisselingen, zodat de geschiedenis rechts niet leeg is.
