@@ -311,7 +311,7 @@ body { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif
 
         <!-- ─────────── posities ─────────── -->
         <section class="paneel">
-          <div class="paneelkop">Posities<span class="meta">spot 5 412 · 14:28 · de zwakste bepaalt de barometer</span></div>
+          <div class="paneelkop">Posities<span class="meta">de ask, van waardeloos tot de stoploss · de zwakste bepaalt de barometer</span></div>
           <div id="posities"></div>
           <div class="schaalrij"><span class="schaal" id="schaal"></span></div>
           <div class="zwakste" id="zwakste"></div>
@@ -342,18 +342,23 @@ body { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif
 /* ───────────────────────── de vijf standen ─────────────────────────
    Links rood, rechts groen — zoals een meter hoort te lopen. De stand is
    afgeleid uit de afstand tot de strike van de zwakste open positie. */
+// De maat is de ask: wat het kost om de positie terug te kopen. De weg loopt
+// van waardeloos (0) tot de stoploss uit het exitplan (hier 60).
+const STOPLOSS = 60;
 const STANDEN = [
-  { w: "onder",       nm: "Onder de strike", kl: "var(--s1)", om: "spot < strike",
-    vraag: "Paraat zijn. Er komt mogelijk een doorrol of een toewijzing." },
-  { w: "krap",        nm: "Krap",            kl: "var(--s2)", om: "< 2 % boven",
+  { w: "stoploss",    nm: "Op de stoploss",  kl: "var(--s1)", van: 100, tot: 120,
+    vraag: "Paraat zijn. Wij stappen eruit volgens het exitplan." },
+  { w: "krap",        nm: "Krap",            kl: "var(--s2)", van: 80,  tot: 100,
     vraag: "Bereikbaar zijn. Geen nieuwe verplichtingen aangaan deze week." },
-  { w: "letop",       nm: "Let op",          kl: "var(--s3)", om: "2 – 4 % boven",
-    vraag: "Meelezen. De positie komt dichter bij de strike." },
-  { w: "comfortabel", nm: "Comfortabel",     kl: "var(--s4)", om: "4 – 6 % boven",
+  { w: "letop",       nm: "Let op",          kl: "var(--s3)", van: 60,  tot: 80,
+    vraag: "Meelezen. De positie loopt op." },
+  { w: "comfortabel", nm: "Comfortabel",     kl: "var(--s4)", van: 35,  tot: 60,
     vraag: "Niets doen. Wij volgen het." },
-  { w: "ruim",        nm: "Ruim",            kl: "var(--s5)", om: "> 6 % boven",
-    vraag: "Niets. Deze maand hoeft er niets te gebeuren." },
+  { w: "ruim",        nm: "Ruim",            kl: "var(--s5)", van: 0,   tot: 35,
+    vraag: "Niets. De premie loopt binnen." },
 ];
+const omschrijving = (s) => s.van === 100 ? "op of over de stoploss"
+  : `${s.van} – ${s.tot} % van de stoploss`;
 
 const VENSTERS = [
   { w: "pre_analyse",      nm: "Pre-analyse",      wn: "chart nog te lezen", vraag: "Niets. De leden horen hier nog niets van." },
@@ -365,42 +370,39 @@ const VENSTERS = [
 ];
 
 /* ── de posities. afstand in % van spot tot de strike ── */
-const SPOT = 5412;
 const POSITIES = [
-  { nm: "OESX 16OCT26 P5300", strike: 5300, afstand: 1.4, dagen: 11, looptijd: 45, premie: 38.5, nu: 21.0, ask: 21.0, bod: 20.2, iv: 18.4, ivOpen: 15.1,
-    aantal: 1, open: true, geopend: "30 sep 15:12", expiratie: "16 okt 2026", delta: -0.31,
-    stoploss: 77.0, eventregel: "Geen handeling rond de ECB van 9 okt — die stond in het besluit.",
-    wieVolgt: "Simon", besluit: "Besluit 2026-10 · tranche 1", afwijking: null,
-    gemeld: "4 okt 14:10 — “Wij zitten erin, 1 contract P5300.”" },
-  { nm: "OESX 16OCT26 P5150", strike: 5150, afstand: 4.8, dagen: 11, looptijd: 32, premie: 19.0, nu: 4.5,  ask: 4.5,  bod: 4.0,  iv: 16.9, ivOpen: 16.2,
-    aantal: 1, open: true, geopend: "4 okt 14:02", expiratie: "16 okt 2026", delta: -0.14,
-    stoploss: 38.0, eventregel: "Geen handeling rond de ECB van 9 okt.",
-    wieVolgt: "Simon", besluit: "Besluit 2026-10 · tranche 2", afwijking: 1, afwijkingKort: "slechtere fill, 19,0 i.p.v. 20,5",
-    gemeld: null },
-  { nm: "OESX 16OCT26 P5000", strike: 5000, afstand: 7.6, dagen: 11, looptijd: 32, premie: 11.0, nu: 1.5,  ask: 1.5,  bod: 1.1,  iv: 15.8, ivOpen: 15.8,
-    aantal: 1, open: true, geopend: "4 okt 14:08", expiratie: "16 okt 2026", delta: -0.06,
-    stoploss: 22.0, eventregel: "Geen handeling rond de ECB van 9 okt.",
-    wieVolgt: "Simon", besluit: "Doorrol uit P5100", afwijking: null, doorrolUit: "OESX 16OCT26 P5100 · −14,5",
-    gemeld: null },
-  { nm: "OESX 18SEP26 P5050", strike: 5050, afstand: null, dagen: 0, looptijd: 44, premie: 22.0, nu: 0.0,  ask: 0.0,  bod: 0.0,  iv: 0,    ivOpen: 14.4,
-    aantal: 1, open: false, geopend: "5 aug 10:30", expiratie: "18 sep 2026", delta: 0,
-    stoploss: 44.0, eventregel: "—", wieVolgt: "Simon", besluit: "Besluit 2026-09 · tranche 1",
-    afwijking: null, uitkomst: "Waardeloos geëxpireerd", gemeld: "18 sep 17:40 — “P5050 liep uit, +22,0 punten.”" },
+  { nm: "OESX 16OCT26 P5300", strike: 5300, dagen: 11, looptijd: 45, premie: 38.5,
+    ask: 48.0, bod: 47.2, stoploss: 77.0, aantal: 1, open: true, geopend: "30 sep 15:12",
+    expiratie: "16 okt 2026", besluit: "Besluit 2026-10 · tranche 1", wieVolgt: "Simon",
+    afwijking: null, gemeld: "4 okt 14:10" },
+  { nm: "OESX 16OCT26 P5150", strike: 5150, dagen: 11, looptijd: 32, premie: 19.0,
+    ask: 14.5, bod: 14.0, stoploss: 38.0, aantal: 1, open: true, geopend: "4 okt 14:02",
+    expiratie: "16 okt 2026", besluit: "Besluit 2026-10 · tranche 2", wieVolgt: "Simon",
+    afwijking: 1, afwijkingKort: "slechtere fill, 19,0 i.p.v. 20,5", gemeld: null },
+  { nm: "OESX 16OCT26 P5000", strike: 5000, dagen: 11, looptijd: 32, premie: 11.0,
+    ask: 1.5, bod: 1.1, stoploss: 22.0, aantal: 1, open: true, geopend: "4 okt 14:08",
+    expiratie: "16 okt 2026", besluit: "Doorrol uit P5100", wieVolgt: "Simon",
+    doorrolUit: "OESX 16OCT26 P5100 · −14,5", afwijking: null, gemeld: null },
+  { nm: "OESX 18SEP26 P5050", strike: 5050, dagen: 0, looptijd: 44, premie: 22.0,
+    ask: 0, bod: 0, stoploss: 44.0, aantal: 1, open: false, geopend: "5 aug 10:30",
+    expiratie: "18 sep 2026", besluit: "Besluit 2026-09 · tranche 1", wieVolgt: "Simon",
+    afwijking: null, uitkomst: "Waardeloos geëxpireerd", gemeld: "18 sep 17:40" },
 ];
+
+// Waar de ask staat op de weg van waardeloos naar de stoploss, in procent.
+const opWeg = (p) => (p.ask / p.stoploss) * 100;
+
 
 // Welke stand hoort bij een afstand. De drempels staan straks in Instellingen,
 // niet in de code — hier even hard, want het is een mockup.
-function standVan(a) {
-  if (a === null) return null;
-  if (a < 0) return 0;
-  if (a < 2) return 1;
-  if (a < 4) return 2;
-  if (a < 6) return 3;
-  return 4;
+// De index in STANDEN (0 = op de stoploss, 4 = ruim) die bij deze weg hoort.
+function standVan(weg) {
+  if (weg === null || !Number.isFinite(weg)) return null;
+  return STANDEN.findIndex((s) => weg >= s.van && (weg < s.tot || s.van === 100));
 }
-const kom = (n) => n.toFixed(1).replace(".", ",");
-const zwakste = Math.min(...POSITIES.filter((p) => p.open).map((p) => standVan(p.afstand)));
-const zwakstePos = POSITIES.filter((p) => p.open).find((p) => standVan(p.afstand) === zwakste);
+const kom = (n) => Number(n).toFixed(1).replace(".", ",");
+const zwakste = Math.min(...POSITIES.filter((p) => p.open).map((p) => standVan(opWeg(p))));
+const zwakstePos = POSITIES.filter((p) => p.open).find((p) => standVan(opWeg(p)) === zwakste);
 
 /* ── de staat van het scherm ── */
 const S = {
@@ -466,7 +468,7 @@ function tekenMeter() {
     ].filter(Boolean).join(" ");
     return `<button class="lreg ${kl}" data-stand="${i}">
       <span class="vlak" style="background:${st.kl}"></span>
-      <span class="nm">${st.nm}</span><span class="om">${st.om}</span></button>`;
+      <span class="nm">${st.nm}</span><span class="om">${omschrijving(st)}</span></button>`;
   }).join("");
 
   document.getElementById("bvraag").textContent = STANDEN[toon].vraag;
@@ -475,9 +477,9 @@ function tekenMeter() {
   const tip = wakker && S.baro.tip !== null && S.baro.tip !== S.baro.nu;
   document.getElementById("bsug").hidden = !tip || S.baro.gekozen !== null;
   if (tip) {
-    const pz = POSITIES.filter((x) => x.open).find((x) => standVan(x.afstand) === S.baro.tip);
+    const pz = POSITIES.filter((x) => x.open).find((x) => standVan(opWeg(x)) === S.baro.tip) || zwakstePos;
     document.getElementById("bsugtekst").innerHTML =
-      `Barometer: het systeem stelt <b>${STANDEN[S.baro.tip].nm}</b> voor — ${pz.nm} staat op ${kom(pz.afstand)} % van de strike. Klik de omstippelde stand en publiceer.`;
+      `Barometer: het systeem stelt <b>${STANDEN[S.baro.tip].nm}</b> voor — ${pz.nm} staat op ask ${kom(pz.ask)} van een stoploss op ${kom(pz.stoploss)}. Klik de omstippelde stand en publiceer.`;
   }
 }
 
@@ -543,24 +545,18 @@ const OPEN = new Set(["OESX 16OCT26 P5300"]);
 
 function detail(p) {
   const resultaat = p.premie - p.ask;
-  const binnen = (resultaat / p.premie) * 100;
-  const verstreken = ((p.looptijd - p.dagen) / p.looptijd) * 100;
-  const breakeven = p.strike - p.premie;
-  const buffer = ((SPOT - breakeven) / SPOT) * 100;
-  const getal = (n) => n.toLocaleString("nl-BE");
-
+  const binnen = Math.max(0, (resultaat / p.premie) * 100);
+  const weg = opWeg(p);
   const m = (l, w, n) => `<span class="dfeit"><span class="dlab">${l}</span><span class="dwaarde">${w}</span>${n ? `<span class="dnoot">${n}</span>` : ""}</span>`;
   const balk = (lab, pct, kl, rechts) => `
     <div class="dbalkrij"><span class="dbalklab">${lab}</span>
       <span class="dbalk"><i style="width:${Math.max(0, Math.min(100, pct))}%;background:${kl}"></i></span>
       <span class="dbalkpct">${rechts}</span></div>`;
 
-  // Wat er aan dit contract hangt en wat eraan afwijkt. Kort — het volledige
-  // record staat één klik verderop.
   const merken = [
     p.doorrolUit ? ["dblauw", "Doorrol uit " + p.doorrolUit] : null,
     p.afwijking ? ["dlet", "Afwijking · " + p.afwijkingKort] : null,
-    p.gemeld ? ["", "Gemeld " + p.gemeld.split(" \u2014 ")[0]] : ["dlet", "Nog niet gemeld aan de leden"],
+    p.gemeld ? ["", "Gemeld " + p.gemeld] : ["dlet", "Nog niet gemeld aan de leden"],
     ["", p.besluit + " · " + p.wieVolgt],
   ].filter(Boolean);
 
@@ -569,17 +565,15 @@ function detail(p) {
       <div class="dfeiten">
         ${m("Premie", kom(p.premie), p.aantal + " contract" + (p.aantal > 1 ? "en" : ""))}
         ${m("Ask nu", kom(p.ask), "bod " + kom(p.bod))}
-        ${m("Open resultaat", (resultaat >= 0 ? "+" : "\u2212") + kom(Math.abs(resultaat)), "€ " + getal(Math.round(resultaat * 10 * p.aantal)))}
-        ${m("Break-even", getal(Math.round(breakeven)), kom(buffer) + " % buffer")}
+        ${m("Open resultaat", (resultaat >= 0 ? "+" : "\u2212") + kom(Math.abs(resultaat)), "€ " + (resultaat < 0 ? "\u2212" : "") + Math.abs(Math.round(resultaat * 10 * p.aantal)).toLocaleString("nl-BE"))}
         ${m("Stoploss", kom(p.stoploss), kom(p.stoploss - p.ask) + " te gaan")}
-        ${m("Dagen", String(p.dagen), p.expiratie)}
+        ${m("Strike", p.strike.toLocaleString("nl-BE"), p.expiratie)}
+        ${m("Dagen", String(p.dagen), "prijs 2 min oud")}
       </div>
-
       <div class="dbalken">
-        ${balk("Looptijd om", verstreken, "var(--blue)", Math.round(verstreken) + " %")}
-        ${balk("Premie binnen", binnen, binnen >= verstreken ? "var(--s5)" : "var(--s2)", Math.round(binnen) + " %")}
+        ${balk("Premie binnen", binnen, binnen >= 50 ? "var(--s5)" : "var(--s3)", Math.round(binnen) + " %")}
+        ${balk("Naar de stoploss", weg, weg >= 80 ? "var(--s1)" : "var(--blue)", Math.round(weg) + " %")}
       </div>
-
       <div class="dmerken">
         ${merken.map(([kl, t]) => `<span class="dmerk ${kl}">${t}</span>`).join("")}
         <a class="knop tweede" href="#">Positierecord</a>
@@ -589,44 +583,51 @@ function detail(p) {
   </div>`;
 }
 
-/* ───────────────────────── de posities ───────────────────────── */
-// De balk loopt van −2 % (links, onder de strike) tot +10 % (rechts, ruim).
-const LINKS = -2, RECHTS = 10;
-// De grenzen van de vijf standen op diezelfde schaal. Vijf even brede vakjes
-// zouden liegen: het merkteken op 4,8 % stond dan in 'let op' terwijl het label
-// ernaast 'comfortabel' zei.
-const GRENZEN = [LINKS, 0, 2, 4, 6, RECHTS];
+// De balk loopt van ask 0 (waardeloos) tot iets over de stoploss. De vakjes
+// hebben de breedte van hun eigen bereik: even brede vakjes zouden het
+// merkteken in een ander vakje zetten dan het label ernaast.
+const RECHTS = 120;
+
 function tekenPosities() {
-  // De schaal eronder staat op dezelfde grenzen als de vakjes.
-  document.getElementById("schaal").innerHTML = GRENZEN.slice(0, -1).map((g, i) => {
-    const breed = (GRENZEN[i + 1] - GRENZEN[i]) / (RECHTS - LINKS);
+  // De schaal eronder staat op dezelfde grenzen als de vakjes, en in punten —
+  // want dat is wat op het scherm van de broker staat.
+  // De stoploss verschilt per positie, dus de schaal toont die van de zwakste
+  // en zegt dat erbij. Elke balk staat in procent van zijn eigen stoploss.
+  const maat = zwakstePos.stoploss;
+  document.getElementById("schaal").innerHTML = [...STANDEN].reverse().map((s) => {
+    const breed = (s.tot - s.van) / RECHTS;
     return `<span style="flex:0 0 calc(${(breed * 100).toFixed(2)}% - 4px)">${
-      i === 0 ? "onder de strike" : GRENZEN[i] === 0 ? "de strike" : "+" + GRENZEN[i] + " %"}</span>`;
+      s.van === 0 ? "waardeloos" : s.van === 100 ? `stoploss ${kom(maat)}` : kom((s.van / 100) * maat)}</span>`;
   }).join("");
+
   document.getElementById("posities").innerHTML = POSITIES.map((p) => {
-    const st = standVan(p.afstand);
-    const zones = STANDEN.map((s, i) => {
-      const breed = (GRENZEN[i + 1] - GRENZEN[i]) / (RECHTS - LINKS);
+    const st = standVan(opWeg(p));
+    const zones = [...STANDEN].reverse().map((s) => {
+      const breed = (s.tot - s.van) / RECHTS;
       return `<span class="z" style="flex:0 0 calc(${(breed * 100).toFixed(2)}% - 4px);background:${s.kl};opacity:${p.open ? .9 : .5}"></span>`;
     }).join("");
-    const pct = p.afstand === null ? null : Math.max(2, Math.min(98, ((p.afstand - LINKS) / (RECHTS - LINKS)) * 100));
-    const merker = pct === null ? "" :
-      `<span class="merkerlab" style="left:${pct}%">${kom(p.afstand)} %</span><span class="merker" style="left:calc(${pct}% - 1.5px)"></span>`;
+    const pct = Math.max(1, Math.min(99, (opWeg(p) / RECHTS) * 100));
+    const merker = `<span class="merkerlab" style="left:${pct}%">${kom(p.ask)}</span><span class="merker" style="left:calc(${pct}% - 1.5px)"></span>`;
     const uit = OPEN.has(p.nm);
     return `<div class="posblok ${uit ? "uitgeklapt" : ""}">
       <button class="pos ${p.open ? "" : "posdicht"}" data-pos="${p.nm}">
         <span class="poslinks"><span class="chev">${uit ? "▾" : "▸"}</span><span>
           <span class="posnaam">${p.nm}</span><br>
-          <span class="posonder">${p.open ? p.dagen + " dagen · premie " + kom(p.premie) + " · nu " + kom(p.nu) : "geëxpireerd · +" + kom(p.premie)}</span></span></span>
-        <span class="spoorbalk">${zones}${merker}</span>
-        <span class="posstand">${p.open ? `<span class="badge" style="background:${STANDEN[st].kl}">${STANDEN[st].nm}</span>` : `<span class="badge" style="background:var(--dim)">Afgerond</span>`}</span>
+          <span class="posonder">${p.open
+            ? `${p.dagen} dagen · premie ${kom(p.premie)} · ask ${kom(p.ask)}`
+            : `${p.uitkomst} · +${kom(p.premie)}`}</span></span></span>
+        <span class="spoorbalk">${zones}${p.open ? merker : ""}</span>
+        <span class="posstand">${p.open
+          ? `<span class="badge" style="background:${STANDEN[st].kl}">${STANDEN[st].nm}</span>`
+          : `<span class="badge" style="background:var(--dim)">Afgerond</span>`}</span>
       </button>
       ${uit ? detail(p) : ""}
     </div>`;
   }).join("");
-  const p = POSITIES.filter((x) => x.open).find((x) => standVan(x.afstand) === zwakste);
+
+  const p = zwakstePos;
   document.getElementById("zwakste").innerHTML =
-    `<b>${p.nm}</b> is de zwakste en bepaalt de barometer: ${kom(p.afstand)} % boven de strike — <b>${STANDEN[zwakste].nm}</b>.`;
+    `<b>${p.nm}</b> is de zwakste en bepaalt de barometer: ask ${kom(p.ask)} van een stoploss op ${kom(p.stoploss)} — <b>${STANDEN[zwakste].nm}</b>.`;
 }
 
 /* ───────────────────────── kaarten en verstuurd ─────────────────────────

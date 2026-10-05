@@ -25,7 +25,7 @@ eis("een verse cyclus heeft nog geen stand", nu.wij === null);
 eis("en de leden dus ook niet", nu.leden === null);
 eis("de schaal heeft vijf standen", nu.schaal.length === 5);
 eis("1 is rustig", nu.schaal[0].waarde === "1" && nu.schaal[0].label === "Ruim");
-eis("5 is het drukst", nu.schaal[4].label === "Onder de strike");
+eis("5 is het drukst", nu.schaal[4].label === "Op de stoploss");
 eis("het venster is een verloop van zes standen", nu.vensters.length === 6);
 eis("de namen komen uit beheer, niet uit de code",
     (await q("select count(*) n from db_choice where tabel='barometerstand' and kolom='stand'"))[0].n === 5);

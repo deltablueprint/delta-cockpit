@@ -10,7 +10,7 @@
 //     het nog niet weg is.
 import { verseDB, CYCLUS, MOMENT, POSITIE } from "./db.mjs";
 import { werkbank, publiceer, nietMelden, kaarten, conceptVoorKaart } from "../../worker/werkbank.js";
-import { metingen, standVan, drempels, koers } from "../../worker/meting.js";
+import { metingen, standVan, opWeg, drempels, zones } from "../../worker/meting.js";
 import { stelVast, huidig } from "../../worker/barometer.js";
 import { conceptUitKaart } from "../../worker/bericht.js";
 import { verstuurPublicatie } from "../../worker/spiegel.js";
@@ -29,76 +29,110 @@ const eis = (wat, goed) => { if (!goed) { fouten++; console.log(`FOUT  ${wat}`);
 // brokerregel aan, want daar komen de ask en de onderliggende vandaan.
 await db.prepare(
   `insert into brokerpositie (conid, contract, onderliggend, strike, expiratiedatum,
-                              aantal, marktprijs, biedprijs, laatprijs)
-   values ('5001', 'OESX 30OKT26 5600 PUT', 'OESX', 5600, '2026-10-30', -4, 21.0, 20.2, 21.0)`
+                              aantal, marktprijs, biedprijs, laatprijs, gewijzigd_op)
+   values ('5001', 'OESX 30OKT26 5600 PUT', 'OESX', 5600, '2026-10-30', -4, 21.0, 20.2, 21.0,
+           '2026-10-19 11:55:00')`
 ).run();
 
 // ------------------------------------------------------------- de drempels
 let d = await drempels(env);
-eis("de grenzen komen uit beheer", d.barometer_krap_pct === 2 && d.barometer_letop_pct === 4
-    && d.barometer_comfortabel_pct === 6);
+eis("de grenzen komen uit beheer", d.barometer_comfortabel_pct === 35
+    && d.barometer_letop_pct === 60 && d.barometer_krap_pct === 80);
 
-eis("onder de strike is de zwaarste stand", standVan(-0.4, d) === 5);
-eis("vlak erboven is krap", standVan(1.4, d) === 4);
-eis("daarboven let op", standVan(2.1, d) === 3);
-eis("daarboven comfortabel", standVan(4.8, d) === 2);
-eis("ruim erboven is ruim", standVan(7.6, d) === 1);
-eis("zonder afstand is er geen stand", standVan(null, d) === null);
-// Precies op een grens hoort bij de rustigere stand erboven: de ondergrens
-// telt mee, de bovengrens niet. Anders hangt de stand op de grens af van de
-// volgorde van drie ifs.
-eis("precies op de strike is krap", standVan(0, d) === 4);
-eis("precies op 2 % is let op", standVan(2, d) === 3);
-eis("precies op 4 % is comfortabel", standVan(4, d) === 2);
-eis("precies op 6 % is ruim", standVan(6, d) === 1);
+// De weg van 0 naar de stoploss, in procent. 0 is waardeloos geëxpireerd,
+// 100 is eruit volgens het exitplan.
+eis("waardeloos is het begin van de weg", opWeg(0, 60) === 0);
+eis("de helft is de helft", opWeg(30, 60) === 50);
+eis("de stoploss is het einde", opWeg(60, 60) === 100);
+eis("eroverheen kan ook", opWeg(72, 60) === 120);
+eis("zonder ask is er geen plek", opWeg(null, 60) === null);
+eis("zonder stoploss ook niet", opWeg(21, 0) === null && opWeg(21, null) === null);
+eis("en onzin geeft niets", opWeg(NaN, 60) === null && opWeg(-1, 60) === null);
+
+eis("vlak boven waardeloos is ruim", standVan(10, d) === 1);
+eis("verder op is comfortabel", standVan(40, d) === 2);
+eis("daarna let op", standVan(65, d) === 3);
+eis("daarna krap", standVan(85, d) === 4);
+eis("op de stoploss is de zwaarste stand", standVan(100, d) === 5);
+eis("eroverheen ook", standVan(130, d) === 5);
+eis("zonder plek is er geen stand", standVan(null, d) === null);
+
+// Precies op een grens hoort bij de zwaardere stand: de ondergrens telt mee.
+// Anders hangt de stand op de grens af van de volgorde van drie ifs.
+eis("precies op 35 % is comfortabel", standVan(35, d) === 2);
+eis("precies op 60 % is let op", standVan(60, d) === 3);
+eis("precies op 80 % is krap", standVan(80, d) === 4);
 eis("onzin geeft geen stand", standVan(NaN, d) === null && standVan(Infinity, d) === null);
-eis("en een tekst ook niet", standVan("3", d) === null);
+eis("en een tekst ook niet", standVan("50", d) === null);
+
+// De vakjes op de balk zijn dezelfde grenzen. Eén plek, zodat de balk niet iets
+// anders kan tonen dan de meter rekent.
+const z = zones(d);
+eis("er zijn vijf vakjes", z.length === 5);
+eis("ze sluiten op elkaar aan", z.every((v, i) => i === 0 || v.van === z[i - 1].tot));
+eis("en ze lopen van waardeloos tot over de stoploss", z[0].van === 0 && z[3].tot === 100);
+eis("elk vakje hoort bij zijn eigen stand",
+    z.every((v) => standVan((v.van + v.tot) / 2, d) === v.stand));
 
 // Grenzen die door elkaar lopen zijn een inrichtingsfout. Ook dan hoort er een
 // bruikbare meter uit te komen in plaats van een stand die van de volgorde van
 // drie ifs afhangt.
-await db.prepare("update instelling set waarde = '9' where sleutel = 'barometer_krap_pct'").run();
+await db.prepare("update instelling set waarde = '90' where sleutel = 'barometer_comfortabel_pct'").run();
 d = await drempels(env);
-eis("omgekeerde grenzen vallen terug op de standaard", d.barometer_krap_pct === 2 && d.grenzen_rechtgezet === true);
-await db.prepare("update instelling set waarde = '2' where sleutel = 'barometer_krap_pct'").run();
+eis("omgekeerde grenzen vallen terug op de standaard",
+    d.barometer_comfortabel_pct === 35 && d.grenzen_rechtgezet === true);
+await db.prepare("update instelling set waarde = '35' where sleutel = 'barometer_comfortabel_pct'").run();
 
-// Onzin in een instelling ook niet.
 await db.prepare("update instelling set waarde = 'nogal wat' where sleutel = 'barometer_letop_pct'").run();
 d = await drempels(env);
-eis("onzin in een grens valt terug op de standaard", d.barometer_letop_pct === 4);
-await db.prepare("update instelling set waarde = '4' where sleutel = 'barometer_letop_pct'").run();
-
-// ---------------------------------------------------------------- de koers
-let meet = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
-eis("zonder koers wordt er niets gemeten", meet.voorstel === null);
-eis("en het scherm krijgt te horen waarom", meet.waarom_niet === "geen koers van de onderliggende");
-
-// Een koers van gisteren is erger dan geen koers: hij ziet er even stellig uit.
-await db.prepare(
-  "insert into marktstand (onderliggend, stand, moment) values ('OESX', 5700, '2026-10-18 12:00:00')"
-).run();
-meet = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
-eis("een oude koers telt niet mee", meet.voorstel === null);
-eis("en ook dat wordt gezegd", meet.waarom_niet === "de koers is te oud");
-
-const k = await koers(env, "OESX", { nu: "2026-10-19T12:00:00Z" });
-eis("de koers weet zelf dat hij oud is", k.vers === false && k.minuten_oud > 60);
+eis("onzin in een grens valt terug op de standaard", d.barometer_letop_pct === 60);
+await db.prepare("update instelling set waarde = '60' where sleutel = 'barometer_letop_pct'").run();
 
 // ------------------------------------------------------------- de meting
-await db.prepare("update marktstand set stand = 5700, moment = '2026-10-19 11:55:00' where onderliggend = 'OESX'").run();
-meet = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
+//
+// De positie uit db.mjs: premie 38,5, stoploss 60 (de standaard), ask 21.
+// 21 van 60 is 35 % van de weg naar de stoploss — precies op de grens, en die
+// telt mee naar beneden: comfortabel.
+let meet = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
 const p1 = meet.posities[0];
-eis("de afstand wordt gemeten", Math.abs(p1.afstand - 1.754) < 0.01);
-eis("en levert een stand op", p1.stand === 4);
 eis("de ask komt van de laatprijs", p1.ask === 21 && p1.ask_is_marktprijs === false);
 eis("het bod staat erbij", p1.bod === 20.2);
+eis("de plek op de weg wordt gemeten", Math.abs(p1.weg - 35) < 0.001);
+eis("en levert een stand op", p1.stand === 2);
 eis("het open resultaat is premie min ask", p1.resultaat === 17.5);
-eis("break-even is strike min premie", p1.breakeven === 5600 - 38.5);
-eis("de buffer rekent vanaf break-even", Math.abs(p1.buffer - 2.43) < 0.02);
+eis("break-even is de premie zelf", p1.breakeven === 38.5);
+eis("de stoploss staat er met wat er nog te gaan is", p1.tot_stoploss === 39);
+eis("er staat hoeveel van de premie binnen is", Math.abs(p1.binnen - 45.45) < 0.01);
 eis("de dagen tot expiratie kloppen", p1.dagen === 11);
-eis("de stoploss staat er met wat er nog te gaan is", p1.tot_stoploss === p1.stoploss - 21);
-eis("het systeem stelt die stand voor", meet.voorstel === 4);
+eis("het systeem stelt die stand voor", meet.voorstel === 2);
 eis("en zegt welke positie dat bepaalt", meet.zwakste.id === POSITIE);
+eis("de strike doet niet meer mee aan de meting", p1.weg === meet.zwakste.weg);
+
+// Een ask die tegen de stoploss aan ligt is de zwaarste stand.
+await db.prepare("update brokerpositie set laatprijs = 60 where conid = '5001'").run();
+meet = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
+eis("op de stoploss is het de zwaarste stand", meet.posities[0].stand === 5);
+await db.prepare("update brokerpositie set laatprijs = 70 where conid = '5001'").run();
+meet = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
+eis("eroverheen ook", meet.posities[0].stand === 5);
+await db.prepare("update brokerpositie set laatprijs = 0.1 where conid = '5001'").run();
+meet = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
+eis("bijna waardeloos is de rustigste stand", meet.posities[0].stand === 1);
+await db.prepare("update brokerpositie set laatprijs = 21.0 where conid = '5001'").run();
+
+// Een stoploss die per positie anders staat, verandert de schaal mee.
+await db.prepare("update positie set stoploss_ask = 30 where conid = '5001'").run();
+meet = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
+eis("een lagere stoploss maakt dezelfde ask zwaarder", meet.posities[0].stand === 3);
+await db.prepare("update positie set stoploss_ask = 60 where conid = '5001'").run();
+
+// Zonder stoploss is er geen schaal, en dus geen stand.
+await db.prepare("update positie set stoploss_ask = 0 where conid = '5001'").run();
+meet = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
+eis("zonder stoploss wordt er niet gemeten", meet.posities[0].stand === null);
+eis("en het scherm krijgt te horen waarom",
+    meet.waarom_niet === "er staat geen stoploss op de positie");
+await db.prepare("update positie set stoploss_ask = 60 where conid = '5001'").run();
 
 // Zonder laatprijs valt hij terug op de marktprijs, en zegt dat erbij.
 await db.prepare("update brokerpositie set laatprijs = null where conid = '5001'").run();
@@ -107,22 +141,43 @@ eis("zonder laatprijs is de marktprijs de ask", meet.posities[0].ask === 21);
 eis("en dat staat erbij", meet.posities[0].ask_is_marktprijs === true);
 await db.prepare("update brokerpositie set laatprijs = 21.0 where conid = '5001'").run();
 
+// Zonder enige prijs valt er niets te meten.
+await db.prepare("update brokerpositie set laatprijs = null, marktprijs = null where conid = '5001'").run();
+meet = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
+eis("zonder prijs is er geen stand", meet.posities[0].stand === null);
+eis("en ook dat wordt gezegd", meet.waarom_niet === "geen prijs van de broker");
+await db.prepare("update brokerpositie set laatprijs = 21.0, marktprijs = 21.0 where conid = '5001'").run();
+
+// Een prijs van gisteren is erger dan geen prijs: hij ziet er even stellig uit.
+await db.prepare("update brokerpositie set gewijzigd_op = '2026-10-18 12:00:00' where conid = '5001'").run();
+meet = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
+eis("een oude prijs telt niet mee", meet.posities[0].stand === null);
+eis("en dat wordt gezegd", meet.waarom_niet === "de prijs is te oud");
+eis("het scherm weet hoe oud", meet.posities[0].prijs_minuten_oud > 1000);
+for (const [wat, moment] of [["onleesbaar", "ergens vanmorgen"], ["uit de toekomst", "2027-01-01 12:00:00"]]) {
+  await db.prepare("update brokerpositie set gewijzigd_op = ? where conid = '5001'").bind(moment).run();
+  const m2 = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
+  eis(`een prijstijdstip ${wat} telt niet als vers`, m2.posities[0].stand === null);
+}
+await db.prepare("update brokerpositie set gewijzigd_op = '2026-10-19 11:55:00' where conid = '5001'").run();
+
 // ------------------------------------------------- de zwakste bepaalt de stand
-// Een tweede tranche die ruim staat mag de meter niet zachter maken.
+// Een tweede tranche die bijna waardeloos staat mag de meter niet zachter maken.
 await db.prepare(
   `insert into positie (cyclus, beoordelingsmoment, tranche, status, contract, strike,
                         expiratiedatum, aantal, ontvangen_premie_pt, conid, herkomst)
    values (?, ?, 2, 'bewaken', 'OESX 30OKT26 5200 PUT', 5200, '2026-10-30', 1, 11.0, '5002', 'broker')`
 ).bind(CYCLUS, MOMENT).run();
 await db.prepare(
-  `insert into brokerpositie (conid, contract, onderliggend, strike, expiratiedatum, aantal, laatprijs, biedprijs)
-   values ('5002', 'OESX 30OKT26 5200 PUT', 'OESX', 5200, '2026-10-30', -1, 1.5, 1.1)`
+  `insert into brokerpositie (conid, contract, onderliggend, strike, expiratiedatum, aantal,
+                              laatprijs, biedprijs, gewijzigd_op)
+   values ('5002', 'OESX 30OKT26 5200 PUT', 'OESX', 5200, '2026-10-30', -1, 1.5, 1.1, '2026-10-19 11:55:00')`
 ).run();
 
 meet = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
-const ruim = meet.posities.find((p) => p.strike === 5200);
-eis("de tweede tranche staat ruim", ruim.stand === 1);
-eis("maar de zwakste bepaalt de barometer", meet.voorstel === 4 && meet.zwakste.strike !== 5200);
+const rustig = meet.posities.find((p) => p.strike === 5200);
+eis("de tweede tranche staat rustig", rustig.stand === 1);
+eis("maar de zwakste bepaalt de barometer", meet.voorstel === 2 && meet.zwakste.id === POSITIE);
 
 // En een positie die dicht is telt niet mee.
 await db.prepare("update positie set status = 'gesloten', uitkomst = 'waardeloos geexpireerd' where conid = '5001'").run();
@@ -138,7 +193,7 @@ eis("voor we erin zitten slaapt de barometer", w.barometer.wakker === false);
 eis("en wordt er niets voorgesteld", w.barometer.voorstel === null);
 eis("het scherm weet waarom hij slaapt", w.barometer.slaapt_waarom === "wij zitten er nog niet in");
 
-let uit = await publiceer(env, ik, { cyclus: CYCLUS, stand: 4, reden: "Krap." });
+let uit = await publiceer(env, ik, { cyclus: CYCLUS, stand: 2, reden: "Comfortabel." });
 eis("een slapende barometer kan niet gezet worden", !!uit.fout);
 
 uit = await publiceer(env, ik, { cyclus: CYCLUS, venster: "in_positie", reden: "Wij zitten erin." });
@@ -146,28 +201,17 @@ eis("het venster verzetten lukt", !uit.fout);
 
 w = await werkbank(env, ik, { cyclus: CYCLUS, nu: "2026-10-19T12:00:00Z" });
 eis("nu is de barometer wakker", w.barometer.wakker === true);
-eis("en stelt het systeem de stand van de zwakste voor", w.barometer.voorstel === 4);
+eis("en stelt het systeem de stand van de zwakste voor", w.barometer.voorstel === 2);
 eis("de werkbank zegt dat er iets op de leden wacht", w.wacht.voorstel === true);
 
 // Allebei tegelijk kan ook, en dat is één bericht in plaats van twee.
-uit = await publiceer(env, ik, { cyclus: CYCLUS, stand: 4, venster: "in_positie", reden: "De positie staat krap." });
+uit = await publiceer(env, ik, { cyclus: CYCLUS, stand: 2, venster: "in_positie", reden: "De positie loopt goed." });
 eis("stand en venster in één keer lukt", !uit.fout);
 const na = await huidig(env, CYCLUS);
-eis("de stand staat op krap", Number(na.wij.stand.waarde) === 4);
-eis("en draagt zijn reden", na.wij.reden === "De positie staat krap.");
+eis("de stand staat waar we hem zetten", Number(na.wij.stand.waarde) === 2);
+eis("en draagt zijn reden", na.wij.reden === "De positie loopt goed.");
 eis("zonder reden gaat er niets vast", !!(await publiceer(env, ik, { cyclus: CYCLUS, stand: 3, reden: "  " })).fout);
 eis("en niets kiezen ook niet", !!(await publiceer(env, ik, { cyclus: CYCLUS, reden: "x" })).fout);
-
-// -------------------------------------------------- wat niet gemeten mag worden
-// Een tijdstip dat we niet kunnen lezen, of een dat in de toekomst ligt, is
-// geen verse koers. Hij ziet er alleen even stellig uit, en daarom is hij
-// gevaarlijker dan geen koers.
-for (const [wat, moment] of [["onleesbaar", "ergens vanmorgen"], ["uit de toekomst", "2027-01-01 12:00:00"]]) {
-  await db.prepare("update marktstand set moment = ? where onderliggend = 'OESX'").bind(moment).run();
-  const m = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
-  eis(`een koerstijdstip ${wat} telt niet als vers`, m.voorstel === null);
-}
-await db.prepare("update marktstand set moment = '2026-10-19 11:55:00' where onderliggend = 'OESX'").run();
 
 // Een positie zonder ingevulde premie levert geen verzonnen break-even op. Dat
 // is precies de stand waarin spiegel.js een tranche aanmaakt waarvan de prijs
@@ -177,9 +221,8 @@ let m = await metingen(env, CYCLUS, { nu: "2026-10-19T12:00:00Z" });
 let zonder = m.posities.find((p) => p.strike === 5600);
 eis("zonder premie is er geen premie", zonder.premie === null);
 eis("en geen break-even", zonder.breakeven === null);
-eis("en geen buffer", zonder.buffer === null);
 eis("en geen open resultaat", zonder.resultaat === null);
-eis("maar wel een stand, want de afstand is wel bekend", zonder.stand === 4);
+eis("maar wel een stand, want de ask en de stoploss zijn wel bekend", zonder.stand === 2);
 await db.prepare("update positie set ontvangen_premie_pt = 38.5 where conid = '5001'").run();
 
 // Een tranche die nog niet uitgevoerd is draagt de strike van het bésluit en
@@ -207,8 +250,9 @@ eis("een afgeronde positie toont zijn resultaat", zonder.resultaat === 38.5);
 await db.prepare("update positie set status = 'bewaken', uitkomst = null, resultaat_pt = null where conid = '5001'").run();
 await db.prepare(
   `insert into brokerpositie (conid, contract, onderliggend, strike, expiratiedatum,
-                              aantal, marktprijs, biedprijs, laatprijs)
-   values ('5001', 'OESX 30OKT26 5600 PUT', 'OESX', 5600, '2026-10-30', -4, 21.0, 20.2, 21.0)`
+                              aantal, marktprijs, biedprijs, laatprijs, gewijzigd_op)
+   values ('5001', 'OESX 30OKT26 5600 PUT', 'OESX', 5600, '2026-10-30', -4, 21.0, 20.2, 21.0,
+           '2026-10-19 11:55:00')`
 ).run();
 
 // ------------------------------------------------------------- de kaarten
@@ -372,7 +416,9 @@ eis("de kaarten erbij", Array.isArray(w.kaarten));
 eis("en wat er verstuurd is", w.verstuurd.some((v) => v.soort === "opening" || v.titel));
 eis("het venster draagt zijn verloop", w.venster.verloop.length === 6);
 eis("de drempels gaan mee naar het scherm, zodat de legende ze kan tonen",
-    w.drempels.barometer_krap_pct === 2);
+    w.drempels.barometer_krap_pct === 80);
+eis("en de vakjes van de balk ook, zodat de balk niet iets anders toont dan de meter rekent",
+    Array.isArray(w.zones) && w.zones.length === 5);
 
 console.log(fouten === 0 ? "alles klopt." : `${fouten} fout(en).`);
 process.exit(fouten === 0 ? 0 : 1);

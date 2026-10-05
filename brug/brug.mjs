@@ -137,7 +137,6 @@ async function stuur(reden) {
     rekening,
     kapitaal,
     posities: [...posities.values()].filter((p) => Number(p.aantal) !== 0),
-    marktstanden: [...marktstanden.entries()].map(([onderliggend, k]) => ({ onderliggend, ...k })),
     gebeurtenissen: gebeurtenissen.splice(0, gebeurtenissen.length),
   };
   try {
@@ -192,34 +191,8 @@ let marktdataAan = false;
 const koersVerzoeken = new Map();   // conid -> reqId
 let volgendVerzoek = 1000;
 
-// De stand van de onderliggende index. Daar meet de barometer in de cockpit
-// mee: hoe ver staat de spot boven de strike. Zonder deze meet hij niets en
-// stelt hij niets voor — beter dan een stand op een koers van gisteren.
-// Per symbool de stand én het moment van de tik. Dat moment moet mee: de
-// cockpit gebruikt het om te beslissen of hij ermee mag meten, en als hij het
-// tijdstip van ontvangst zou gebruiken was elke koers altijd vers — ook als de
-// beurs dicht is en er al uren niets getikt heeft.
-const marktstanden = new Map();     // symbool -> { stand, moment }
-const indexVerzoeken = new Map();   // symbool -> reqId
-
 function volgKoersen() {
   if (!marktdataAan) return;
-
-  // Eén verzoek per onderliggende, niet per positie: drie tranches op dezelfde
-  // index zijn één koers.
-  for (const naam of new Set([...posities.values()]
-        .filter((p) => Number(p.aantal) !== 0 && p.onderliggend)
-        .map((p) => p.onderliggend))) {
-    if (indexVerzoeken.has(naam)) continue;
-    const id = volgendVerzoek++;
-    indexVerzoeken.set(naam, id);
-    try {
-      ib.reqMktData(id, { symbol: naam, secType: "IND", exchange: "EUREX", currency: "EUR" }, "", false, false);
-    } catch (fout) {
-      log(`koers van ${naam} volgen lukt niet: ${fout.message}`);
-      indexVerzoeken.delete(naam);
-    }
-  }
 
   for (const p of posities.values()) {
     if (koersVerzoeken.has(p.conid) || Number(p.aantal) === 0) continue;
@@ -238,10 +211,6 @@ function stopKoersen() {
   for (const [conid, id] of koersVerzoeken) {
     try { ib.cancelMktData(id); } catch { /* al weg */ }
     koersVerzoeken.delete(conid);
-  }
-  for (const [naam, id] of indexVerzoeken) {
-    try { ib.cancelMktData(id); } catch { /* al weg */ }
-    indexVerzoeken.delete(naam);
   }
 }
 
@@ -330,23 +299,6 @@ ib.on(EventName.execDetails, (reqId, contract, uitvoering) => {
 // kost om eruit te stappen, en dus de prijs waar het exitplan op rekent.
 ib.on(EventName.tickPrice, (reqId, veld, prijs) => {
   if (!marktdataAan || !Number.isFinite(prijs) || prijs <= 0) return;
-
-  // De stand van een index. Veld 4 is de laatste prijs; staat de beurs dicht,
-  // dan is veld 9 de slotkoers en die is dan het beste wat er is.
-  const index = [...indexVerzoeken.entries()].find(([, id]) => id === reqId);
-  if (index) {
-    if (veld !== 4 && veld !== 9) return;
-    const stand = rond(prijs, 2);
-    const vorig = marktstanden.get(index[0]);
-    // Ook als de stand hetzelfde blijft is de tik nieuws: hij zegt dat de koers
-    // nog loopt. Het moment gaat dus altijd mee omhoog, de zending alleen als
-    // er iets verandert.
-    marktstanden.set(index[0], { stand, moment: new Date().toISOString() });
-    if (vorig && vorig.stand === stand) return;
-    vuil = true;
-    melden();
-    return;
-  }
 
   const conid = [...koersVerzoeken.entries()].find(([, id]) => id === reqId);
   if (!conid) return;

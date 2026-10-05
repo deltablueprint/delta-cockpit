@@ -1617,29 +1617,38 @@ Die laatste zijn de ene plek waar wél verwijderd wordt, en dat is precies zoals
 
 **Een kaart blijft bestaan, maar alleen voor een positie.** Open, gesloten, doorgerold — dat zijn de enige drie. De doorrol wordt herkend: sluit een positie en gaat er kort daarna een nieuwe open, dan verandert de kaart van de sluiting van vorm en laadt het doorrolsjabloon met beide contracten erin. De mapping staat in code, niet als ingerichte SQL.
 
-## 13c. De nieuwe werkbank (migratie 0128, 5 okt 2026)
+## 13c. De nieuwe werkbank (migraties 0128–0131, 5 okt 2026)
 
 Het scherm waarop je begint, herbouwd uit `docs/mockup-werkbank.html`. Vier vakken, in deze volgorde, en niets anders.
 
 **1. Stand naar de leden.** Het venster boven, de barometer eronder, en **één knop Publiceren voor allebei**. Kies je er twee, dan gaat er één bericht uit over allebei — een lid dat twee berichten krijgt over hetzelfde moment leest het tweede niet meer. De barometer **slaapt** tot het venster op *In positie* staat: daarvoor zitten wij er niet in en vragen we de leden niets, daarna is de cyclus uit. Hij is dan grijs en onklikbaar, met één regel waarom.
 
-**2. De barometer wordt gemeten.** De vijf treden heten nu naar wat ze meten, met grenzen uit beheer:
+**2. De barometer wordt gemeten — op de ask** (0130). De maat is wat het kost om de positie terug te kopen, en dus precies wat er nog op het spel staat. De schaal loopt van het ene uiterste naar het andere:
 
-| Stand | Wanneer | Grens in beheer |
+- **ask = 0** — de optie is waardeloos, de hele premie is binnen
+- **ask = de stoploss** — eruit volgens het exitplan
+
+De vijf treden zijn vijf stukken van die weg, in procent van de stoploss, met grenzen uit beheer:
+
+| Stand | Ask als deel van de stoploss | Grens in beheer |
 |---|---|---|
-| 1 Ruim | > 6 % boven de strike | `barometer_comfortabel_pct` |
-| 2 Comfortabel | 4 – 6 % | `barometer_comfortabel_pct` |
-| 3 Let op | 2 – 4 % | `barometer_letop_pct` |
-| 4 Krap | 0 – 2 % | `barometer_krap_pct` |
-| 5 Onder de strike | spot < strike | — |
+| 1 Ruim | < 35 % | `barometer_comfortabel_pct` |
+| 2 Comfortabel | 35 – 60 % | `barometer_letop_pct` |
+| 3 Let op | 60 – 80 % | `barometer_krap_pct` |
+| 4 Krap | 80 – 100 % | — |
+| 5 Op de stoploss | ≥ 100 % | — |
 
-1 blijft het rustigst; de schaal zelf verandert niet, alleen wat hij betekent en wie hem invult. **De zwakste open positie bepaalt de stand** — niet het gemiddelde: één positie onder de strike vraagt iets van een lid, ook als de twee andere ruim staan.
+Dat is met opzet **niet** de afstand van de spot tot de strike. Die maat klopt ook, maar hij vraagt de stand van de onderliggende index — een abonnement op Eurex-data en een brug die draait — terwijl het getal dat ertoe doet al binnenkomt bij elke hartslag. Een maat die de helft van de tijd ontbreekt is geen maat. Daarmee vervalt ook de tabel `marktstand` uit 0128: hij blijft staan maar niets leest of schrijft hem nog (0131).
+
+De stoploss staat per positie (`positie.stoploss_ask`, standaard 60 = 2× de premie), dus de schaal is per positie anders. Dezelfde ask kan op de ene tranche *Let op* zijn en op de andere *Krap*. Dat is geen inconsistentie maar precies wat het exitplan zegt.
+
+1 blijft het rustigst; de schaal zelf verandert niet, alleen wat hij betekent en wie hem invult. **De zwakste open positie bepaalt de stand** — niet het gemiddelde: één positie die tegen haar stoploss aanligt vraagt iets van een lid, ook als de twee andere waardeloos staan te worden.
 
 **Het systeem stelt voor, een mens publiceert.** Het voorstel staat als stippellijn om de stand; je klikt hem aan en drukt op publiceren. Er wordt niets automatisch vastgesteld.
 
-**Meten kan ook niet lukken, en dan zegt het dat.** De meting heeft de stand van de onderliggende nodig. Die stuurt de brug mee (`marktstand`, overschreven bij elke hartslag). Is er geen koers, of is hij ouder dan `koers_vers_minuten`, dan stelt het systeem **niets** voor en staat op het scherm waarom. Een stand op een koers van gisteren is erger dan geen stand: hij ziet er even stellig uit.
+**Meten kan ook niet lukken, en dan zegt het dat.** Geen prijs van de broker, een prijs ouder dan `koers_vers_minuten`, een prijstijdstip dat onleesbaar is of in de toekomst ligt, of geen stoploss op de positie: dan stelt het systeem **niets** voor en staat op het scherm waarom. Een stand op een prijs van gisteren is erger dan geen stand: hij ziet er even stellig uit.
 
-**3. De posities.** Per positie een balk met de vijf standen en een merkteken waar hij staat. De vakjes hebben de breedte van hun eigen bereik — even brede vakjes zouden het merkteken in een ander vakje zetten dan het label ernaast. Uitklappen geeft zes cijfers: premie, ask (de laatprijs; ontbreekt die, dan de marktprijs, en dat staat erbij), open resultaat, break-even met de buffer, stoploss met wat er nog te gaan is, en de dagen.
+**3. De posities.** Per positie een balk die loopt van ask 0 tot de stoploss, met een merkteken op de ask. De vakjes hebben de breedte van hun eigen bereik — even brede vakjes zouden het merkteken in een ander vakje zetten dan het label ernaast. Uitklappen geeft zes cijfers: premie, ask (de laatprijs; ontbreekt die, dan de marktprijs, en dat staat erbij), open resultaat, stoploss met wat er nog te gaan is, strike, en de dagen met hoe oud de prijs is. Plus twee balkjes: hoeveel van de premie binnen is, en hoe ver de ask naar de stoploss staat.
 
 **4. Ledencommunicatie.** Twee kolommen in één kader: links de kaarten, rechts wat verstuurd is.
 
@@ -1651,7 +1660,7 @@ Het scherm waarop je begint, herbouwd uit `docs/mockup-werkbank.html`. Vier vakk
 
 **Routes:** `GET /api/werkbank` (alles in één vraag — het scherm toont één samenhangend beeld, en drie losse vragen zouden drie momenten opleveren die niet bij elkaar horen), `POST /api/werkbank/publiceer`, `POST /api/kaart/:id/niet-melden`, `POST /api/kaart/:id/concept`.
 
-**Wat de brug erbij kreeg:** één `reqMktData` per onderliggende index, en `marktstanden` in de zending. Dat vraagt een herstart van de brug op de VPS; zonder die herstart meet de barometer niets en zegt hij dat.
+**Wat de brug levert:** de bied- en laatprijs per contract, die hij al stuurde. Er is geen extra marktdata voor nodig — wel moet *marktdata* in de brokerinstellingen aan staan, anders komt er geen prijs door en meet de barometer niets (en zegt hij dat).
 
 ## 14. Openstaande punten
 

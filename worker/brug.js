@@ -9,19 +9,6 @@ import { spiegel } from "./spiegel.js";
 const getal = (w) => (Number.isFinite(Number(w)) ? Number(w) : null);
 const kort = (w, n = 200) => (w === null || w === undefined ? null : String(w).slice(0, n));
 
-// Een tijdstip van de brug, in de vorm waarin de database het schrijft. Wat we
-// niet kunnen lezen wordt null, en dan valt de aanroeper terug op nu: een
-// onleesbaar tijdstip mag nooit als een geldig tijdstip de database in.
-import { leesMoment, alsTekst } from "./tijd.js";
-const alsMoment = (w) => {
-  const d = leesMoment(w);
-  if (!d) return null;
-  // Iets uit de toekomst is een klok die verkeerd staat. Dan liever niets, dan
-  // beslist de ontvanger wat hij ermee doet.
-  if (d.getTime() > Date.now() + 60000) return null;
-  return alsTekst(d);
-};
-
 // Wat je aan de koppeling mag veranderen zonder op de machine in te loggen.
 // De brug krijgt ze terug in het antwoord op zijn eigen zending: zo komt een
 // wijziging binnen tien seconden aan, zonder dat de cockpit ooit iets naar de
@@ -74,11 +61,7 @@ export async function zetInstellingen(env, ik, waarden = {}) {
 export async function neemStand(env, pakket = {}) {
   const posities = Array.isArray(pakket.posities) ? pakket.posities : [];
   const gebeurtenissen = Array.isArray(pakket.gebeurtenissen) ? pakket.gebeurtenissen : [];
-  // De stand van de onderliggende. Daar meet de barometer mee: hoe ver staat de
-  // spot boven de strike. Zonder deze meet hij niets en stelt het systeem niets
-  // voor — dat is beter dan een stand op een koers van gisteren.
-  const koersen = Array.isArray(pakket.marktstanden) ? pakket.marktstanden : [];
-  if (posities.length > 500 || gebeurtenissen.length > 500 || koersen.length > 50) {
+  if (posities.length > 500 || gebeurtenissen.length > 500) {
     return { fout: "Te veel in één zending.", status: 413 };
   }
 
@@ -94,29 +77,6 @@ export async function neemStand(env, pakket = {}) {
   // Het hele beeld wordt overschreven: de brug stuurt wat er nú open staat, en
   // wat er niet bij zit, staat niet meer open. Bijhouden met losse wijzigingen
   // zou betekenen dat één gemiste zending het beeld voorgoed laat afwijken.
-  // Eén rij per onderliggende, overschreven bij elke hartslag. Dit is een
-  // momentopname, geen vastlegging: wat bewaard moet blijven staat in de stroom.
-  for (const k of koersen) {
-    const naam = kort(k.onderliggend, 40);
-    const stand = getal(k.stand);
-    // Een stand van 0 of lager is geen koers maar een leeg veld dat door
-    // Number() heen is gekomen.
-    if (!naam || stand === null || !(stand > 0)) continue;
-
-    // Het moment komt van de brug: dat is wanneer de koers getikt heeft. Het
-    // moment van ontvangst zou elke koers altijd vers maken, ook als de beurs
-    // dicht is — en dan meet de barometer op de hartslag in plaats van op de
-    // markt. Is het onleesbaar, dan valt hij terug op nu en is hij hoogstens
-    // te optimistisch over één zending.
-    const moment = alsMoment(k.moment);
-    werk.push(env.DB.prepare(
-      `insert into marktstand (onderliggend, stand, moment, bron)
-       values (?, ?, coalesce(?, datetime('now')), 'brug')
-       on conflict (onderliggend) do update set
-         stand = excluded.stand, moment = excluded.moment, bron = 'brug'`
-    ).bind(naam, stand, moment));
-  }
-
   const conids = posities.map((p) => String(p.conid || "")).filter(Boolean);
   if (conids.length) {
     const plek = conids.map(() => "?").join(",");
