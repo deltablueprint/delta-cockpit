@@ -1553,6 +1553,17 @@ Twee bevindingen vallen buiten de wachtrij en vragen een beslissing, geen patch:
 - Front-end: Vite. Vier componenten dragen het geheel — schil met navigatie en routing, lijst, formulier, veldrenderer. Alles daarbuiten is configuratie.
 - Eén datalaagje tussen app en worker, één functie per endpoint.
 - **Een tabel herbouwen in D1.** D1 draait met foreign keys aan. Een migratie die een tabel herbouwt — nieuwe tabel, rijen overzetten, oude droppen, hernoemen — faalt daarom zodra er kindrijen onder die tabel hangen: de DROP telt als het wissen van alle ouderrijen. Zo'n migratie begint met `pragma defer_foreign_keys = on;` en eindigt met `off`, zodat de controle pas aan het einde van de transactie gebeurt, als de tabel er weer staat met dezelfde id's. `scripts/proef/migraties.mjs` draait sinds 4 okt 2026 met foreign keys aan en elke migratie in een eigen transactie, met een positie en een exitregel in de zaai — anders gaat zoiets lokaal moeiteloos door en pas op staging stuk.
+**Uitrollen, in deze volgorde.** Vier opdrachten, elk apart, en elke volgende pas als de vorige gelukt is. Plak er geen commentaar achter: `#` in een zsh-regel die via `npm run` doorloopt komt als argument bij wrangler terecht, en dan faalt de opdracht terwijl de rest van het plakwerk gewoon doorloopt — je staat dan met nieuwe code op een oude database.
+
+```
+npm run proef
+npm run build
+npm run db:migrate:staging
+npm run deploy:staging
+```
+
+Naar productie: `npm run db:migrate` en daarna `npm run deploy`. **De migratie gaat altijd vóór de uitrol**, want de code rekent op de definitielaag die de migratie neerzet. Loopt er één stap stuk, dan stop je: een deploy op een niet-gemigreerde database geeft schermen die velden zoeken die er nog niet zijn.
+
 - **Uitrol via de repository.** Worker, migraties en front-end in één repo, gekoppeld aan Cloudflare. Elke push is een uitrol. Staging naast productie, met eigen database en eigen sleutels. Geheimen als omgevingsvariabelen, niet in de code. De bestaande `delta-blueprint.html` gaat mee in dezelfde repo.
 
 ---
