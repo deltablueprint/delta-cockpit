@@ -1643,6 +1643,8 @@ Het scherm waarop je begint, herbouwd uit `docs/mockup-werkbank.html`. Vier vakk
 
 **Het heet Ledencommunicatie** (0134). 'Werkbank' zei wat het vroeger was: een bank met werk erop. Dat werk is weg (§13b) — wat er staat gaat over de leden: de stand die zij te zien krijgen, de posities waar die stand uit volgt, en wat er verstuurd is. De route blijft `/werkbank`: een adres is geen naam, en favorieten, bladwijzers en de geschiedenis van iedereen wijzen ernaar.
 
+**Het instap venster is een balk die volloopt (5 okt 2026).** Zes even zware vakjes lieten juist niet zien wat het is: een verloop. Nu staat de stand groot in woorden, met daaronder zes segmenten en hun naam. Drie kleuren, één verhaal: **grijs** is nog niet geweest, **lichtblauw** is gepasseerd, **donkerblauw** is waar we staan — en dat is wat de leden weten. Groen blijft wat je net koos en nog niet gepubliceerd is; na publiceren wordt dat groen vanzelf donkerblauw.
+
 **1. Stand naar de leden.** Het venster boven, de barometer eronder, en **één knop Publiceren voor allebei**. Kies je er twee, dan gaat er één bericht uit over allebei — een lid dat twee berichten krijgt over hetzelfde moment leest het tweede niet meer. De barometer **slaapt** tot het venster op *In positie* staat: daarvoor zitten wij er niet in en vragen we de leden niets, daarna is de cyclus uit. Hij is dan grijs en onklikbaar.
 
 **2. De barometer leest de balk** (0132). De vijf standen zijn de vijf zones van de gezondheidsbalk uit §10.1, en de stand die het systeem voorstelt is de zone waarin de markering van de **zwakste tranche** staat. Er is dus geen apart rekenwerk: iedereen ziet op het scherm waarom.

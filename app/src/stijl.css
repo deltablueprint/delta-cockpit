@@ -1614,26 +1614,32 @@ body.sleept .lijsttabel { pointer-events: none; }
 .dtitel { font-size: 13px; font-weight: 700; }
 .dkent { margin-left: auto; font-size: 11.5px; color: var(--mut); }
 
-.vensterrij { display: flex; gap: 6px; }
-.vhok {
-  flex: 1 1 0; min-width: 0; border: 1px solid var(--b1); background: var(--soft); border-radius: 3px;
-  padding: 11px 10px 12px; cursor: pointer; text-align: left; font-family: inherit;
-}
-.vhok .nm { font-size: 12px; font-weight: 600; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-.vensterrij { align-items: stretch; }
-.vhok:hover { border-color: var(--blue); }
-.vhok.gehad { background: #fff; } .vhok.gehad .nm { color: var(--mut); }
-/* Twee randen met twee betekenissen, en ze horen niet door elkaar te lopen:
-     blauw  — dit is de stand zoals hij vastligt, en de leden weten hem
-     groen  — dit is wat jij net koos, en het is nog niet weg
+/* Het instap venster als een balk die volloopt. Drie kleuren, één verhaal:
+     grijs       — nog niet geweest
+     lichtblauw  — gepasseerd
+     donkerblauw — hier staan we, en de leden weten dat
 
-   Na publiceren wordt het groene kader dus blauw: dat ene moment is precies
-   wat deze twee kleuren vertellen. Een derde kleur zou alleen maar vragen
-   oproepen, dus 'eerder geweest' blijft gedempt wit. */
-.vhok.nu { border: 2px solid var(--blue); background: var(--bluebg); }
-.vhok.nu .nm { color: var(--blue); font-weight: 700; }
-.vhok.gekozen { border: 2px solid var(--grn); background: var(--grnbg); }
-.vhok.gekozen .nm { color: var(--grn); font-weight: 700; }
+   Plus groen voor wat je net koos en nog niet gepubliceerd is; na publiceren
+   wordt dat groen vanzelf donkerblauw. Dat ene moment is precies wat deze
+   kleuren vertellen. */
+.vnu { font-size: 17px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 10px; }
+.vensterrij { display: flex; gap: 6px; align-items: flex-start; }
+.vstap {
+  flex: 1 1 0; min-width: 0; border: 0; background: none; padding: 0;
+  cursor: pointer; text-align: left; font-family: inherit;
+}
+.vbalk { display: block; height: 9px; border-radius: 2px; background: var(--b1); }
+.vstap .nm {
+  display: block; margin-top: 7px; font-size: 11.5px; font-weight: 600; color: var(--faint);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.vstap:hover .vbalk { outline: 1px solid var(--blue); outline-offset: 1px; }
+.vstap.gehad .vbalk { background: #9DC0D5; }
+.vstap.gehad .nm { color: var(--mut); }
+.vstap.nu .vbalk { background: var(--blue); }
+.vstap.nu .nm { color: var(--blue); font-weight: 700; }
+.vstap.gekozen .vbalk { background: var(--grn); }
+.vstap.gekozen .nm { color: var(--grn); font-weight: 700; }
 
 /* De barometer slaapt tot wij in positie zitten: dan staat hij er grijs bij. */
 .deel.uit .meterrij { opacity: .32; filter: grayscale(1); pointer-events: none; }
@@ -1788,8 +1794,7 @@ body.sleept .lijsttabel { pointer-events: none; }
   .detail { padding-left: 38px; }
   /* Liever twee regels dan 'Opent binnen…': de naam van een vensterstand is
      wat een lid straks te horen krijgt, en die hoort leesbaar te blijven. */
-  .vhok { padding: 9px 9px 10px; }
-  .vhok .nm { font-size: 11.5px; white-space: normal; line-height: 1.25; }
+  .vstap .nm { font-size: 11px; white-space: normal; line-height: 1.25; }
 }
 
 /* Smaller dan een iPad: dan valt het naast elkaar wél om, want anders wordt
@@ -1802,7 +1807,7 @@ body.sleept .lijsttabel { pointer-events: none; }
   .werkbank .schaal { grid-column: 1; }
   .detail { padding-left: var(--gutter); }
   .vensterrij { flex-wrap: wrap; }
-  .vhok { flex: 1 1 30%; }
+  .vstap { flex: 1 1 30%; }
   .dfeiten { grid-template-columns: repeat(2, 1fr); }
 }
 

@@ -110,16 +110,20 @@ export async function werkbankscherm(inhoud, kruimel) {
     const standTip = b.voorstel !== null && b.wij && Number(b.wij.stand.waarde) !== b.voorstel
       ? b.voorstel : null;
 
-    const vakje = (x, i) => {
-      // Het blauwe kader blijft staan terwijl je kiest: zo zie je naast elkaar
-      // wat er vastligt en wat je ervan wil maken. Staat de keuze op hetzelfde
-      // vakje, dan wint groen — die regel staat later in de opmaak.
+    // Het venster is een verloop, en dus leest het als een balk die volloopt:
+    // wat geweest is lichtblauw, waar we staan donkerblauw, wat nog komt grijs.
+    // Zes even zware blokjes lieten dat verloop juist niet zien. Het blauwe
+    // segment blijft staan terwijl je kiest — zo zie je naast elkaar wat
+    // vastligt en wat je ervan wil maken; staat de keuze op hetzelfde segment,
+    // dan wint groen (die regel staat in de opmaak).
+    const vakje = (x) => {
       const kl = [
         v.verloop.indexOf(x.waarde) < v.verloop.indexOf(v.nu) ? "gehad" : "",
         x.waarde === v.nu ? "nu" : "",
         kiesVenster === x.waarde ? "gekozen" : "",
       ].filter(Boolean).join(" ");
-      return `<button class="vhok ${kl}" data-venster="${x.waarde}">
+      return `<button class="vstap ${kl}" data-venster="${x.waarde}">
+        <span class="vbalk"></span>
         <span class="nm">${ontsnap(x.label)}</span></button>`;
     };
 
@@ -139,6 +143,7 @@ export async function werkbankscherm(inhoud, kruimel) {
         <div class="deel">
           <div class="deelkop"><span class="dtitel">Instap venster</span>
             <span class="dkent">${v.gepubliceerd ? `Leden kennen: ${ontsnap(labelVenster(v.gepubliceerd))}` : "Nog niets gemeld"}</span></div>
+          <div class="vnu">${ontsnap(labelVenster(toonVenster))}</div>
           <div class="vensterrij">${vensters().map(vakje).join("")}</div>
         </div>
 

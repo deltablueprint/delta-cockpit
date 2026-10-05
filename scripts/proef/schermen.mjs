@@ -207,10 +207,12 @@ eis("vastleggen is niet melden", na.gelijk === false);
 // Twee randen met twee betekenissen. Lopen ze door elkaar, dan weet je op het
 // drukste moment van de maand niet of een stand al bij de leden ligt.
 const wbcss = css;
-eis("de stand zoals hij vastligt heeft een blauw kader",
-    /\.vhok\.nu \{[^}]*var\(--blue\)/.test(wbcss));
-eis("wat je net koos heeft een groen kader",
-    /\.vhok\.gekozen \{[^}]*var\(--grn\)/.test(wbcss));
+eis("de stand zoals hij vastligt is donkerblauw",
+    /\.vstap\.nu \.vbalk \{[^}]*var\(--blue\)/.test(wbcss));
+eis("wat je net koos is groen",
+    /\.vstap\.gekozen \.vbalk \{[^}]*var\(--grn\)/.test(wbcss));
+eis("wat geweest is, is lichtblauw; wat nog komt grijs",
+    /\.vstap\.gehad \.vbalk \{/.test(wbcss) && /\.vbalk \{[^}]*var\(--b1\)/.test(wbcss));
 eis("en dat geldt ook voor de regels naast de meter",
     /\.lreg\.nu \{[^}]*var\(--blue\)/.test(wbcss) && /\.lreg\.gekozen \{[^}]*var\(--grn\)/.test(wbcss));
 eis("het systeemvoorstel blijft een stippellijn, en geen van beide kleuren",
