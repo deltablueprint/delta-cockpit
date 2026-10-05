@@ -551,19 +551,28 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
   letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin-bottom: 5px; }
 .strook { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
 .strook .week { display: flex; gap: 2px; }
-.strook i { width: 11px; height: 14px; border-radius: 2px; display: block; cursor: default; }
-.strook i:hover, .dagen i:hover { outline: 1.5px solid var(--ink); outline-offset: 1px; }
+.strook i { position: relative; width: 11px; height: 14px; border-radius: 2px; display: block; cursor: default; }
+.strook i:hover { outline: 1.5px solid var(--ink); outline-offset: 1px; }
+/* De datum hoort meteen te verschijnen, niet na een seconde wachten zoals bij
+   een title van de browser. Eén vakje is te klein om zonder bijschrift te
+   lezen. */
+.strook i:hover::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%;
+  transform: translateX(-50%); z-index: 60;
+  background: var(--ink); color: #fff; font-size: 11px; line-height: 1.3;
+  padding: 4px 8px; border-radius: 3px; white-space: nowrap; pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18);
+}
 .strooknoot { font-size: 10.5px; font-weight: 400; letter-spacing: 0; text-transform: none;
   color: var(--faint); }
 .strookdata { display: flex; justify-content: space-between; margin-top: 4px;
   font-size: 10.5px; color: var(--faint); }
+.posdagen .strookdata { max-width: 420px; }
 
-/* Eén vakje per dag, in de kleur van de stand waarop de tranche die dag sloot.
-   Ze staan tegen elkaar aan: een rij vakjes leest als een verloop, los van
-   elkaar als losse dagen. */
-.dagen { display: flex; gap: 1px; height: 14px; align-items: stretch; }
-.dagen i { flex: 1 1 0; min-width: 2px; border-radius: 1px; }
-.dagen.leeg { background: var(--b2); border-radius: 2px; opacity: .5; }
+/* De strook dagen van een tranche staat onder haar eigen regel en loopt over de
+   hele looptijd: wat geweest is in de kleur van die dag, wat nog komt grijs. */
+.posdagen { padding: 0 var(--gutter) 12px; margin-top: -4px; }
+.posdagen .strook { gap: 6px; }
 
 /* --- Dispatch: links het nu, rechts wat er gebeurd is --- */
 /* Naast elkaar zodra er plaats is, eronder zodra die er niet is. Op een iPad in
@@ -1818,7 +1827,7 @@ body.sleept .lijsttabel { pointer-events: none; }
 .posblok:last-child { border-bottom: none; }
 .posblok.uitgeklapt { background: var(--soft); }
 .pos { width: 100%; border: 0; background: none; font-family: inherit; text-align: left; cursor: pointer;
-  display: grid; grid-template-columns: 210px 1fr 108px 108px; gap: 16px; align-items: center; padding: 13px var(--gutter); }
+  display: grid; grid-template-columns: 210px 1fr 108px; gap: 16px; align-items: center; padding: 13px var(--gutter); }
 .pos:hover { background: var(--soft); }
 .posdicht { opacity: .5; }
 .poslinks { display: flex; align-items: center; gap: 9px; min-width: 0; }
@@ -1839,7 +1848,7 @@ body.sleept .lijsttabel { pointer-events: none; }
   font-weight: 700; white-space: nowrap; color: var(--ink); }
 /* De schaal onder de balken, op dezelfde grenzen als de vakjes. In punten, want
    dat is wat op het scherm van de broker staat. */
-.werkbank .schaalrij { display: grid; grid-template-columns: 210px 1fr 108px 108px; gap: 16px; padding: 2px var(--gutter) 12px; }
+.werkbank .schaalrij { display: grid; grid-template-columns: 210px 1fr 108px; gap: 16px; padding: 2px var(--gutter) 12px; }
 .werkbank .schaal { grid-column: 2; display: flex; gap: 3px; font-size: 10px; color: var(--faint); }
 .werkbank .schaal span { text-align: right; }
 .werkbank .schaal span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1917,7 +1926,7 @@ body.sleept .lijsttabel { pointer-events: none; }
   .dfeiten { grid-template-columns: repeat(3, 1fr); }
   .meterrij { grid-template-columns: 260px 210px; gap: 18px; }
   .lreg .nm { min-width: 104px; }
-  .pos, .werkbank .schaalrij { grid-template-columns: 178px 1fr 84px 96px; gap: 12px; }
+  .pos, .werkbank .schaalrij { grid-template-columns: 178px 1fr 96px; gap: 12px; }
   .detail { padding-left: 38px; }
   /* Liever twee regels dan 'Opent binnen…': de naam van een vensterstand is
      wat een lid straks te horen krijgt, en die hoort leesbaar te blijven. */

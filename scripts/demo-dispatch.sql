@@ -38,16 +38,16 @@ values ('DEMO · dispatch', 'in positie', date('now', '-18 days'), date('now', '
 --   5450: ask 14,5 bij premie 19,0  -> voorbij break-even: aandacht
 --   5300: ask  1,5 bij premie 11,0  -> voorbij het winstanker: veilig
 insert into positie (cyclus, tranche, status, contract, strike, expiratiedatum, aantal,
-                     ontvangen_premie_pt, conid, inzet_pct, herkomst, wie_volgt)
-select id, 1, 'bewaken', 'OESX 30OKT26 5600 PUT', 5600, date('now', '+25 days'), 4, 38.5, '9900001', 22, 'handmatig', 'simon'
+                     ontvangen_premie_pt, conid, inzet_pct, herkomst, wie_volgt, uitvoering_op)
+select id, 1, 'bewaken', 'OESX 30OKT26 5600 PUT', 5600, date('now', '+25 days'), 4, 38.5, '9900001', 22, 'handmatig', 'simon', date('now', '-17 days')
   from cyclus where label = 'DEMO · dispatch';
 insert into positie (cyclus, tranche, status, contract, strike, expiratiedatum, aantal,
-                     ontvangen_premie_pt, conid, inzet_pct, herkomst, wie_volgt)
-select id, 2, 'bewaken', 'OESX 30OKT26 5450 PUT', 5450, date('now', '+25 days'), 2, 19.0, '9900002', 11, 'handmatig', 'jacqueline'
+                     ontvangen_premie_pt, conid, inzet_pct, herkomst, wie_volgt, uitvoering_op)
+select id, 2, 'bewaken', 'OESX 30OKT26 5450 PUT', 5450, date('now', '+25 days'), 2, 19.0, '9900002', 11, 'handmatig', 'jacqueline', date('now', '-12 days')
   from cyclus where label = 'DEMO · dispatch';
 insert into positie (cyclus, tranche, status, contract, strike, expiratiedatum, aantal,
-                     ontvangen_premie_pt, conid, inzet_pct, herkomst, wie_volgt)
-select id, 3, 'bewaken', 'OESX 30OKT26 5300 PUT', 5300, date('now', '+25 days'), 2, 11.0, '9900003', 9, 'handmatig', 'pieter'
+                     ontvangen_premie_pt, conid, inzet_pct, herkomst, wie_volgt, uitvoering_op)
+select id, 3, 'bewaken', 'OESX 30OKT26 5300 PUT', 5300, date('now', '+25 days'), 2, 11.0, '9900003', 9, 'handmatig', 'pieter', date('now', '-12 days')
   from cyclus where label = 'DEMO · dispatch';
 
 -- Een vierde die al afgelopen is: die hoort grijs in de lijst en telt niet mee

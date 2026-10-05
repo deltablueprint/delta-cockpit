@@ -271,6 +271,8 @@ export async function metingen(env, cyclusId, { nu = null, positie = null } = {}
       // de inzet in procent van het kapitaal is wat een lid wil weten.
       inzet_pct: p.inzet_pct === null || p.inzet_pct === undefined ? null : Number(p.inzet_pct),
       expiratiedatum: p.expiratiedatum, dagen,
+      // Wanneer de tranche in de markt kwam. Daar begint haar strook dagen.
+      geopend_op: p.uitvoering_op || null,
       premie: premie !== null && Number.isFinite(premie) ? premie : null,
       ask, bod, ask_is_marktprijs: p.laatprijs === null || p.laatprijs === undefined,
       prijs_moment: p.prijs_moment, prijs_minuten_oud: minuten === null ? null : Math.round(minuten),

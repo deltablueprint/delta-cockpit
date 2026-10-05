@@ -316,14 +316,14 @@ export async function werkbankscherm(inhoud, kruimel) {
       if (wat === "venster") {
         const i = (data.venster.verloop || []).indexOf(d.venster);
         const kleur = i < 0 ? "var(--b2)" : VENSTERBLAUW[i];
-        return `<i style="background:${kleur}" title="${ontsnap(
+        return `<i style="background:${kleur}" data-tip="${ontsnap(
           `${kortedatum(d.dag)} · ${d.venster ? labelVenster(d.venster) : "nog niets vastgelegd"}`)}"></i>`;
       }
       // De barometer slaapt tot wij in positie zitten: op die dagen is er geen
       // stand, en dan hoort er ook geen kleur te staan.
       const inPositie = d.venster === "in_positie";
       const kleur = inPositie && d.stand >= 1 && d.stand <= 5 ? KLEUR[d.stand - 1] : "var(--b2)";
-      return `<i style="background:${kleur}" title="${ontsnap(
+      return `<i style="background:${kleur}" data-tip="${ontsnap(
         `${kortedatum(d.dag)} · ${inPositie && d.stand ? labelStand(d.stand) : "geen stand"}`)}"></i>`;
     };
 
@@ -352,15 +352,33 @@ export async function werkbankscherm(inhoud, kruimel) {
   // kleur veranderde: van groen naar oranje is een verhaal, een los getal niet.
   function dagen(p) {
     const rijen = (data.geschiedenis && data.geschiedenis.verloop[p.id]) || [];
-    if (!rijen.length) return `<span class="dagen leeg" title="nog geen verloop vastgelegd"></span>`;
-    return `<span class="dagen" title="${ontsnap(
-      `verloop ${kortedatum(rijen[0].dag)} – ${kortedatum(rijen[rijen.length - 1].dag)}`)}">${rijen.map((r) => {
+    if (!rijen.length) return "";
+
+    // De strook loopt over de hele looptijd: van de dag dat de tranche openging
+    // tot de expiratie. Een dag zonder meting is grijs — dat is of het verleden
+    // waarin niemand mat, of de toekomst die nog moet komen. Zo zie je in één
+    // blik hoe het ging én hoeveel dagen er nog te gaan zijn.
+    const weken = [];
+    for (const r of rijen) {
+      const laatste = weken[weken.length - 1];
+      if (laatste && laatste.week === r.week) laatste.dagen.push(r);
+      else weken.push({ week: r.week, dagen: [r] });
+    }
+
+    const vakje = (r) => {
       const st = Number(r.stand);
       const kleur = st >= 1 && st <= 5 ? KLEUR[st - 1] : "var(--b2)";
-      return `<i style="background:${kleur}" title="${ontsnap(
-        `${kortedatum(r.dag)}: ${st ? labelStand(st) : "niet gemeten"}${
+      return `<i style="background:${kleur}" data-tip="${ontsnap(
+        `${kortedatum(r.dag)} · ${st ? labelStand(st) : "niet gemeten"}${
           r.binnen === null || r.binnen === undefined ? "" : ` · ${getalMet(r.binnen, 0)} % binnen`}`)}"></i>`;
-    }).join("")}</span>`;
+    };
+
+    return `<div class="posdagen">
+      <div class="strook">${weken.map((w) => `<span class="week">${
+        w.dagen.map(vakje).join("")}</span>`).join("")}</div>
+      <div class="strookdata"><span>${ontsnap(kortedatum(rijen[0].dag))}</span><span>${
+        ontsnap(kortedatum(rijen[rijen.length - 1].dag))}</span></div>
+    </div>`;
   }
 
   // --------------------------------------------------------- de posities
@@ -380,9 +398,9 @@ export async function werkbankscherm(inhoud, kruimel) {
             <span class="posnaam">${ontsnap(p.contract || `Tranche ${p.tranche}`)}</span><br>
             <span class="posonder">${ontsnap(onderschrift(p))}</span></span></span>
           ${balkHtml(p, VAKKEN)}
-          ${dagen(p)}
           <span class="posstand">${standBadge(p, p.stand ? labelStand(p.stand) : null)}</span>
         </button>
+        ${dagen(p)}
         ${uit ? detail(p) : ""}
       </div>`;
     }).join("");

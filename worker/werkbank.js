@@ -208,15 +208,29 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
   // naar rechts.
   const verloop = {};
   for (const p of meet.posities) {
-    const r = await env.DB.prepare(
+    const gemeten = await env.DB.prepare(
       `select dag, stand, ask, binnen from (
          select date(moment) as dag, stand, ask, binnen,
                 row_number() over (partition by date(moment) order by moment desc) as rn
            from positiemeting where positie = ?
        ) where rn = 1
-       order by dag desc limit 30`
+       order by dag`
     ).bind(p.id).all().then((x) => x.results).catch(() => []);
-    if (r.length) verloop[p.id] = r.reverse();
+
+    // De strook loopt over de hele looptijd van de tranche: van de dag dat ze
+    // openging tot de expiratie. Wat nog moet komen staat er grijs bij — zo zie
+    // je niet alleen hoe het ging, maar ook hoeveel dagen er nog te gaan zijn.
+    const start = String(p.geopend_op || (gemeten[0] && gemeten[0].dag) || "").slice(0, 10);
+    const eind = String(p.expiratiedatum || "").slice(0, 10);
+    if (!start || !eind) { if (gemeten.length) verloop[p.id] = gemeten; continue; }
+
+    const bij = new Map(gemeten.map((r) => [String(r.dag), r]));
+    const dagen = await handelsdagen(env, start, eind);
+    verloop[p.id] = dagen.map((d) => {
+      const r = bij.get(d.dag);
+      return r ? { ...d, stand: Number(r.stand), ask: r.ask, binnen: r.binnen }
+               : { ...d, stand: null, ask: null, binnen: null };
+    });
   }
 
   const cyclusrij = cycli.find((c) => c.id === id) || null;
@@ -403,39 +417,42 @@ export async function dagstanden(env, cyclusId, { nu = null, maxdagen = 90 } = {
   const eerste = String(cyclusrij && cyclusrij.geopend_op ? cyclusrij.geopend_op : standen[0].vastgesteld_op).slice(0, 10);
   const laatste = (nu ? new Date(nu) : new Date()).toISOString().slice(0, 10);
 
+  const uit = (await handelsdagen(env, eerste, laatste, maxdagen)).map((d) => {
+    // De laatste vastlegging van of vóór deze dag. Vóór de eerste vastlegging is
+    // er niets te zeggen; dan draagt de dag geen kleur.
+    let gold = null;
+    for (const s of standen) {
+      if (String(s.vastgesteld_op).slice(0, 10) <= d.dag) gold = s; else break;
+    }
+    return { ...d, stand: gold ? Number(gold.stand) : null, venster: gold ? gold.venster : null };
+  });
+  // De laatste dagen zijn de interessante; bij een lange cyclus valt het begin af.
+  return uit.slice(-maxdagen);
+}
+
+// De handelsdagen tussen twee datums, uit de handelskalender. Staat er voor een
+// datum niets in, dan geldt maandag tot en met vrijdag: beter een kalender die
+// ongeveer klopt dan een lege strook.
+export async function handelsdagen(env, van, tot, maxdagen = 120) {
   const kalender = new Map();
   try {
     const r = await env.DB.prepare(
       "select datum, status from handelsdag where datum between ? and ?"
-    ).bind(eerste, laatste).all();
+    ).bind(van, tot).all();
     for (const d of r.results) kalender.set(String(d.datum).slice(0, 10), String(d.status));
   } catch { /* dan de weekdagen */ }
 
   const uit = [];
-  const dag = new Date(`${eerste}T12:00:00Z`);
-  const eind = new Date(`${laatste}T12:00:00Z`);
+  const dag = new Date(`${van}T12:00:00Z`);
+  const eind = new Date(`${tot}T12:00:00Z`);
   while (dag <= eind && uit.length < maxdagen) {
     const d = dag.toISOString().slice(0, 10);
     const status = kalender.get(d);
     const handel = status ? status !== "dicht" : dag.getUTCDay() >= 1 && dag.getUTCDay() <= 5;
-    if (handel) {
-      // De laatste vastlegging van of vóór deze dag. Vóór de eerste vastlegging
-      // is er niets te zeggen; dan draagt de dag geen kleur.
-      let gold = null;
-      for (const s of standen) {
-        if (String(s.vastgesteld_op).slice(0, 10) <= d) gold = s; else break;
-      }
-      uit.push({
-        dag: d,
-        week: weeknummer(dag),
-        stand: gold ? Number(gold.stand) : null,
-        venster: gold ? gold.venster : null,
-      });
-    }
+    if (handel) uit.push({ dag: d, week: weeknummer(dag) });
     dag.setUTCDate(dag.getUTCDate() + 1);
   }
-  // De laatste dagen zijn de interessante; bij een lange cyclus valt het begin af.
-  return uit.slice(-maxdagen);
+  return uit;
 }
 
 // Het weeknummer, alleen om de dagen in blokjes te zetten. ISO-week: de week
