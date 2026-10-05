@@ -39,7 +39,7 @@ const ZONDER_SCHERM = new Set([
   "db_rule", "db_calc", "schema_versie", "sqlite_sequence", "configuratieversie",
   "favoriet", "bezoek", "gebruiker_voorkeur", "inzending", "audit",
   "brokerpositie", "brokergebeurtenis", "brokerverbinding", "brokerinstelling",
-  "lynx_rapport", "handelsdag", "cyclus_event",
+  "lynx_rapport", "cyclus_event",
   // De stand van de onderliggende. Eén rij per index, overschreven bij elke
   // hartslag van de brug: een momentopname, geen vastlegging. Wat bewaard moet
   // blijven staat in de gebeurtenissenstroom.
