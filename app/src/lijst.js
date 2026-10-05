@@ -409,9 +409,13 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   // en het record bestaat. De knop *Nieuw* blijft staan voor wie het hele
   // formulier wil, maar voor een voorwaarde of een event is dat een scherm
   // openen, drie velden invullen en terugkomen — terwijl de lijst er al staat.
-  const magInline = ingebed
-    ? ingebed.magNieuw !== false
-    : !!data.tabel.nieuw_vanuit_lijst;
+  // Niet elke tabel leent zich ervoor. Een besluit draagt een datum, een
+  // uitkomst, een strike en een inzet, en opent een beoordelingsronde: dat vul
+  // je op het formulier in. db_table.inline_nieuw zegt het per tabel (0140).
+  const magInline = data.tabel.inline_nieuw === 0 ? false
+    : ingebed
+      ? ingebed.magNieuw !== false
+      : !!data.tabel.nieuw_vanuit_lijst;
 
   // Wat je in een cel kunt typen. Een verwijzing naar een record kiest je met
   // de loep op het formulier; hier is er niets om in te vullen. Een afbeelding

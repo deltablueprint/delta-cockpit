@@ -230,7 +230,8 @@ export async function lijst(env, tabelnaam, params, ik) {
     verwijzingen,
     tabel: { naam: tabel.naam, label: tabel.label, label_mv: tabel.label_mv,
              titel_veld: tabel.titel_veld, import_toegestaan: tabel.import_toegestaan,
-             nieuw_vanuit_lijst: tabel.nieuw_vanuit_lijst },
+             nieuw_vanuit_lijst: tabel.nieuw_vanuit_lijst,
+             inline_nieuw: tabel.inline_nieuw },
     // 'Actief' is geen veld uit de definitielaag maar de keerzijde van
     // 'archief'. Hij staat achteraan, want hij zegt iets over het record en
     // niet over de inhoud ervan.

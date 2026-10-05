@@ -181,6 +181,7 @@ eis("in een gerelateerde lijst draagt hij de ouder mee",
     lj.includes("velden[ingebed.kolom] = String(ingebed.ouder.id)"));
 eis("hij staat er alleen waar je mag aanmaken",
     lj.includes("ingebed.magNieuw !== false") && lj.includes("data.tabel.nieuw_vanuit_lijst"));
+eis("en een tabel kan hem uitzetten", lj.includes("data.tabel.inline_nieuw === 0"));
 eis("een lege toevoegregel maakt niets aan", lj.includes("if (!Object.keys(velden).length) return;"));
 eis("en hij heeft opmaak", opmaak.includes("tr.nieuwregel > td") && opmaak.includes("tr.nieuwregel.bezigrij"));
 
