@@ -1,4 +1,4 @@
-// Ledencommunicatie: het scherm waarop je begint.
+// Dispatch: het scherm waarop je begint.
 //
 // Het heette Werkbank, naar wat het vroeger was: een bank met werk erop. Dat
 // werk is weg (BOUWSPEC §13b) — wat er staat gaat over de leden. De route heet
@@ -62,8 +62,8 @@ export async function werkbankscherm(inhoud, kruimel) {
 
   function teken() {
     if (!leeftNog()) return;
-    document.title = "Ledencommunicatie · Delta Blueprint Cockpit";
-    kruimel.innerHTML = `<span>Werken</span> <span class="pijlje">&rsaquo;</span> <span>Ledencommunicatie</span>`;
+    document.title = "Dispatch · Delta Blueprint Cockpit";
+    kruimel.innerHTML = `<span>Communicatie</span> <span class="pijlje">&rsaquo;</span> <span>Dispatch</span>`;
 
     if (!data.cyclus) {
       inhoud.innerHTML = `<div class="werkbank"><p class="wbleeg">Er loopt geen cyclus. Open er een om te beginnen.</p></div>`;

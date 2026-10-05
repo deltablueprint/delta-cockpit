@@ -130,7 +130,7 @@ for (const m of await q("select label, groep, doeltabel, route from db_module wh
 const groepen = [...new Set((await q("select distinct groep from db_module where actief = 1")).map((g) => g.groep))];
 for (const g of groepen) {
   eis(`de menugroep '${g}' is er een die we kennen`,
-      ["WERKEN", "GEGEVENS", "VASTLEGGING", "BEHEER"].includes(g));
+      ["COMMUNICATIE", "GEGEVENS", "VASTLEGGING", "BEHEER"].includes(g));
 }
 
 

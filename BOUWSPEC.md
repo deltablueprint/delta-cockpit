@@ -1664,11 +1664,11 @@ Die laatste zijn de ene plek waar wél verwijderd wordt, en dat is precies zoals
 
 **Een kaart blijft bestaan, maar alleen voor een positie.** Open, gesloten, doorgerold — dat zijn de enige drie. De doorrol wordt herkend: sluit een positie en gaat er kort daarna een nieuwe open, dan verandert de kaart van de sluiting van vorm en laadt het doorrolsjabloon met beide contracten erin. De mapping staat in code, niet als ingerichte SQL.
 
-## 13c. Ledencommunicatie — het scherm waarop je begint (migraties 0128–0134, 5 okt 2026)
+## 13c. Dispatch — het scherm waarop je begint (migraties 0128–0134, 0141, 5 okt 2026)
 
 Het scherm waarop je begint, herbouwd uit `docs/mockup-werkbank.html`. Vier vakken, in deze volgorde, en niets anders.
 
-**Het heet Ledencommunicatie** (0134). 'Werkbank' zei wat het vroeger was: een bank met werk erop. Dat werk is weg (§13b) — wat er staat gaat over de leden: de stand die zij te zien krijgen, de posities waar die stand uit volgt, en wat er verstuurd is. De route blijft `/werkbank`: een adres is geen naam, en favorieten, bladwijzers en de geschiedenis van iedereen wijzen ernaar.
+**Het heet Dispatch** (0134, 0141). 'Werkbank' zei wat het vroeger was: een bank met werk erop. Dat werk is weg (§13b) — wat er staat gaat over de leden: de stand die zij te zien krijgen, de posities waar die stand uit volgt, en wat er verstuurd is. De route blijft `/werkbank`: een adres is geen naam, en favorieten, bladwijzers en de geschiedenis van iedereen wijzen ernaar.
 
 **Het instap venster is een balk die volloopt (5 okt 2026).** Zes even zware vakjes lieten juist niet zien wat het is: een verloop. Nu staat de stand groot in woorden, met daaronder zes segmenten en hun naam. Drie kleuren, één verhaal: **grijs** is nog niet geweest, **lichtblauw** is gepasseerd, **donkerblauw** is waar we staan — en dat is wat de leden weten. Groen blijft wat je net koos en nog niet gepubliceerd is; na publiceren wordt dat groen vanzelf donkerblauw.
 
@@ -1713,6 +1713,8 @@ De balk loopt **van verlies links naar winst rechts** — de ask daalt naar rech
 **De maat van het scherm is een iPad in landscape.** 1024 px breed, min het menu en de marges: ongeveer 740 px voor de werkbank. Daar past alles in zonder horizontaal te scrollen en zonder dat de balken omvallen — juist het naast elkaar lezen van drie tranches is waar dit scherm voor is. Onder de 760 px (telefoon) valt het wel om, want dan wordt alles onleesbaar smal.
 
 **De kaders staan in hetzelfde ritme als de rest van de app**: 10 px ertussen, 14 px erbinnen — zoals op het gespreksscherm. Alles in een paneel komt op dezelfde linkerlijn uit: de kop, de body, een positieregel, een kaart, de knopbalk.
+
+**De navigator heet waar hij over gaat (0141).** 'Werken' zei niets — alles hier is werken. De groep heet **Communicatie**, en het scherm **Dispatch**: daar gaat het de deur uit. *Barometer* en *Stroom* verhuizen mee: het zijn de twee logboeken van wat wij wisten en wat wij zeiden. *Mijn taken*, *Klaar voor de leden* en *Posities zonder cyclus* staan niet meer in de navigator; de schermen blijven bestaan. De barometerlijst viel zonder `db_view` terug op de eerste zeven velden en toonde dus geen enkel tijdstip — hij begint nu met *vastgesteld op*, aflopend, want de volgorde in de tijd is wat je eraan wil aflezen.
 
 **Er loopt er één (5 okt 2026).** Bovenaan stond een keuzelijst met cycli. In productie loopt er op een gegeven moment één cyclus, dus stond daar een keuze van één — een vraag die je elke keer opnieuw moest beantwoorden. Nu staat er *Lopende cyclus: <naam>*. In demodata lopen er meerdere naast elkaar; dan toont het scherm er één.
 
