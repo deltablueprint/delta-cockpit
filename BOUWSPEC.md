@@ -1720,11 +1720,10 @@ De balk loopt **van verlies links naar winst rechts** — de ask daalt naar rech
 | Groep | Wat erin staat |
 |---|---|
 | **Communicatie** | Dispatch, Barometer, Stroom, Publicaties |
-| **Strategie** | Cycli, Posities, Chartanalyses, Eventskalender, Metingen, Besluiten, Inzendingen |
-| **Vastlegging** | Maandverslagen |
-| **Beheer** | ongewijzigd |
+| **Strategie** | Cycli, Instapvoorwaarden, Posities, Exitplannen, Technische analyse, Eventskalender, Besluiten, Inzendingen |
+| **Beheer** | ongewijzigd, min Bouwstenen |
 
-'Werken' zei niets — alles hier is werken; 'Gegevens' zei wat het technisch was. De schermen waarop wij praten met de leden staan bij elkaar, en de hele gang van cyclus tot besluit staat bij elkaar. *Mijn taken*, *Klaar voor de leden* en *Posities zonder cyclus* staan niet meer in de navigator; de schermen blijven bestaan. *Inzendingen* kreeg een eigen ingang: je kwam er alleen via een besluit, en dat is te smal om over cycli heen terug te kijken. De barometerlijst viel zonder `db_view` terug op de eerste zeven velden en toonde dus geen enkel tijdstip — hij begint nu met *vastgesteld op*, aflopend.
+'Werken' zei niets — alles hier is werken; 'Gegevens' zei wat het technisch was. De schermen waarop wij praten met de leden staan bij elkaar, en de hele gang van cyclus tot besluit staat bij elkaar. *Mijn taken*, *Klaar voor de leden* en *Posities zonder cyclus* staan niet meer in de navigator; de schermen blijven bestaan. *Inzendingen* stond onder VASTLEGGING en kreeg in 0143 per ongeluk een tweede ingang onder Strategie, omdat de hernoeming die groep niet raakte; 0146 haalt de dubbele weg en verplaatst de oude. Daarmee viel VASTLEGGING vanzelf weg — een groep is niets meer dan wat eronder staat. De barometerlijst viel zonder `db_view` terug op de eerste zeven velden en toonde dus geen enkel tijdstip — hij begint nu met *vastgesteld op*, aflopend.
 
 **De applicatie heet Delta Wave Cockpit.** Grotere merknaam in de balk, en achter het woord *Cockpit* loopt een signaallijn naar rechts die uitdooft: dat is de golf waar de naam over gaat. Delta Blueprint blijft het bedrijf.
 **Er loopt er één (5 okt 2026).** Bovenaan stond een keuzelijst met cycli. In productie loopt er op een gegeven moment één cyclus, dus stond daar een keuze van één — een vraag die je elke keer opnieuw moest beantwoorden. Nu staat er *Lopende cyclus: <naam>*. In demodata lopen er meerdere naast elkaar; dan toont het scherm er één.
