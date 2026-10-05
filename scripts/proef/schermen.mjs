@@ -168,6 +168,17 @@ eis("de opsteller zet alles vast als het verstuurd is", opsteller.includes("cons
 eis("en toont wanneer en door wie", opsteller.includes("verstuurdRegel"));
 eis("er is geen wisknop op de opsteller", !/wissen|verwijder/i.test(opsteller.replace(/^\/\/.*$/gm, "")));
 
+// ------------------------------------------------- de aanwezigenkiezer
+// Een naam verslepen is de wijziging. Blijft hij in het scherm hangen tot je
+// opslaat, dan staat de stap bovenaan open terwijl het werk gedaan is, en
+// verschijnt 'waarom alleen besloten' pas na een herlaadbeurt.
+const rc = readFileSync("app/src/record.js", "utf8");
+eis("een naam verslepen slaat meteen op", rc.includes("bewaar(tabelnaam, id, { aanwezigen_ids"));
+eis("en tekent de stappen opnieuw",
+    /aanwezigen_ids[\s\S]{0,400}stappenHertekenen\(\)/.test(rc));
+eis("en zet het voorwaardelijke veld in beweging",
+    rc.includes('veld.dispatchEvent(new Event("change"'));
+
 // ------------------------------------------------- de toevoegregel
 // Onderaan elke lijst staat een lege regel: typen en Enter maakt het record,
 // zonder eerst op Nieuw te drukken en een formulier te openen.

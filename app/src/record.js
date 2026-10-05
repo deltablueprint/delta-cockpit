@@ -527,9 +527,25 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     const veld = inhoud.querySelector("#aanwezigen_ids");
     const tekst = inhoud.querySelector("#quorumtekst");
     if (vak && veld) {
-      kiezerAansluiten(vak, (ids) => {
+      // Een naam verslepen ís de wijziging — daar hoort geen tweede handeling
+      // achteraan. Het wordt meteen opgeslagen, zodat de stap bovenaan afvinkt
+      // en 'waarom alleen besloten' verschijnt zodra er maar één iemand staat.
+      // De change-gebeurtenis is wat die laatste in beweging zet; een waarde
+      // die de code zelf zet, stuurt er zelf geen.
+      kiezerAansluiten(vak, async (ids) => {
         veld.value = ids.join(",");
         if (tekst) tekst.textContent = quorumtekst(ids.length);
+        veld.dispatchEvent(new Event("change", { bubbles: true }));
+        try {
+          const uitkomst = await bewaar(tabelnaam, id, { aanwezigen_ids: veld.value || null },
+                                        data.waarden.revisie);
+          data.waarden.revisie = uitkomst.revisie ?? data.waarden.revisie;
+          data.waarden.aanwezigen_ids = veld.value;
+          await stappenHertekenen();
+        } catch (fout) {
+          const m = inhoud.querySelector("#opslagmelding");
+          if (m) { m.textContent = fout.message; m.className = "recordmelding fouttekst"; }
+        }
       });
     }
   }
