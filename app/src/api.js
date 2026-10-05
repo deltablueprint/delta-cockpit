@@ -140,6 +140,11 @@ export const brugInstelling = (waarden) =>
 export const brugFlex = () => haal("/api/brug/flex");
 
 // ---- de leden: de barometer en de berichten ----
+//
+// Drie functies hieronder hebben op dit moment geen aanroeper: conceptUitKaart,
+// werkbankCycli en haalStroom. Ze wachten op de nieuwe werkbank, en hun routes
+// bestaan en worden door scripts/proef/schermen.mjs gecontroleerd. Staat dit
+// over een week nog zo, dan is het geen wachten meer maar dode code.
 // Van kaart naar concept. Welke gebeurtenis een kaart is, bepaalt de werkbank;
 // deze route maakt er een bericht van, met het sjabloon uit beheer.
 export const conceptUitKaart = (id, body = {}) =>
