@@ -312,7 +312,7 @@ export async function metingen(env, cyclusId, { nu = null, positie = null } = {}
       doorgerold_naar: p.doorgerold_naar,
       afwijking: p.afwijking ? 1 : 0, afwijking_soort: p.afwijking_soort,
       gepubliceerd_op: p.gepubliceerd_op,
-      open, uitkomst: p.uitkomst,
+      open, uitkomst: p.uitkomst, sluittijdstip: p.sluittijdstip || null,
       stand: open && versePrijs ? standVan(ask, ijk) : null,
     };
   });

@@ -53,9 +53,10 @@ select id, 3, 'bewaken', 'OESX 30OKT26 5300 PUT', 5300, date('now', '+25 days'),
 -- Een vierde die al afgelopen is: die hoort grijs in de lijst en telt niet mee
 -- voor de barometer.
 insert into positie (cyclus, tranche, status, contract, strike, expiratiedatum, aantal,
-                     ontvangen_premie_pt, conid, inzet_pct, herkomst, uitkomst, resultaat_pt)
+                     ontvangen_premie_pt, conid, inzet_pct, herkomst, uitkomst, resultaat_pt,
+                     uitvoering_op, sluittijdstip)
 select id, 4, 'gesloten', 'OESX 18SEP26 5050 PUT', 5050, date('now', '-17 days'), 0, 22.0, '9900004', 8, 'handmatig',
-       'waardeloos geexpireerd', 22.0
+       'waardeloos geexpireerd', 22.0, date('now', '-45 days'), date('now', '-17 days')
   from cyclus where label = 'DEMO · dispatch';
 
 -- ---------- de barometerstand die nu vastligt ----------

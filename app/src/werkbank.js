@@ -367,9 +367,14 @@ export async function werkbankscherm(inhoud, kruimel) {
 
     const vakje = (r) => {
       const st = Number(r.stand);
-      const kleur = st >= 1 && st <= 5 ? KLEUR[st - 1] : "var(--b2)";
+      // De laatste dag van een afgeronde tranche draagt haar uitkomst, niet een
+      // stand: toen was het klaar.
+      const kleur = r.slot === "winst" ? "var(--grn)"
+                  : r.slot === "verlies" ? DIEPROOD
+                  : st >= 1 && st <= 5 ? KLEUR[st - 1] : "var(--b2)";
+      const wat = r.slot ? r.uitkomst : st ? labelStand(st) : "niet gemeten";
       return `<i style="background:${kleur}" data-tip="${ontsnap(
-        `${kortedatum(r.dag)} · ${st ? labelStand(st) : "niet gemeten"}${
+        `${kortedatum(r.dag)} · ${wat}${
           r.binnen === null || r.binnen === undefined ? "" : ` · ${getalMet(r.binnen, 0)} % binnen`}`)}"></i>`;
     };
 

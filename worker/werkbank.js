@@ -221,16 +221,30 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
     // openging tot de expiratie. Wat nog moet komen staat er grijs bij — zo zie
     // je niet alleen hoe het ging, maar ook hoeveel dagen er nog te gaan zijn.
     const start = String(p.geopend_op || (gemeten[0] && gemeten[0].dag) || "").slice(0, 10);
-    const eind = String(p.expiratiedatum || "").slice(0, 10);
+    // Een tranche die dicht is loopt tot haar sluiting, niet tot de expiratie:
+    // de dagen daarna bestaan niet voor haar. Een expiratie zonder sluittijdstip
+    // telt als de laatste dag.
+    const dicht = String(p.sluittijdstip || "").slice(0, 10);
+    const eind = !p.open && dicht ? dicht : String(p.expiratiedatum || "").slice(0, 10);
     if (!start || !eind) { if (gemeten.length) verloop[p.id] = gemeten; continue; }
 
     const bij = new Map(gemeten.map((r) => [String(r.dag), r]));
     const dagen = await handelsdagen(env, start, eind);
-    verloop[p.id] = dagen.map((d) => {
+    const rijen = dagen.map((d) => {
       const r = bij.get(d.dag);
       return r ? { ...d, stand: Number(r.stand), ask: r.ask, binnen: r.binnen }
                : { ...d, stand: null, ask: null, binnen: null };
     });
+
+    // De laatste dag van een afgeronde tranche draagt haar uitkomst. Zonder dat
+    // eindigt een strook die goed afliep in dezelfde grijstint als een strook
+    // waar niemand naar keek.
+    if (!p.open && rijen.length) {
+      const res = p.resultaat === null || p.resultaat === undefined ? null : Number(p.resultaat);
+      rijen[rijen.length - 1].slot = res === null ? null : res >= 0 ? "winst" : "verlies";
+      rijen[rijen.length - 1].uitkomst = p.uitkomst || "gesloten";
+    }
+    verloop[p.id] = rijen;
   }
 
   const cyclusrij = cycli.find((c) => c.id === id) || null;
