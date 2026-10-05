@@ -93,12 +93,11 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
       <div class="feitkop">Instapvoorwaarden<span class="feitmeta">alleen lezen — bijwerken gebeurt op de cyclus</span></div>
       ${instap.length === 0 ? `<p class="feitleeg">Nog geen instapvoorwaarden ingevuld.</p>` : `
       <table class="feittabel">
-        <thead><tr><th>Voorwaarde</th><th>Waar gekeken</th><th>Gemeten</th><th>Status</th><th>Door</th></tr></thead>
+        <thead><tr><th>Voorwaarde</th><th>Waar gekeken</th><th>Status</th><th>Door</th></tr></thead>
         <tbody>${instap.map((v) => `
           <tr>
             <td class="feitnaam">${ontsnap(v.naam)}</td>
             <td>${ontsnap(v.bron || "—")}</td>
-            <td>${ontsnap(v.gemeten_waarde || "—")}</td>
             <td>${badge(v.status, STATUSKLEUR[v.status] || "grijs")}</td>
             <td>${v.gemeten_door && meta.gebruikers[v.gemeten_door]
                   ? avatarMetNaam(meta.gebruikers[v.gemeten_door]) : "—"}</td>

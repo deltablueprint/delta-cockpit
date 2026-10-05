@@ -125,21 +125,6 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
       teSchrijven.push({ veld, nieuweWaarde, oudeWaarde: huidig[kolom] });
     }
   }
-  // Een gemeten waarde zonder oordeel is geen meting. 2,4 % zegt niets tegen wie
-  // er bij het gesprek naar kijkt; pas 'groen' of 'rood' maakt er iets van. Zonder
-  // deze regel vul je de waarde in, blijft de status op 'niet gemeten' staan, en
-  // zie je de processtap openstaan zonder te begrijpen waarom.
-  if (tabelnaam === "voorwaarde") {
-    const straksNu = { ...huidig, ...(body.velden || {}) };
-    const heeftWaarde = String(straksNu.gemeten_waarde ?? "").trim() !== "";
-    if (heeftWaarde && (!straksNu.status || straksNu.status === "niet gemeten")) {
-      return {
-        fout: "Zet er ook bij of deze voorwaarde groen, oranje of rood staat. Een waarde zonder oordeel helpt het gesprek niet.",
-        veld: "status", status: 422,
-      };
-    }
-  }
-
   if (!teSchrijven.length) return { ongewijzigd: true, id, revisie: huidig.revisie };
 
   // Validatie uit db_rule, tegen het record zoals het ná opslaan zou zijn.
@@ -306,20 +291,15 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
     }
   }
 
-  // Een meting draagt wie hem deed en wanneer. Dat hoeft niemand in te vullen:
-  // wie het opschrijft is degene die gekeken heeft, en 'nu' is nu. Bij een
-  // instapvoorwaarde is dat geen bijzaak — het besluit steunt erop.
-  if (tabelnaam === "voorwaarde"
-      && teSchrijven.some((t) => ["gemeten_waarde", "status"].includes(t.veld.kolom))) {
-    const heeftWaarde = String(straks.gemeten_waarde ?? "").trim() !== "";
-    const beoordeeld = straks.status && straks.status !== "niet gemeten";
-    if (heeftWaarde || beoordeeld) {
-      await env.DB.prepare(
-        `update voorwaarde
-            set gemeten_door = coalesce(gemeten_door, ?), gemeten_op = coalesce(gemeten_op, datetime('now'))
-          where id = ?`
-      ).bind(ik && ik.id ? ik.id : null, id).run();
-    }
+  // Wie de status zette en wanneer, blijft het systeem noteren — niet als meting
+  // (die is er niet meer, 0135) maar omdat het besluit op dat oordeel steunt.
+  if (tabelnaam === "voorwaarde" && teSchrijven.some((t) => t.veld.kolom === "status")
+      && straks.status && straks.status !== "niet gemeten") {
+    await env.DB.prepare(
+      `update voorwaarde
+          set gemeten_door = coalesce(gemeten_door, ?), gemeten_op = coalesce(gemeten_op, datetime('now'))
+        where id = ?`
+    ).bind(ik && ik.id ? ik.id : null, id).run();
   }
 
   // Een cyclus op *go / no-go* zetten ís het openen van een beoordelingsmoment.

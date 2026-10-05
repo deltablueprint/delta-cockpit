@@ -48,15 +48,14 @@ const REGELS = {
   },
 
   async voorwaarden_ingevuld(env, rij) {
+    // Eén voorwaarde is genoeg (0135). De status per voorwaarde is werk voor het
+    // gesprek; een stap die pas afgaat als alles een oordeel draagt, duwt mensen
+    // naar een status kiezen om van de stap af te zijn.
     const alle = await tel(env,
       "select count(*) as n from voorwaarde where cyclus = ? and archief = 0", rij.id);
-    const open = await tel(env,
-      "select count(*) as n from voorwaarde where cyclus = ? and archief = 0 and (status = 'niet gemeten' or gemeten_waarde is null)", rij.id);
-    // 'van de 3' alleen is dubbelzinnig: je hebt er drie aangemaakt en ziet
-    // '0 van 3' staan. Wat er geteld wordt, moet erbij.
     return {
-      gedaan: alle > 0 && open === 0,
-      stand: alle ? `${alle - open} van ${alle} gemeten` : "nog geen voorwaarden",
+      gedaan: alle > 0,
+      stand: alle ? `${alle}` : "nog geen voorwaarden",
     };
   },
 

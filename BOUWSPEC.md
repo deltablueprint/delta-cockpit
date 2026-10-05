@@ -391,9 +391,13 @@ Wat wél bestaat is een eenvoudige gerelateerde lijst op de cyclus waarin je per
 | Kolom | Wat |
 | --- | --- |
 | Voorwaarde | De naam, overgenomen uit de standaardset |
-| Gemeten waarde | Wat je afleest bij Lynx of in de chart, als tekst — "2,4 %", "18,4", "0,8×" |
-| Status | Groen, oranje, rood of *niet gemeten*, met de hand gezet |
-| Wie en wanneer | Automatisch |
+| Status | Groen, oranje, rood of *nog niet bepaald*, met de hand gezet |
+
+**Er wordt niets gemeten (0135, 5 okt 2026).** De kolom *gemeten waarde*, met wie hem mat en wanneer, is uit de definitielaag. In de praktijk kijk je, je oordeelt, en je zet de status; het getal eromheen was een tweede administratie die niemand bijhield — waardoor de processtap bleef openstaan terwijl het werk gedaan was. De kolommen blijven in de tabel staan, zodat wat er ooit in gezet is leesbaar blijft, maar er komt niets meer bij. Wie de status zette en wanneer wordt nog wel genoteerd: het besluit steunt op dat oordeel.
+
+**De stap heet *Instapvoorwaarden bepalen* en gaat af zodra er één voorwaarde staat.** Hij telde eerst of élke voorwaarde een oordeel droeg. Dat duwt een mens naar een status kiezen om van de stap af te zijn, en dat is precies niet waar het oordeel voor is. Het aantal staat erbij; wát er staat lees je in de lijst.
+
+**En één naam die niet klopte:** *Tranche in de markt* → **Eerste Tranche geplaatst**. De stap gaat over wat je gedaan hebt, niet over waar iets staat.
 
 **Niets wordt bevroren.** Een eerder ontwerp zette de set op slot bij de start van het gesprek, zodat iedereen tegen dezelfde cijfers oordeelde. Dat is bewust losgelaten: de beoordeling wordt op maat gemaakt op het moment van de markt, en dat de drie co-founders op een iets ander moment naar een iets andere markt kijken is geen ruis maar **precies de waarde van drie perspectieven**. Een bevroren tabel zou die verschillen juist wegpoetsen.
 
