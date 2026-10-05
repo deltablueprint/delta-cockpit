@@ -1720,7 +1720,7 @@ De balk loopt **van verlies links naar winst rechts** — de ask daalt naar rech
 | Groep | Wat erin staat |
 |---|---|
 | **Communicatie** | Dispatch, Barometer, Stroom, Publicaties |
-| **Strategie** | Cycli, Instapvoorwaarden, Posities, Exitplannen, Technische analyse, Eventskalender, Besluiten, Inzendingen |
+| **Strategie** | Cycli, Posities, Eventskalender, Instapvoorwaarden, Technische analyse, Besluiten, Inzendingen, Exitplannen |
 | **Beheer** | ongewijzigd, min Bouwstenen |
 
 'Werken' zei niets — alles hier is werken; 'Gegevens' zei wat het technisch was. De schermen waarop wij praten met de leden staan bij elkaar, en de hele gang van cyclus tot besluit staat bij elkaar. *Mijn taken*, *Klaar voor de leden* en *Posities zonder cyclus* staan niet meer in de navigator; de schermen blijven bestaan. *Inzendingen* stond onder VASTLEGGING en kreeg in 0143 per ongeluk een tweede ingang onder Strategie, omdat de hernoeming die groep niet raakte; 0146 haalt de dubbele weg en verplaatst de oude. Daarmee viel VASTLEGGING vanzelf weg — een groep is niets meer dan wat eronder staat. De barometerlijst viel zonder `db_view` terug op de eerste zeven velden en toonde dus geen enkel tijdstip — hij begint nu met *vastgesteld op*, aflopend.
