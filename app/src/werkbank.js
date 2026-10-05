@@ -316,7 +316,7 @@ export async function werkbankscherm(inhoud, kruimel) {
       <div class="dfeiten">
         ${feit("Premie", getal(p.premie), `${p.aantal ?? "?"} contract${p.aantal === 1 ? "" : "en"}`)}
         ${feit("Ask nu", getal(p.ask), p.ask_is_marktprijs ? "marktprijs" : `bod ${getal(p.bod)}`)}
-        ${feit("Open resultaat", getalMet(p.resultaat), p.resultaat_eur === null ? "" : `€ ${getal(p.resultaat_eur, 0)}`)}
+        ${feit("Open resultaat", getalMet(p.resultaat), p.resultaat_eur === null ? "" : `€ ${getalMet(p.resultaat_eur, 0)}`)}
         ${feit("Break-even", getal(p.breakeven), "ask gelijk aan de premie")}
         ${feit("Stoploss", getal(p.stoploss), p.tot_stoploss === null ? "" : `${getal(p.tot_stoploss)} te gaan`)}
         ${feit("Dagen", p.dagen === null ? "—" : String(p.dagen), p.prijs_minuten_oud === null ? "" : `prijs ${p.prijs_minuten_oud} min oud`)}
@@ -336,7 +336,7 @@ export async function werkbankscherm(inhoud, kruimel) {
   const balk = (l, pctWaarde, kleur) => pctWaarde === null ? "" : `
     <div class="dbalkrij"><span class="dbalklab">${ontsnap(l)}</span>
       <span class="dbalk"><i style="width:${Math.max(0, Math.min(100, pctWaarde))}%;background:${kleur}"></i></span>
-      <span class="dbalkpct">${Math.round(pctWaarde)} %</span></div>`;
+      <span class="dbalkpct">${getalMet(pctWaarde, 0)} %</span></div>`;
 
   // ------------------------------------------------- kaarten en verstuurd
   function ledenvak() {

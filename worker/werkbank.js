@@ -35,6 +35,18 @@ const minutenTussen = (a, b) => {
   return Math.abs(y - x) / 60000;
 };
 
+// Number(null) is 0, en op een kaart betekent 0,0 "gesloten op break-even".
+// Dat is iets heel anders dan "we weten het nog niet", en het gaat zo het
+// bericht aan de leden in.
+const leeg = (n) => n === null || n === undefined || String(n).trim() === "";
+const getal = (n) => (!leeg(n) && Number.isFinite(Number(n)) ? Number(n).toFixed(1).replace(".", ",") : "—");
+const getalMet = (n) => {
+  if (leeg(n)) return "—";
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "—";
+  return `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(x).toFixed(1).replace(".", ",")}`;
+};
+
 // ---------------------------------------------------------------- de kaarten
 //
 // Drie soorten, en alle drie uit een positie. Een kaart staat open zolang er
@@ -127,7 +139,7 @@ export async function kaarten(env, cyclusId, { nu = null } = {}) {
       moment: r.moment, positie: r.positie,
       feiten: geopend
         ? [["Contract", r.contract || "?"], ["Premie", getal(r.ontvangen_premie_pt)],
-           ["Aantal", String(r.aantal ?? "?")]]
+           ["Aantal", leeg(r.aantal) ? "—" : String(r.aantal)]]
         : [["Contract", r.contract || "?"], ["Uitkomst", r.uitkomst || "gesloten"],
            ["Resultaat", getalMet(r.resultaat_pt)]],
       concept: r.concept_soort === (geopend ? "opening" : "sluiting") ? r.concept : null,
@@ -139,12 +151,7 @@ export async function kaarten(env, cyclusId, { nu = null } = {}) {
   return uit;
 }
 
-const getal = (n) => (Number.isFinite(Number(n)) ? Number(n).toFixed(1).replace(".", ",") : "—");
-const getalMet = (n) => {
-  const x = Number(n);
-  if (!Number.isFinite(x)) return "—";
-  return `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(x).toFixed(1).replace(".", ",")}`;
-};
+
 
 // ------------------------------------------------------------- het hele beeld
 export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {

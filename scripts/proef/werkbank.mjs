@@ -413,6 +413,19 @@ const gewoon = await log(env, ik, { bron: "meting", soort: "barometer_voorstel",
 eis("een gewone gebeurtenis levert geen bericht op", !!(await conceptVoorKaart(env, ik, gewoon)).fout);
 eis("en kan ook niet op 'niet melden'", !!(await nietMelden(env, ik, gewoon, "omdat het kan")).fout);
 
+// Een resultaat dat nog niet bekend is, is geen nul. Op een kaart leest 0,0 als
+// 'gesloten op break-even', en dat gaat zo het bericht aan de leden in.
+{
+  const open2 = await log(env, ik, { bron: "ibkr", soort: "positie_geopend", cyclus: CYCLUS,
+    positie: POSITIE, titel: "Zonder cijfers", moment: "2026-10-25 09:00:00" });
+  await db.prepare("update positie set resultaat_pt = null, aantal = null where id = ?").bind(POSITIE).run();
+  const k = (await kaarten(env, CYCLUS)).find((x) => x.id === open2);
+  const feit = (naam) => (k.feiten.find(([l]) => l === naam) || [])[1];
+  eis("een onbekend aantal is een streepje, geen nul", feit("Aantal") === "\u2014");
+  await db.prepare("update positie set aantal = 4 where id = ?").bind(POSITIE).run();
+  await db.prepare("delete from gebeurtenis where id = ?").bind(open2).run();
+}
+
 // Ver uit elkaar is het geen doorrol maar twee losse dingen.
 await db.prepare("update gebeurtenis set moment = '2026-10-21 09:00:00' where id = ?").bind(inRol).run();
 lijst = await kaarten(env, CYCLUS);

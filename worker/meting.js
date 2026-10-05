@@ -186,9 +186,11 @@ export async function metingen(env, cyclusId, { nu = null } = {}) {
   const d = await drempels(env);
 
   const posities = (await env.DB.prepare(
-    `select p.*, b.laatprijs, b.biedprijs, b.marktprijs, b.multiplier, b.gewijzigd_op as prijs_moment
+    `select p.*, b.laatprijs, b.biedprijs, b.marktprijs, b.multiplier, b.gewijzigd_op as prijs_moment,
+            coalesce(g.korte_naam, g.naam, p.wie_volgt) as volger
        from positie p
        left join brokerpositie b on b.conid = p.conid
+       left join gebruiker g on g.id = p.wie_volgt
       where p.cyclus = ? and p.archief = 0
       order by p.tranche, p.id`
   ).bind(cyclusId).all()).results;
@@ -256,9 +258,15 @@ export async function metingen(env, cyclusId, { nu = null } = {}) {
       // wordt is winst.
       plek: versePrijs ? plekVan(ask, ijk) : null,
       voorbij_de_grens: versePrijs ? voorbijDeGrens(ask, ijk) : false,
+      // Hoeveel van de premie binnen is, met teken: staat de ask boven de
+      // premie, dan is het verlies. Dit is het getal dat boven de markering op
+      // de balk staat, en afkappen op nul zou daar 0,0 % van maken terwijl de
+      // positie 35 % in het rood staat.
       binnen: premie !== null && ask !== null && premie > 0
-        ? Math.max(0, ((premie - ask) / premie) * 100) : null,
-      wie_volgt: p.wie_volgt, beoordelingsmoment: p.beoordelingsmoment,
+        ? ((premie - ask) / premie) * 100 : null,
+      // De naam, niet het gebruikersnummer: "Volgt: simon" leest als een
+      // technisch veld dat per ongeluk op het scherm staat.
+      wie_volgt: p.volger || p.wie_volgt, beoordelingsmoment: p.beoordelingsmoment,
       doorgerold_naar: p.doorgerold_naar,
       afwijking: p.afwijking ? 1 : 0, afwijking_soort: p.afwijking_soort,
       gepubliceerd_op: p.gepubliceerd_op,
