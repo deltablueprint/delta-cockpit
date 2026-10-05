@@ -36,6 +36,85 @@ eis("main.js roept het barometerscherm aan", main.includes("barometerscherm(inho
 
 // Een scherm dat nergens vandaan te bereiken is, bestaat niet.
 
+// ------------------------------------- elke aanroep komt ergens op een route
+//
+// Dit is de controle die ontbrak toen de kaartlaag eruit ging. Er werden drie
+// routes mee weggeknipt die niets met de kaartlaag te maken hadden — nalezen,
+// vrijgeven en terugsturen — en niets viel om: de proeven riepen de functies in
+// worker/bericht.js rechtstreeks aan, dus die bleven groen. Alleen de weg
+// ernaartoe was weg. Een scherm dat erop drukte had HTML teruggekregen waar het
+// JSON verwachtte, en het vierogenprincipe was onbereikbaar.
+//
+// Dus beide richtingen: elk pad dat app/src/api.js aanroept komt in
+// worker/index.js ergens op uit, en elke route die de worker aanbiedt wordt
+// ergens gebruikt.
+const worker = readFileSync("worker/index.js", "utf8");
+
+// Wat de worker aanbiedt: letterlijke paden en patronen.
+const letterlijk = [...worker.matchAll(/pad === "([^"]+)"/g)].map((m) => m[1]);
+const patronen = [...worker.matchAll(/pad\.match\(\/(.*?)\/([gimsuy]*)\)/g)].map((m) => {
+  try { return new RegExp(m[1].replace(/\\\//g, "/"), m[2]); } catch { return null; }
+}).filter(Boolean);
+eis(`de worker biedt routes aan (${letterlijk.length} vast, ${patronen.length} met een patroon)`,
+    letterlijk.length > 10 && patronen.length > 3);
+
+// Wat de schermen aanroepen. Een ${...} wordt een 1, ook als er accolades in
+// staan; de queryreeks telt niet mee.
+// Een `${...}` kan van alles worden: een tabelnaam, een getal, of niets (een
+// queryreeks die er soms wel en soms niet is). Daarom proberen we alle drie, en
+// is het pad goed zodra één invulling op een route uitkomt.
+const stukken = (tekst) => {
+  const uit = []; let vast = "", i = 0;
+  while (i < tekst.length) {
+    if (tekst[i] === "$" && tekst[i + 1] === "{") {
+      let diep = 1; i += 2;
+      while (i < tekst.length && diep > 0) {
+        if (tekst[i] === "{") diep++;
+        else if (tekst[i] === "}") diep--;
+        i++;
+      }
+      uit.push(vast); vast = ""; uit.push(null);      // null = hier stond een invoeging
+    } else vast += tekst[i++];
+  }
+  uit.push(vast);
+  return uit;
+};
+
+const invullingen = (tekst) => {
+  let paden = [""];
+  for (const stuk of stukken(tekst)) {
+    paden = stuk === null
+      ? paden.flatMap((p) => ["1", "tabel", ""].map((w) => p + w))
+      : paden.map((p) => p + stuk);
+  }
+  return [...new Set(paden.map((p) => p.split("?")[0]))];
+};
+
+const aanroepen = [...api.matchAll(/haal\(\s*`([^`]+)`/g)]
+  .map((m) => invullingen(m[1]))
+  .filter((paden) => paden.some((p) => p.startsWith("/api/")));
+eis(`de schermen roepen routes aan (${aanroepen.length})`, aanroepen.length > 10);
+
+const kent = (pad) => letterlijk.includes(pad) || patronen.some((r) => r.test(pad));
+for (const paden of aanroepen) {
+  eis(`api.js roept ${paden[0]} aan, en de worker kent dat pad`, paden.some(kent));
+}
+
+// En andersom. Een route die niemand aanroept is dode code, of het spoor van
+// iets dat half verwijderd is. Wat er met opzet bij staat, staat hier met naam
+// en reden — zo is de schuld zichtbaar in plaats van stil.
+const GEEN_SCHERM = {
+  "/api/lynx/rapport": "de brug levert hier het Flex-rapport af",
+  "/api/lynx/diagnose": "diagnose, met de hand opgevraagd",
+  "/api/werkbank/cycli": "wacht op de nieuwe werkbank",
+};
+for (const pad of letterlijk) {
+  if (pad.startsWith("/api/brug")) continue;        // de brug is geen scherm
+  if (GEEN_SCHERM[pad]) continue;
+  eis(`de worker biedt ${pad} aan, en een scherm gebruikt dat`,
+      aanroepen.some((paden) => paden.includes(pad)) || api.includes(pad));
+}
+
 // Elke api-functie die een scherm importeert, bestaat.
 for (const [naam, tekst] of [["opsteller", opsteller], ["barometerscherm", baro]]) {
   const stuk = (tekst.match(/import \{([^}]+)\} from "\.\/api\.js"/s) || [])[1] || "";

@@ -205,8 +205,17 @@ for (const map of ["worker", "scripts/proef"]) {
       const pad = m[2].replace(/^\.\//, "").replace(/^\.\.\/\.\.\//, "");
       const bron = pad.endsWith(".js") || pad.endsWith(".mjs") ? pad : `${pad}.js`;
       const vol = bron.includes("/") ? bron : `${map}/${bron}`;
+      // Bestaat het bestand niet, dan is dat geen reden om door te lopen — dat
+      // is juist de fout die deze controle moet vangen. Hij sloeg hem over, en
+      // daardoor bleef een invoer uit een verwijderde module groen — precies
+      // wat er bij het slopen van de kaartlaag gebeurd had kunnen zijn.
       let bronTekst;
-      try { bronTekst = bestandLees(vol, "utf8"); } catch { continue; }
+      try {
+        bronTekst = bestandLees(vol, "utf8");
+      } catch {
+        eis(`${bestand}: importeert uit ${bron}, en dat bestand bestaat`, false);
+        continue;
+      }
       for (const naam of m[1].split(",").map((x) => x.trim().split(/\s+as\s+/)[0].trim()).filter(Boolean)) {
         eis(`${bestand}: ${bron} exporteert ${naam}`,
             new RegExp(`export\\s+(const|let|var|function|async function|class)\\s+${naam}\\b`).test(bronTekst)
@@ -252,6 +261,33 @@ for (const label of ["Werkbank", "Motorrondes"]) {
   eis(`'${label}' staat niet meer in het menu`,
       (await q("select count(*) n from db_module where label = ? and actief = 1", label))[0].n === 0);
 }
+eis("de tabel 'motorronde' staat niet meer in de definitielaag",
+    (await q("select count(*) n from db_table where naam = 'motorronde' and actief = 1"))[0].n === 0);
+eis("en haar velden en keuzes ook niet",
+    (await q("select count(*) n from db_field where tabel = 'motorronde' and actief = 1"))[0].n === 0
+    && (await q("select count(*) n from db_choice where tabel = 'motorronde' and actief = 1"))[0].n === 0);
+eis("de weergaven van motorronde en de kaartenweergave zijn uit",
+    (await q("select count(*) n from db_view where (tabel = 'motorronde' or (tabel = 'processtap' and naam = 'kaarten')) and actief = 1"))[0].n === 0);
+eis("de twee instellingen van de achterstandsmeter zijn gearchiveerd",
+    (await q("select count(*) n from instelling where sleutel in ('achterstand_amber_uur','achterstand_rood_uur') and archief = 0"))[0].n === 0);
+eis("geen favoriet of bezoek wijst nog naar de werkbank",
+    (await q("select count(*) n from favoriet where route like '/werkbank%'"))[0].n === 0
+    && (await q("select count(*) n from bezoek where route like '/werkbank%'"))[0].n === 0);
+
+// Elke tabel die in de definitielaag actief staat, hoort ook ergens vandaan te
+// bereiken te zijn. Precies dit gat liet 'motorronde' staan: de menuregel was
+// weg, de tabel niet, en #/t/motorronde werkte gewoon nog.
+const inHetMenu = new Set((await q("select doeltabel from db_module where actief = 1 and doeltabel is not null"))
+  .map((m) => String(m.doeltabel)));
+const ALLEEN_VIA_EEN_ANDER = new Set([
+  "chartlezing", "inzending", "voorwaarde", "meting", "event", "positie_event",
+  "cyclus_event", "exitplan", "publicatie", "gebruiker_voorkeur", "favoriet", "bezoek",
+]);
+for (const t of await q("select naam from db_table where actief = 1")) {
+  if (inHetMenu.has(String(t.naam)) || ALLEEN_VIA_EEN_ANDER.has(String(t.naam))) continue;
+  eis(`de tabel '${t.naam}' staat actief in beheer, en is ook ergens te bereiken`, false);
+}
+
 eis("de instelling van de motorrondgang is gearchiveerd",
     (await q("select count(*) n from instelling where sleutel = 'motor_rondgang_seconden' and archief = 0"))[0].n === 0);
 

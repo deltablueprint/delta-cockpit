@@ -237,11 +237,9 @@ export async function wijsToe(env, ik, positieId, cyclusId, buiten = false) {
 // gebeurd is, niet waaróm, en dat laatste is het enige deel dat je leden
 // werkelijk lezen. Zolang het concept openstaat, blijft de positie op
 // 'publiceren naar leden' wachten.
-// Het concept draagt de gebeurtenis waar het uit voortkwam. Zonder dat ziet de
-// achterstand het bericht niet — die joint op publicatie.gebeurtenis — en bleef
-// de meter voor altijd zeggen dat de leden achterlopen op iets dat allang
-// verstuurd was. En de kaart die om dit bericht vroeg ging bij het versturen
-// niet dicht, waardoor 'Bericht opstellen' een tweede publicatie maakte.
+// Het concept draagt de gebeurtenis waar het uit voortkwam. Zonder die
+// verwijzing is na het versturen niet meer te zien wélke gebeurtenis gemeld is,
+// en maakt 'Bericht opstellen' op diezelfde gebeurtenis een tweede publicatie.
 async function zetConceptKlaar(env, ik, positie, soort, gebeurtenis = null) {
   const al = await env.DB.prepare(
     "select id from publicatie where positie = ? and soort = ? and archief = 0"
@@ -322,14 +320,14 @@ export async function verstuurPublicatie(env, ik, publicatieId) {
     await meldGepubliceerd(env, p.cyclus, publicatieId);
   }
 
-  // Het bericht is weg, dus de vraag is beantwoord. Zonder dit blijft de kaart
-  // staan die om precies dit bericht vroeg, en blijft de achterstand hangen op
-  // iets dat de leden allang weten.
+  // Het bericht is weg, dus de vraag is beantwoord: de gebeurtenis waar het
+  // over ging vraagt er niet meer om. Vraagt die gebeurtenis niets (dat is nu
+  // zo — de nieuwe werkbank gaat weer kaarten zetten), dan raakt dit geen rij
+  // en is het stil klaar.
   if (p.gebeurtenis) {
     await env.DB.prepare(
       `update gebeurtenis
-          set beantwoord_op = datetime('now'), antwoord = 'publicatie', beantwoord_door = ?,
-              wachten_tot = null
+          set beantwoord_op = datetime('now'), antwoord = 'publicatie', beantwoord_door = ?
         where id = ? and vraagt_antwoord = 1 and beantwoord_op is null`
     ).bind(ik && ik.id ? ik.id : null, p.gebeurtenis).run();
   }

@@ -3,9 +3,15 @@
 //   node scripts/proef/hersteld.mjs
 //
 // Elke proef hieronder faalde vóór zijn reparatie. Ze staan bij elkaar omdat ze
-// één ding gemeen hebben: het waren alle negen stille fouten. Niets viel om,
-// niemand kreeg een melding — de uitkomst was gewoon verkeerd, en bij zes ervan
-// zouden de leden het als eerste gemerkt hebben.
+// één ding gemeen hebben: het waren stille fouten. Niets viel om, niemand kreeg
+// een melding — de uitkomst was gewoon verkeerd, en bij de meeste zouden de
+// leden het als eerste gemerkt hebben.
+//
+// Het waren er negen. Drie ervan gingen over de kaartlaag die eruit is
+// (BOUWSPEC §13b) en konden niet blijven staan; ze staan in de git-tak
+// 'voor-de-herbouw' en horen terug te komen met de nieuwe werkbank. De zes
+// hieronder gaan over de berichten, de spiegel en het lezen van een tijdstip,
+// en die staan nog gewoon overeind.
 import { verseDB, CYCLUS, MOMENT, POSITIE } from "./db.mjs";
 import { conceptUitKaart, vraagNalezen, geefVrij, stuurTerug } from "../../worker/bericht.js";
 import { verstuurPublicatie, spiegel } from "../../worker/spiegel.js";
@@ -48,7 +54,8 @@ eis("dus wij en zij staan niet gelijk", b.gelijk === false);
 
 // ---------------------------------------------------------------------- 4
 // Het concept dat de spiegel klaarzet kende zijn gebeurtenis niet, waardoor de
-// achterstand na het versturen bleef hangen en er een tweede bericht ontstond.
+// publicatie na het versturen niet aan zijn gebeurtenis te koppelen was en er
+// een tweede bericht ontstond.
 const contract = { conid: 777, contract: "OESX 6000 PUT", onderliggend: "OESX", strike: 6000,
                    expiratiedatum: "2026-12-18", aantal: -2 };
 await spiegel(env, simon, [contract], [], "2026-09-02");

@@ -141,9 +141,9 @@ export const brugFlex = () => haal("/api/brug/flex");
 
 // ---- de leden: de barometer en de berichten ----
 // Van kaart naar concept. Welke gebeurtenis een kaart is, bepaalt de werkbank;
-// deze route maakt er een bericht van.
+// deze route maakt er een bericht van, met het sjabloon uit beheer.
 export const conceptUitKaart = (id, body = {}) =>
-  haal(`/api/wachtrij/${id}/concept`, { methode: "POST", body });
+  haal(`/api/kaart/${id}/concept`, { methode: "POST", body });
 
 export const haalBarometer = (cyclus) => haal(`/api/cyclus/${cyclus}/barometer`);
 export const zetBarometer = (cyclus, body) =>

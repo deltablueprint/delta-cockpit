@@ -79,7 +79,7 @@ export async function conceptUitKaart(env, ik, kaartId, sjabloonnaam = null) {
   const gegevens = await gegevensVoor(env, g);
   const positie = gegevens.positie || {};
 
-  // De vaste nalezer uit het sjabloon, of die op de kaartdefinitie. Is er een,
+  // De vaste nalezer uit het sjabloon. Is er een,
   // dan begint het bericht bij 'nalezen' en niet bij 'concept': dan is meteen
   // zichtbaar dat het nog ergens langs moet.
   // Een vaste nalezer die jijzelf blijkt te zijn, is geen nalezer. Dan ligt het
@@ -121,7 +121,7 @@ export async function conceptUitKaart(env, ik, kaartId, sjabloonnaam = null) {
     feiten: { sjabloon: sjabloon.naam, uit_kaart: kaartId },
   });
 
-  // Ligt het meteen bij een lezer, dan hoort die dat in zijn eigen wachtrij te
+  // Ligt het meteen bij een lezer, dan hoort die dat in zijn eigen overzicht te
   // zien. Niet in een aparte postbus: er is één rij.
   if (nalezer && id) {
     await log(env, ik, {
@@ -139,7 +139,7 @@ export async function conceptUitKaart(env, ik, kaartId, sjabloonnaam = null) {
 // ---------------------------------------------------------------- nalezen
 //
 // Nalezen is geen vinkje dat de opsteller zelf zet. De vraag gaat als kaart
-// naar de wachtrij van de lezer, en pas zijn antwoord zet het bericht door.
+// naar de lezer, en pas zijn antwoord zet het bericht door.
 // Daarom is er geen aparte postbus: er is één rij, en dit staat erin.
 export async function vraagNalezen(env, ik, publicatieId, lezer) {
   const p = await env.DB.prepare(

@@ -39,7 +39,7 @@ async function labels(env, kolom) {
 }
 
 // De stand nu: wat wij vastgesteld hebben, en wat de leden ervan weten. Die twee
-// zijn met opzet twee velden. Zolang ze verschillen loopt er een achterstand, en
+// zijn met opzet twee velden. Zolang ze verschillen lopen de leden achter, en
 // dat hoort niet weggerekend te worden tot één getal.
 export async function huidig(env, cyclusId) {
   const wij = await env.DB.prepare(
@@ -62,17 +62,20 @@ export async function huidig(env, cyclusId) {
   return {
     wij: wij ? { ...wij, stand: noem(standen, wij.stand), venster: noem(vensters, wij.venster) } : null,
     leden: zij ? { ...zij, stand: noem(standen, zij.stand), venster: noem(vensters, zij.venster) } : null,
-    // Weten de leden wat wij weten? Dit is dezelfde vraag als de achterstand,
-    // maar dan voor dit ene ding.
+    // Weten de leden wat wij weten? Zo niet, dan wacht er iets op hen.
     gelijk: !!wij && !!zij && wij.id === zij.id,
     schaal: standen,
     vensters,
   };
 }
 
-// Het systeem stelt voor. Dat wordt een gebeurtenis, de motor maakt er een kaart
-// van, en pas het antwoord op die kaart stelt de stand vast. Hier gebeurt dus
-// niets definitiefs.
+// Het systeem stelt voor. Dat wordt een gebeurtenis en verder niets: pas een
+// mens stelt de stand vast, met stelVast hieronder. Hier gebeurt dus niets
+// definitiefs.
+//
+// Wie dit voorstel doet, wordt met de nieuwe werkbank gebouwd: de stand volgt
+// uit de afstand tot de strike van de zwakste open positie. Tot dan heeft deze
+// functie alleen de proeven als aanroeper.
 export async function stelVoor(env, { cyclus, naar, venster = null, reden = null }) {
   const nu = await huidig(env, cyclus);
   const van = nu.wij ? nu.wij.stand.waarde : null;

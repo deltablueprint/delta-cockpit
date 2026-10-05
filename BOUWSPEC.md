@@ -123,7 +123,9 @@ De zes plekken die nu meeschrijven, alle in code die er al stond:
 
 **`auditlog` blijft bestaan.** Pas als de stroom een paar cycli heeft bewezen, bekijken we of audit erin opgaat. Niet eerder, en niets wordt gewist.
 
-### 3.2b De kaartdefinitie — de wachtrij staat in de database (migratie 0102)
+### 3.2b ~~De kaartdefinitie — de wachtrij staat in de database~~ (migratie 0102, vervallen)
+
+> **Vervallen op 5 oktober 2026.** Deze paragraaf beschrijft de taakkaartlaag zoals die tussen 2 en 5 oktober bestond. Hij staat er nog omdat de overweging erin de moeite waard is, niet omdat het zo werkt. Zie **§13b** voor wat ervoor in de plaats komt.
 
 **Etappe B van de werkbank-als-wachtrij.** Welke kaarten bestaan en wanneer ze verschijnen hoort niet in de code. Dat is procesinrichting, en die staat in dit systeem al ergens: op `processtap`.
 
@@ -150,7 +152,9 @@ De twaalf kaarten die er nu staan: nieuwe positie, sluiting, doorrol, barometers
 
 **Er draait nog niets.** 0102 zet alleen de definitie neer. De motor die hiernaar kijkt en gebeurtenissen omzet in kaarten is etappe C.
 
-### 3.2c De motor — van gebeurtenis naar kaart (worker/motor.js)
+### 3.2c ~~De motor — van gebeurtenis naar kaart~~ (vervallen; worker/motor.js is verwijderd)
+
+> **Vervallen op 5 oktober 2026.** Zie §13b.
 
 **Etappe C.** De wachtrij is een vraag over één tabel:
 
@@ -186,7 +190,9 @@ select * from gebeurtenis where vraagt_antwoord = 1 and beantwoord_op is null
 
 `scripts/proef/motor.mjs` stelt niet de vraag "werkt het een keer" maar "overleeft het een cron die dubbel vuurt": twee ronden, een dubbele melding van IBKR, een beantwoorde kaart die niet terugkomt, twee tikken op dezelfde dag, en een kapotte definitie tussen de goede.
 
-### 3.2c-bis De aanleiding — kaarten uit iets dat er níét gebeurde (migratie 0112)
+### 3.2c-bis ~~De aanleiding — kaarten uit iets dat er níét gebeurde~~ (migratie 0112, vervallen)
+
+> **Vervallen op 5 oktober 2026.** Zie §13b.
 
 De motor van §3.2c dekt alles wat IBKR meldt en alles wat wij doen: er gebeurt iets, dat wordt een gebeurtenis, de weger stempelt die tot kaart.
 
@@ -208,7 +214,9 @@ In etappe C stonden deze vier wel als definitie klaar maar vuurden ze niet, met 
 
 De backtest draait deze nu mee: elke dag kan het beoordelingsmoment van stand wisselen en kan een voorwaarde op rood springen, en invariant 13 eist dat geen enkele toestand ooit twee kaarten oplevert.
 
-### 3.2d De wachtrij — de kaart wordt afgeleid, niet opgeslagen (worker/wachtrij.js)
+### 3.2d ~~De wachtrij — de kaart wordt afgeleid, niet opgeslagen~~ (vervallen; worker/wachtrij.js is verwijderd)
+
+> **Vervallen op 5 oktober 2026.** Wat blijft is het principe: een kaart wordt bij het lezen afgeleid en niet als taak weggeschreven. Zie §13b.
 
 **Etappe D.** `wachtrij(env, ik, {cyclus})` beantwoordt één vraag — `vraagt_antwoord = 1 and beantwoord_op is null` — en leidt de rest af uit de kaartdefinitie en de gebeurtenis, **bij elke aanroep opnieuw**. Er wordt niets van de kaart opgeslagen, want het verandert mee: een kaart van vanmorgen is vanavond dringender geworden zonder dat er iets aan hem gebeurd is.
 
@@ -236,6 +244,8 @@ De backtest draait deze nu mee: elke dag kan het beoordelingsmoment van stand wi
 
 ### 3.2e De berichten — van kaart naar bericht (migraties 0104/0105, worker/bericht.js)
 
+> **Blijft.** Alleen de route heet nu `/api/kaart/:id/concept`, en de sjabloonnaam komt van de aanroeper in plaats van uit de kaartdefinitie.
+
 **Etappe E.** Een kaart met de knop *Bericht opstellen* wijst een sjabloon aan. `conceptUitKaart()` zet dat om in een concept: de feiten ingevuld, de tekst klaar, **de oordelen nog open**. Elk sjabloon heeft een regel als `Wat dit betekent: [in één alinea]` — het sjabloon zet de feiten klaar, niet het oordeel.
 
 **`publicatie.positie` is nullable geworden (0104).** Dat stond op `not null` toen een bericht altijd over één tranche ging. De wachtrij levert nu ook kaarten op die een bericht vragen zónder positie: een barometerstand, een week-update, een maandbericht. SQLite kan `not null` niet weghalen, dus de tabel is herbouwd — met `pragma defer_foreign_keys`, want `gebeurtenis.publicatie` hangt eronder. **Dit is de tweede keer dat dat ons kost; zie §12.**
@@ -261,7 +271,9 @@ De opsteller vinkt niet zelf af dat er iemand meegekeken heeft. `vraagNalezen()`
 
 **De feiten worden vastgelegd zoals ze op dat moment waren.** Verandert de positie later, dan verandert een verstuurd bericht niet mee: wat eruit ging, ging eruit.
 
-### 3.2f De achterstand — de enige blijvende meter (worker/achterstand.js)
+### 3.2f ~~De achterstand — de enige blijvende meter~~ (vervallen; worker/achterstand.js is verwijderd)
+
+> **Vervallen op 5 oktober 2026.** De vraag blijft overeind — *hoe lang weten wij iets dat de leden niet weten* — en keert terug in de nieuwe werkbank. De meter die hier beschreven staat hing aan de kaartdefinitie en is mee verdwenen. Zie §13b.
 
 **Etappe F.** De werkbank heeft één permanente indicator, en die meet niet ons maar de leden: **hoe lang weten wij iets dat zij niet weten.**
 
@@ -307,7 +319,9 @@ De schaal, 1 is rustig: **Niets · Meekijken · Volgen · Dichtbij blijven · Pa
 
 **Een ingehaalde stand komt nooit alsnog bij de leden.** Bij deze etappe gevonden: `meldGepubliceerd()` pakte eerst de laatste nog niet gemelde stand in plaats van de huidige. Bij drie standen achter elkaar zonder bericht publiceerde het versturen dan een stand die intussen al ingehaald was.
 
-### 3.2c-ter Een toestandskaart sluit zichzelf (migratie-loos, worker/motor.js)
+### 3.2c-ter ~~Een toestandskaart sluit zichzelf~~ (vervallen; worker/motor.js is verwijderd)
+
+> **Vervallen op 5 oktober 2026.** Zie §13b.
 
 Eerst gold: *een kaart verdwijnt niet, hij wordt beantwoord.* Dat klopt voor een kaart die iets vraagt — *zullen we dit de leden vertellen?* — want daar is het antwoord het punt, ook als het antwoord 'nee' is.
 
@@ -1083,7 +1097,9 @@ Twee dingen die hierbij misgingen en nu vastliggen:
   of `0`. Zoeken op `ja` vond dan niets. De worker vertaalt `ja`/`nee` nu naar
   `= 1` en `coalesce(…, 0) = 0`.
 
-### 10.1b De werkbank — het scherm waarop je begint (app/src/werkbank.js)
+### 10.1b ~~De werkbank — het scherm waarop je begint~~ (vervallen; app/src/werkbank.js is verwijderd)
+
+> **Vervallen op 5 oktober 2026.** Het scherm wordt opnieuw gebouwd uit `docs/mockup-werkbank.html`: de positie monitoren, het venster en de barometer zetten, en de ledencommunicatie doen. Zie §13b.
 
 Het dashboard laat zien hoe het ervoor staat; de werkbank zegt wat er nog moet gebeuren. Dat tweede is waarvoor je inlogt, dus de werkbank staat bovenaan in WERKEN (migratie 0108).
 
@@ -1152,6 +1168,8 @@ Het verloop eronder komt uit de gewone lijst. Een eigen route erbij zou hetzelfd
 
 ### 10.1d-bis Een scherm dat weg is, schrijft niet meer
 
+> **Blijft als regel.** Het scherm dat hem het hardst nodig had is weg; de proef erop staat in de tak `voor-de-herbouw` en komt terug met de nieuwe werkbank.
+
 De werkbank peilt elke tien seconden. Klik je intussen door naar een besluit, dan tikte die klok gewoon door — en tien seconden later tekende hij zichzelf over het scherm waar je inmiddels was.
 
 Dat zag eruit als een omleiding naar de werkbank. Het was erger: op een formulier waar je in zat te typen was je je werk kwijt.
@@ -1168,7 +1186,9 @@ De luisteraar op `visibilitychange` verwijdert zichzelf zodra het scherm niet me
 
 **Een les over de proef zelf.** De eerste versie van deze controle telde of `leeftNog` ergens in het bestand voorkwam. Toen ik het lek opzettelijk terugzette om te kijken of de proef hem ving, bleef hij groen — er stonden nog zes andere vóórkomens. De proef controleert nu dat de wacht de **eerste regel** is van de klok en van de afhandeling van het antwoord, en dat is wel aangetoond door het lek twee keer terug te zetten.
 
-### 10.1e De werkbank werkt live bij (migraties 0114, 0115)
+### 10.1e ~~De werkbank werkt live bij~~ (migraties 0114, 0115, vervallen)
+
+> **Vervallen op 5 oktober 2026.** Het principe blijft — de brug is de klok, geen cron — maar de peiling hing aan de wachtrij en is mee verdwenen. Zie §13b.
 
 **Een kaart hoort er te staan voordat jij kijkt, niet een uur later.**
 
@@ -1209,7 +1229,9 @@ De `scheduled`-handler blijft in `worker/index.js` staan. Blijkt de brug ooit ge
 
 Niet élke ronde laat een spoor na. De brug duwt veel vaker dan er iets gebeurt, en een tabel vol lege rondes maakt juist onzichtbaar wat je zoekt. Een ronde die niets deed en op niets stuitte wordt alleen vastgelegd als de klok hem begon — want juist dán is "er gebeurde niets" het bericht.
 
-### 10.1f Een kaart heeft een eigenaar (migratie 0115)
+### 10.1f ~~Een kaart heeft een eigenaar~~ (migratie 0115, vervallen)
+
+> **Vervallen op 5 oktober 2026.** Zie §13b.
 
 Alles stond in ieders rij. Voor het meeste klopt dat: wie als eerste tijd heeft, stelt het bericht op. Voor twee soorten niet.
 
@@ -1416,21 +1438,19 @@ GET    /api/barometer/:cyclus     afgeleide toestand voor de ledenapp
 
 ## 11a. Hoe dit systeem zichzelf bewaakt
 
-`npm run proef` draait zestien proeven. Drie daarvan zijn van een andere soort dan de rest: ze testen geen module maar een afspraak.
+`npm run proef` draait twaalf proeven. Twee daarvan zijn van een andere soort dan de rest: ze testen geen module maar een afspraak.
 
-### De backtest — drie maanden, dag voor dag
+> Het waren er zestien. Met de taakkaartlaag (§13b) gingen tien proeven mee en kwamen er geen bij; wat ervan overeind bleef is in de resterende proeven opgenomen. De verwijderde proeven staan in de git-tak `voor-de-herbouw`.
 
-`scripts/proef/backtest.mjs` draait de hele keten negentig dagen achter elkaar: IBKR meldt, de klok tikt, de motor stempelt, wij antwoorden, berichten gaan weg. Na **elke dag** controleert hij dertien uitspraken die het systeem over zichzelf doet — geen twee kaarten met dezelfde sleutel, elke kaart hoort bij een definitie, de achterstand telt precies wat er onverteld is, de barometerstand die de leden zien is echt verstuurd, een beantwoorde kaart komt nooit terug, geen leeg bericht is ooit de deur uit.
+Twee dingen bewaakt de suite sinds 5 oktober over zichzelf, omdat ze beide een keer stilgevallen zijn bij het slopen: een proef die in de lijst staat maar als bestand verdwenen is geeft nu **STUK** in plaats van niets, en een proefbestand dat niet in de lijst staat ook — zo kan een proef niet geruisloos uit de suite vallen.
 
-Drie dingen maken hem bruikbaar in plaats van decoratief:
+### ~~De backtest — drie maanden, dag voor dag~~ (vervallen)
 
-- **De dobbelsteen is voorspelbaar.** Het zaad staat vast en is in te stellen (`node scripts/proef/backtest.mjs 7`), dus een fout die één keer op de twintig opduikt is te herhalen.
-- **Elke dag wordt de motor twee keer gedraaid.** Dat is de cron die dubbel vuurt, en de tweede ronde hoort niets te veranderen.
-- **De ijver is in te stellen** (`node scripts/proef/backtest.mjs 7 0`). Bij ijver 0 kijkt niemand ooit naar de rij: ook dan moeten alle uitspraken waar blijven, en hoort de achterstand gewoon op te lopen in plaats van ergens vast te lopen.
+> **Vervallen op 5 oktober 2026.** `scripts/proef/backtest.mjs` draaide de hele keten negentig dagen achter elkaar en controleerde na elke dag dertien uitspraken die het systeem over zichzelf deed. Elf daarvan gingen over de kaartlaag. De drie eigenschappen die hem bruikbaar maakten — een vast zaad zodat een zeldzame fout te herhalen is, elke dag twee rondes zodat dubbel vuren niets verandert, en een instelbare ijver zodat het ook klopt als niemand kijkt — horen terug te komen zodra de nieuwe werkbank staat. De proef zelf staat in de tak `voor-de-herbouw`.
 
 ### De inrichtingsaudit — staat alles in beheer?
 
-`scripts/proef/inrichting.mjs` kijkt niet of iets werkt maar of het op de goede plek staat. De afspraak dat dit systeem metadatagestuurd is verwatert vanzelf — iemand voegt een kolom toe en vergeet het veld, of zet een lijstje waarden in een worker omdat het even sneller is. Acht controles:
+`scripts/proef/inrichting.mjs` kijkt niet of iets werkt maar of het op de goede plek staat. De afspraak dat dit systeem metadatagestuurd is verwatert vanzelf — iemand voegt een kolom toe en vergeet het veld, of zet een lijstje waarden in een worker omdat het even sneller is. Elf controles:
 
 1. Elk veld wijst naar een kolom die bestaat, en elk titelveld ook.
 2. **Elke kolom heeft een veld**, op huishouding na. Een kolom zonder veld wordt wél geschreven en gelezen, maar is nergens te zien of te zetten — staat hij ooit fout, dan is er geen scherm waarop je dat merkt. Uitzonderingen staan in `MET_OPZET_GEEN_VELD`, mét reden: een uitzondering zonder reden is een vergeten kolom met een vrijbrief.
@@ -1440,6 +1460,9 @@ Drie dingen maken hem bruikbaar in plaats van decoratief:
 6. Elk veld staat in een sectie die bestaat.
 7. Elke lijstweergave en elk menu-item wijst naar iets dat er is, en elke menugroep is er een die we kennen.
 8. **De code implementeert, de database verklaart.**
+9. Elke invoer tussen eigen modules wijst naar een bestand dat bestaat en een naam die het uitvoert. Bestaat het bestand niet, dan is dat een fout en geen reden om de controle over te slaan — die beleefdheid liet een invoer uit een verwijderde module groen blijven.
+10. Wat de kaartlaag achterliet staat niet meer in beheer, en wat moest blijven staat er nog: de kaartvelden op de processtap, hun keuzelijsten, de twee menuregels, de tabel `motorronde` en de instellingen die niets meer aanstuurden zijn uit; `gebeurtenis.vraagt_antwoord`, `sleutel`, `beantwoord_op` en het venster blijven.
+11. Elke tabel die actief in beheer staat, is ergens te bereiken. Dit gat liet `motorronde` staan: de menuregel was weg, de tabel niet, en `#/t/motorronde` werkte gewoon nog.
 
 Dat laatste is de kern. Waarden als `hoog/medium/laag`, `open/wacht/dicht` of wat een knop doet bestaan op twee plekken: de code weet wat eraan te doen, de database zegt welke er mogen bestaan. Dat is geen dubbeling maar een werkverdeling — zolang de twee lijsten gelijk blijven. Lopen ze uiteen, dan richt je in beheer iets in dat de code niet kent (de knop doet niets) of kent de code iets dat je nergens kunt kiezen (dode code). De modules **exporteren** hun lijst, zodat de proef hem leest in plaats van uit de tekst te raden.
 
@@ -1459,15 +1482,19 @@ Dat laatste is de kern. Waarden als `hoog/medium/laag`, `open/wacht/dicht` of wa
 
 Niet alles hoort in beheer. Drie dingen blijven in code, en dat is een keuze:
 
-- **De sleutelbouwers** (`worker/motor.js`). Welke vorm een kaart gebruikt staat in de definitie; hoe die vorm gebouwd wordt is code. Het zijn er acht en ze veranderen niet mee met de inrichting.
-- **De kalenderslagen** (`SLAGEN`). "Er is een week voorbij" is geen melding en geen handeling; er gebeurde juist niets, en dat moet iemand opschrijven.
-- **Waar een kaartsoort je heen stuurt** (`app/src/werkbank.js`). Dat zijn routes van deze app, en een kaartdefinitie hoort niet te weten hoe het adres van een scherm eruitziet.
+- **De bronnen van een gebeurtenis** (`worker/stroom.js`). Welke bronnen er zijn staat in beheer; wat er met elke bron gebeurt is code.
+- **Het verloop van het venster** (`worker/barometer.js`). De volgorde van de zes standen is een eigenschap van het verloop, de labels staan in beheer want die gaan naar de leden.
+- **Waar een scherm heen stuurt.** Dat zijn routes van deze app, en een rij in beheer hoort niet te weten hoe het adres van een scherm eruitziet.
 
 In alle drie de gevallen geldt dezelfde regel: de code houdt de uitvoering, de database houdt de lijst, en de proef legt ze naast elkaar.
 
+> De sleutelbouwers en de kalenderslagen stonden hier ook. Die hoorden bij `worker/motor.js` en zijn met §13b verdwenen.
+
 ## 11b. Wat een review vond, en wat eraan veranderd is
 
-Twee onafhankelijke reviews van de hele keten (beveiliging en robuustheid; logische correctheid) leverden negen fouten op die alle negen **stil** waren: niets viel om, niemand kreeg een melding, de uitkomst was gewoon verkeerd. Bij zes ervan zouden de leden het als eerste gemerkt hebben. `scripts/proef/hersteld.mjs` legt ze alle negen vast.
+Twee onafhankelijke reviews van de hele keten (beveiliging en robuustheid; logische correctheid) leverden negen fouten op die alle negen **stil** waren: niets viel om, niemand kreeg een melding, de uitkomst was gewoon verkeerd. Bij zes ervan zouden de leden het als eerste gemerkt hebben.
+
+> `scripts/proef/hersteld.mjs` legt er sinds 5 oktober zes vast. De drie die over de kaartlaag gingen — de sleutel per openstaande kaart, de go/no-go-sleutel en het uitstellen met een onzindatum — konden niet blijven staan toen die laag eruit ging (§13b). De tabel hieronder blijft volledig: deze fouten zijn gemaakt, en wat terugkomt moet ze opnieuw uitsluiten.
 
 | Wat er misging | Gevolg | Reparatie |
 |---|---|---|
@@ -1563,7 +1590,7 @@ Zes standen, als verloop:
 
 **'Venster gemist' is geen venstertoestand** (0123). Het venster zegt hetzelfde tegen alle leden tegelijk; 'gemist' zegt juist iets over één lid: dat hij niet heeft aangegeven de positie gevolgd te hebben toen de stand naar *In positie* ging. Dat hoort op de ledenkant, per lid. Die bestaat nog niet — dit is dus uitgesteld, niet verplaatst.
 
-## 13b. De taakkaartlaag is eruit (migratie 0125, 5 okt 2026)
+## 13b. De taakkaartlaag is eruit (migraties 0125–0127, 5 okt 2026)
 
 De eerste werkbank was een **wachtrij van taken**: processtappen met een stuk SQL per definitie (`voorwaarde`, `aanleiding`) dat bepaalde wanneer een gebeurtenis zich tot kaart stempelde, een motor die dat elke tien seconden deed, en een scherm met *Van mij / Alles*. Die vorm is verlaten. Twee redenen:
 
@@ -1572,11 +1599,19 @@ De eerste werkbank was een **wachtrij van taken**: processtappen met een stuk SQ
 
 **Wat de werkbank nu is:** de positie monitoren, het venster en de barometer zetten, en de ledencommunicatie doen. Niets anders.
 
-**Wat eruit ging** (code verwijderd, database op archief): `worker/motor.js`, `worker/wachtrij.js`, `worker/stappen.js`, `worker/achterstand.js`, `app/src/werkbank.js`, de routes `/api/wachtrij*`, `/api/achterstand` en `/api/cyclus/:id/tedoen`, de twaalf kaartdefinities onder proces 4 en de menuregel naar `/werkbank`.
+**Wat eruit ging** (code verwijderd, database op archief): `worker/motor.js`, `worker/wachtrij.js`, `worker/stappen.js`, `worker/achterstand.js`, `app/src/werkbank.js` met zijn 125 regels opmaak in `stijl.css`, de `scheduled`-handler, de routes `/api/wachtrij*`, `/api/achterstand` en `/api/cyclus/:id/tedoen`, tien proeven, de twaalf kaartdefinities onder proces 4 en de menuregel naar `/werkbank`.
+
+**Wat het slopen zelf kapotmaakte, en hoe dat gevonden is.** Bij het wegknippen van de achterstandsroute gingen drie routes mee die niets met de kaartlaag te maken hadden: `/api/publicatie/:id/nalezen`, `/vrijgeven` en `/terug` — het hele vierogenprincipe op een bericht. **Geen enkele proef viel om**, want ze riepen de functies in `worker/bericht.js` rechtstreeks aan; alleen de weg ernaartoe was weg. Een review vond het. Daarom staat er nu in `scripts/proef/schermen.mjs` een controle in twee richtingen: elk pad dat `app/src/api.js` aanroept komt in `worker/index.js` ergens op uit, en elke route die de worker aanbiedt wordt ergens gebruikt — op een korte lijst na, met naam en reden. Die controle is omgekeerd geverifieerd: met de routes er weer uit faalt hij op precies die drie.
 
 **Wat bleef:** de gebeurtenissenstroom (`gebeurtenis`), de publicaties met hun nalees- en vierogenstroom, de berichtsjablonen, de barometer met haar venster, de spiegel en de brug. Daarop wordt de nieuwe werkbank gebouwd.
 
 **Ook uit beheer** (0126). De kaartdefinities waren weg, maar het processtapformulier vroeg nog om *Voorwaarde*, *Aanleiding*, *Sleutel*, *Prioriteit* en de knopvelden — eenentwintig velden die niets meer aanstuurden, met hun keuzelijsten eronder. Die staan nu op `actief = 0`, net als de menuregels *Werkbank* en *Motorrondes* en de instelling `motor_rondgang_seconden`. Op de gebeurtenis zijn `processtap` en `wachten_tot` uit beeld; `vraagt_antwoord`, `sleutel` en `beantwoord_op` blijven, want een kaart blijft bestaan — alleen gaat hij voortaan over een positie. `scripts/proef/inrichting.mjs` bewaakt dit: geen van die velden mag terugkomen zonder dat iemand het expliciet aanzet.
+
+**En de rest** (0127). Een review vond nog vier sporen die 0126 miste. De tabel `motorronde` stond nog volledig actief in de definitielaag: niet in het menu, maar wél in `/api/meta`, in *Tabellen en velden*, en `#/t/motorronde` was een werkend scherm — een tabel met een keuzelijst *De klok* voor een klok die niet meer loopt. De weergave `kaarten` op processtap bestond nog uit zeven kolommen waarvan er zes uitgezet waren. De twee instellingen van de achterstandsmeter (`achterstand_amber_uur`, `achterstand_rood_uur`) stonden er nog met uitleg en al. En favorieten en bezoeken die naar `/werkbank` wezen bleven staan: wie de werkbank als ster had, hield een ster die op een leeg scherm uitkwam.
+
+Die laatste zijn de ene plek waar wél verwijderd wordt, en dat is precies zoals afgesproken (uitgangspunt 2): een favoriet en je eigen geschiedenis zijn geen vastlegging maar een persoonlijke instelling — ze zeggen alleen waar jij graag heen gaat en waar je net was.
+
+`inrichting.mjs` heeft er een controle bij die dit gat dicht: **elke tabel die actief in beheer staat, moet ergens te bereiken zijn.** Precies dat ontbrak, en daarom bleef `motorronde` staan.
 
 **Niets is verwijderd uit de database.** De definities staan op `archief = 1` en hun kolommen op `processtap` blijven staan: een kolom laten vallen betekent de tabel herbouwen, en dat is een groter risico dan een ongebruikte kolom. De verwijderde code en de proeven die erbij hoorden staan in de git-tak **`voor-de-herbouw`**.
 

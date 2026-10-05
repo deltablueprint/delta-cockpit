@@ -262,8 +262,8 @@ async function behandel(request, env, ctx) {
       }
 
 
-      // De werkbank opent op één cyclus: de lopende. Welke dat is hoort het
-      // scherm niet zelf te raden uit een lijst.
+      // Welke cycli er lopen. De werkbank opent straks op één cyclus — de
+      // lopende — en dat hoort een scherm niet zelf uit een lijst te raden.
       if (pad === "/api/werkbank/cycli" && request.method === "GET") {
         const cycli = (await env.DB.prepare(
           `select id, label, status, geopend_op from cyclus
@@ -281,8 +281,8 @@ async function behandel(request, env, ctx) {
       }
 
       // De barometer van een cyclus: wat wij vastgesteld hebben, en wat de leden
-      // ervan weten. Twee velden, met opzet — zolang ze verschillen loopt er
-      // een achterstand, en die hoort niet weggerekend te worden tot één getal.
+      // ervan weten. Twee velden, met opzet — zolang ze verschillen lopen de
+      // leden achter, en dat hoort niet weggerekend te worden tot één getal.
       const baro = pad.match(/^\/api\/cyclus\/(\d+)\/barometer$/);
       if (baro && request.method === "GET") {
         return json(await barometer(env, Number(baro[1])));
@@ -298,6 +298,35 @@ async function behandel(request, env, ctx) {
         return json(uit);
       }
 
+      // Van kaart naar concept. Een kaart is een gebeurtenis die om een antwoord
+      // vraagt; welke dat zijn bepaalt de werkbank. Het sjabloon staat in
+      // beheer, niet in de code. Twee keer drukken levert hetzelfde concept op,
+      // geen tweede.
+      const kaartConcept = pad.match(/^\/api\/kaart\/(\d+)\/concept$/);
+      if (kaartConcept && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const uit = await conceptUitKaart(env, ik, Number(kaartConcept[1]), body.sjabloon || null);
+        if (uit.fout) return json(uit, uit.status || 400);
+        return json(uit);
+      }
+
+      // Nalezen, vrijgeven, terugsturen: het vierogenprincipe op een bericht.
+      // Vier ogen is hier geen formaliteit — wat hier langs komt gaat naar 412
+      // leden en is daarna niet terug te halen.
+      const bericht = pad.match(/^\/api\/publicatie\/(\d+)\/(nalezen|vrijgeven|terug)$/);
+      if (bericht && request.method === "POST") {
+        const id = Number(bericht[1]);
+        const body = await request.json().catch(() => ({}));
+        const uit = bericht[2] === "nalezen" ? await vraagNalezen(env, ik, id, body.lezer)
+                  : bericht[2] === "vrijgeven" ? await geefVrij(env, ik, id)
+                  : await stuurTerug(env, ik, id, body.reden);
+        if (uit.fout) return json(uit, uit.status || 400);
+        return json(uit);
+      }
+
+      // De posities die bij geen cyclus horen, en het toewijzen ervan. Dat is
+      // het enige wat een mens nog doet aan de brokerkant: zeggen waar een
+      // contract bij hoort, of dat het er niet bij hoort.
       if (pad === "/api/posities/onverdeeld" && request.method === "GET") {
         const cycli = (await env.DB.prepare(
           `select id, label, status from cyclus

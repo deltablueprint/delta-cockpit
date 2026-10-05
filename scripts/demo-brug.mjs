@@ -58,7 +58,7 @@ const pakketten = {
       aantal: 2, prijs: 4, uitvoering_id: `demo-dicht-${Date.now()}`, moment: nu,
     }],
   },
-  // Alleen een hartslag: niets veranderd. Hiermee zie je dat de motor draait
+  // Alleen een hartslag: niets veranderd. Hiermee zie je dat de spiegel draait
   // zonder dat er iets gebeurt.
   tik: { verbonden: true, rekening: "DU-SIMULATIE", kapitaal: 420000, posities: [positie], gebeurtenissen: [] },
 };

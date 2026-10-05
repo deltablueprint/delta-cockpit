@@ -16,16 +16,16 @@
   // Geen cron. De brug stuurt elke tien seconden een hartslag vanaf de VPS, en
   // dát is de klok — tweehonderdveertig keer zo fijn als een uurcron, en zonder
   // een tweede ding dat stil kan vallen zonder dat iemand het merkt.
-  // Zie migratie 0116 en BOUWSPEC §3.2c.
+  // Zie migratie 0116 en BOUWSPEC §13b.
   //
   // Met opzet een lege lijst en niet een weggelaten sleutel: weglaten laat een
   // cron die er al staat gewoon doordraaien, een lege lijst haalt hem weg. Het
   // verschil is onzichtbaar tot je je afvraagt waarom er elk uur een ronde in
   // het logboek staat die niemand startte.
   //
-  // De scheduled-handler in worker/index.js blijft bestaan. Blijkt de brug ooit
-  // geen betrouwbare klok, dan is hier één regel genoeg om hem weer aan te
-  // zetten.
+  // Er is ook geen scheduled-handler meer in worker/index.js: die ging met de
+  // kaartlaag mee (BOUWSPEC §13b). Een cron hier zetten doet dus niets totdat
+  // die handler er weer is — eerst de handler, dan deze lijst.
   "triggers": { "crons": [] },
 
   // De front-end wordt als statische bestanden geserveerd; alles onder /api/
