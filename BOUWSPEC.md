@@ -1444,6 +1444,16 @@ GET    /api/barometer/:cyclus     afgeleide toestand voor de ledenapp
 
 Twee dingen bewaakt de suite sinds 5 oktober over zichzelf, omdat ze beide een keer stilgevallen zijn bij het slopen: een proef die in de lijst staat maar als bestand verdwenen is geeft nu **STUK** in plaats van niets, en een proefbestand dat niet in de lijst staat ook — zo kan een proef niet geruisloos uit de suite vallen.
 
+**Wanneer je wat draait.** De hele suite is er voor code en migraties, niet voor elk tussendoortje:
+
+| Wat je veranderde | Wat je draait |
+|---|---|
+| alleen opmaak (CSS, spacing, kleur) | `node scripts/proef/schermen.mjs` — de enige die de CSS leest |
+| alleen een mockup in `docs/` | niets |
+| worker, migratie of schermlogica | de hele suite, één keer, vlak voor het vastleggen |
+
+Niet na elke edit. De suite vangt wat hij vangt op het moment dat het af is; hem twintig keer per uur draaien levert alleen ruis op.
+
 ### ~~De backtest — drie maanden, dag voor dag~~ (vervallen)
 
 > **Vervallen op 5 oktober 2026.** `scripts/proef/backtest.mjs` draaide de hele keten negentig dagen achter elkaar en controleerde na elke dag dertien uitspraken die het systeem over zichzelf deed. Elf daarvan gingen over de kaartlaag. De drie eigenschappen die hem bruikbaar maakten — een vast zaad zodat een zeldzame fout te herhalen is, elke dag twee rondes zodat dubbel vuren niets verandert, en een instelbare ijver zodat het ook klopt als niemand kijkt — horen terug te komen zodra de nieuwe werkbank staat. De proef zelf staat in de tak `voor-de-herbouw`.
