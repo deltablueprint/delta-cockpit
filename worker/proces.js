@@ -38,13 +38,17 @@ const REGELS = {
   // staat wat je erin leest. Een plaatje zonder lezing zegt niets tegen iemand
   // die er later naar kijkt; een lezing zonder plaatje is niet na te gaan.
   async chartlezing_gedaan(env, rij) {
+    // Eén gelezen chart is genoeg (0139). Hij telde er eerst élke: voeg je naast
+    // de standaardset nog een chart toe, dan sprong de stap terug naar open
+    // zolang die ene nieuwe leeg was — terwijl het werk juist vooruit ging. Wat
+    // je verder nog opschrijft is winst, geen voorwaarde.
     const alle = await tel(env,
       "select count(*) as n from chartlezing where cyclus = ? and archief = 0", rij.id);
     const af = await tel(env,
       `select count(*) as n from chartlezing
         where cyclus = ? and archief = 0
           and afbeelding is not null and trim(coalesce(commentaar, '')) <> ''`, rij.id);
-    return { gedaan: alle > 0 && af === alle, stand: alle ? `${af} van ${alle} gelezen` : "geen charts" };
+    return { gedaan: af > 0, stand: alle ? `${af} van ${alle} gelezen` : "geen charts" };
   },
 
   async voorwaarden_ingevuld(env, rij) {

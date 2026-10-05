@@ -393,11 +393,17 @@ Wat wél bestaat is een eenvoudige gerelateerde lijst op de cyclus waarin je per
 | Voorwaarde | De naam, overgenomen uit de standaardset |
 | Status | Groen, oranje, rood of *nog niet bepaald*, met de hand gezet |
 
+**De status staat rechts naast de voorwaarde (0137).** Hij stond onder het kopje *Meting*, terwijl er niets meer gemeten wordt: je las eerst de voorwaarde, dan een kopje dat nergens meer over ging, en dáár stond het enige dat je moest zetten. Wat onder dat tweede kopje overblijft — waar je gekeken hebt en wat je ervan vond — heet nu *Notitie*.
+
 **Er wordt niets gemeten (0135, 5 okt 2026).** De kolom *gemeten waarde*, met wie hem mat en wanneer, is uit de definitielaag. In de praktijk kijk je, je oordeelt, en je zet de status; het getal eromheen was een tweede administratie die niemand bijhield — waardoor de processtap bleef openstaan terwijl het werk gedaan was. De kolommen blijven in de tabel staan, zodat wat er ooit in gezet is leesbaar blijft, maar er komt niets meer bij. Wie de status zette en wanneer wordt nog wel genoteerd: het besluit steunt op dat oordeel.
 
 **De stap heet *Instapvoorwaarden bepalen* en gaat af zodra er één voorwaarde staat.** Hij telde eerst of élke voorwaarde een oordeel droeg. Dat duwt een mens naar een status kiezen om van de stap af te zijn, en dat is precies niet waar het oordeel voor is. Het aantal staat erbij; wát er staat lees je in de lijst.
 
 **En één naam die niet klopte:** *Tranche in de markt* → **Eerste Tranche geplaatst**. De stap gaat over wat je gedaan hebt, niet over waar iets staat.
+
+**Een stap straft niet dat je méér opschrijft (0135, 0139).** *Instapvoorwaarden bepalen* gaat af bij de eerste voorwaarde, *Technische analyse* bij de eerste chart met een schermafdruk én een lezing. Ze telden eerst élke regel: voegde je er een toe, dan sprong de stap terug naar open terwijl het werk juist vooruit ging.
+
+**Opslaan brengt je terug waar je vandaan kwam (0138).** Drie vlaggen op `db_table`, want dit is gedrag per tabel en geen uitzondering in een scherm: `na_opslaan = 'ouder'` brengt je na opslaan terug naar het record waar het onder hangt, met het juiste tabblad open; `opslaan_en_nieuw = 1` zet naast *Opslaan* een knop die opslaat en meteen een lege opent onder dezelfde ouder; `bijlageknop = 0` laat de bijlageknop weg. De chartlezing draagt alle drie: je vult er een paar achter elkaar in, en zijn afbeelding staat in het record zelf — een losse bijlage ernaast zou een tweede plek zijn waar hetzelfde kan staan.
 
 **De stappenbalk toont alleen de naam van de stap (0136, 5 okt 2026).** De stand eronder — '1 van 1 gelezen', '0 van 5 gemeten' — herhaalde wat de lijst eronder al laat zien, op een balk die je elke keer langsloopt. Hij staat nog in de tooltip. En *Technische analyse gelezen* heet nu *Technische analyse*: de balk leest als een lijst onderwerpen, dus hoort er een onderwerp te staan; het werkwoord zei wat de afvinkregel telt.
 
@@ -784,6 +790,8 @@ Dit is de zwaarste regel van hoofdstuk 10. Wie een scherm ontwerpt begint hier, 
 **Een nieuw record typ je in de lijst zelf (5 okt 2026).** Onderaan elke lijst en elke gerelateerde lijst staat een lege regel: je typt erin en drukt op Enter, en het record bestaat. Geen knop, geen formulier, geen terugkomen. De knop *Nieuw* blijft staan voor wie het hele formulier wil — voor een record met tien velden is dat de betere weg — maar voor een voorwaarde of een event was een scherm openen om twee woorden in te typen drie handelingen te veel.
 
 De regel staat er alleen waar aanmaken mag: in een gerelateerde lijst als `magNieuw` niet uit staat, in een volledige lijst als de tabel `nieuw_vanuit_lijst` draagt. In een gerelateerde lijst krijgt de ouderverwijzing vanzelf de ouder mee, net als bij de knop. Cellen die je niet kunt typen — een verwijzing naar een record, een afbeelding, een systeemkolom — blijven leeg; die vul je op het formulier. Een lege regel plus Enter maakt niets aan. Ontbreekt er een verplicht veld dat niet in de kolommen staat, dan zegt de lijst dat, en open je alsnog het formulier.
+
+**De toevoegregel ligt te rusten tot je typt (5 okt 2026).** Zichtbaar is één uitnodiging — *Nieuw — typ en druk op Enter* — in de eerste invulbare kolom. Zodra daar iets staat, komen de andere kolommen erbij. De cellen blijven wel staan, zodat de kolommen niet verspringen. Een datum typ je als `dd/mm/jjjj` in een gewoon tekstvak: een kalenderknop in elke datumcel maakt van een lege regel een rij knoppen, en getypt is het korter. Een verplichte datum — *geopend op* — staat er meteen in, want dat is toch vandaag. Enter maakt de regel aan, ook in een tekstvak; een witregel typ je met shift-Enter.
 
 **Records worden gemaakt vanaf hun ouder, nooit vanuit het menu.** Een instapvoorwaarde maak je op de cyclus, een stap op het proces, een aanleiding op het proces Publicatie, een publicatie vanaf haar aanleiding. Het menu opent lijsten en dashboards; onder BEHEER staat alleen inrichting. De breadcrumb toont die ouderketen altijd volledig: *Beheer › Processen › Publicatie › Aanleidingen › Uitkomst van een tranche*.
 

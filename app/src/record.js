@@ -301,10 +301,13 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       <span class="recordnaam">${ontsnap(titel)}</span>
       <span class="recordmelding" id="opslagmelding"></span>
       <span class="recordacties">
-        <button class="knop tweede" id="bijlage" title="Bijlage toevoegen">${ICOON.bijlage}<span>Bijlage</span></button>
+        ${data.tabel.bijlageknop === 0 ? "" : `
+        <button class="knop tweede" id="bijlage" title="Bijlage toevoegen">${ICOON.bijlage}<span>Bijlage</span></button>`}
         ${data.actie && !isNieuw
           ? `<a class="knop" href="#${data.actie.route}" title="${ontsnap(data.actie.stap || "")}">${ontsnap(data.actie.label)}</a>`
           : ""}
+        ${data.tabel.opslaan_en_nieuw && data.ouder
+          ? `<button class="knop tweede" id="opslaannieuw">Opslaan en nieuw</button>` : ""}
         <button class="knop${data.actie && !isNieuw ? " tweede" : ""}" id="opslaan">${
           isNieuw ? ontsnap(data.tabel.aanmaakknop || "Aanmaken") : "Opslaan"}</button>
       </span>
@@ -720,11 +723,14 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   const melding = inhoud.querySelector("#opslagmelding");
   const knop = inhoud.querySelector("#opslaan");
 
-  inhoud.querySelector("#bijlage").addEventListener("click", () => {
-    melding.textContent = "Bijlagen komen bij de chartanalyses (etappe 11).";
-    melding.className = "recordmelding";
-    setTimeout(() => { melding.textContent = ""; }, 3000);
-  });
+  const bijlageknop = inhoud.querySelector("#bijlage");
+  if (bijlageknop) {
+    bijlageknop.addEventListener("click", () => {
+      melding.textContent = "Bijlagen komen bij de chartanalyses (etappe 11).";
+      melding.className = "recordmelding";
+      setTimeout(() => { melding.textContent = ""; }, 3000);
+    });
+  }
 
 
   // De i naast een verwijzing opent het record in een kijkvenster. Je blijft
@@ -802,6 +808,45 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     return v;
   }
 
+  // Waar je na het opslaan heen gaat, staat in de definitielaag. Een
+  // chartlezing vul je er een paar achter elkaar in: dan hoor je terug te komen
+  // waar ze bij elkaar staan, en niet op het record dat je net afmaakte.
+  const naarOuder = (tab) => {
+    if (!data.ouder) return false;
+    location.hash = tab
+      ? `/t/${data.ouder.tabel}/${data.ouder.id}?tab=${tabelnaam}`
+      : `/t/${data.ouder.tabel}/${data.ouder.id}`;
+    return true;
+  };
+
+  const opslaanNieuw = inhoud.querySelector("#opslaannieuw");
+  if (opslaanNieuw) {
+    opslaanNieuw.addEventListener("click", async () => {
+      opslaanNieuw.disabled = true;
+      melding.textContent = "Bezig met opslaan…";
+      melding.className = "recordmelding";
+      try {
+        if (isNieuw) {
+          const velden = verzamel();
+          if (data.ouderkolom) velden[data.ouderkolom] = data.waarden[data.ouderkolom];
+          await maakAan(tabelnaam, velden, data.ouderkolom);
+        } else {
+          await bewaar(tabelnaam, id, verzamel(), data.waarden.revisie);
+        }
+        // Meteen een lege weer, onder dezelfde ouder: dat is waar deze knop voor
+        // is. Hetzelfde adres opnieuw zetten tekent het scherm niet opnieuw,
+        // dus eerst weg en dan terug.
+        const heen = `/t/${tabelnaam}/nieuw?ouder=${data.ouder.tabel}:${data.ouder.id}`;
+        if (location.hash === `#${heen}`) location.hash = "/";
+        location.hash = heen;
+      } catch (fout) {
+        opslaanNieuw.disabled = false;
+        melding.textContent = fout.message;
+        melding.className = "recordmelding fouttekst";
+      }
+    });
+  }
+
   knop.addEventListener("click", async () => {
     knop.disabled = true;
     melding.textContent = "Bezig met opslaan…";
@@ -827,6 +872,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         if (uitkomst.waarschuwingen && uitkomst.waarschuwingen.length) {
           melding.textContent = `Opgeslagen — ${uitkomst.waarschuwingen[0].melding}`;
           melding.className = "recordmelding waarschuwing";
+        } else if (data.tabel.na_opslaan === "ouder" && naarOuder(true)) {
+          return;
         }
         // Verandert het procesveld, dan klopt de chevronbalk niet meer.
         if (data.proces && verzamel()[data.proces.veld] !== data.proces.nu) {

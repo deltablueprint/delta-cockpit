@@ -173,7 +173,9 @@ eis("er is geen wisknop op de opsteller", !/wissen|verwijder/i.test(opsteller.re
 // zonder eerst op Nieuw te drukken en een formulier te openen.
 const lj = readFileSync("app/src/lijst.js", "utf8");
 const opmaak = readFileSync("app/src/stijl.css", "utf8");
-eis("de lijst heeft een toevoegregel", lj.includes('class="nieuwregel"'));
+eis("de lijst heeft een toevoegregel", lj.includes('class="nieuwregel rust"'));
+eis("en die ligt te rusten tot je typt", lj.includes('toevoeg.classList.toggle("rust", ja)'));
+eis("een datum typ je er als dd/mm/jjjj", lj.includes('data-datum="1"') && lj.includes("const naarISO"));
 eis("en die maakt het record aan", /tr\.nieuwregel/.test(lj) && lj.includes("maakAan(tabelnaam, velden"));
 eis("in een gerelateerde lijst draagt hij de ouder mee",
     lj.includes("velden[ingebed.kolom] = String(ingebed.ouder.id)"));

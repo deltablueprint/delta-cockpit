@@ -422,17 +422,39 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
 
   const eersteInvulbaar = (kolommen.find(inlineVeld) || {}).kolom || null;
 
+  // Een datum typ je hier, je kiest hem niet. Een kalenderknop in elke
+  // datumcel maakt van een lege regel een rij knoppen; dd/mm/jjjj is korter
+  // getypt dan de kalender open te klikken. Een verplichte datum — 'geopend
+  // op' — staat er meteen in: dat is toch vandaag.
+  const vandaagNL = () => {
+    const d = new Date();
+    return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+  };
+
   const nieuwcel = (k) => {
     if (!inlineVeld(k)) return "";
-    const hint = k.kolom === eersteInvulbaar
-      ? ` placeholder="Nieuw — typ en druk op Enter"` : "";
+    const eerste = k.kolom === eersteInvulbaar;
+    if (k.type === "datum") {
+      return `<input type="text" data-kolom="${k.kolom}" data-datum="1"
+        class="celinvoer${eerste ? " eerste" : ""}" value="${k.verplicht ? vandaagNL() : ""}"
+        placeholder="${eerste ? "Nieuw — typ en druk op Enter" : "dd/mm/jjjj"}">`;
+    }
+    // Een lang veld krijgt hier één regel: de toevoegregel is een regel, geen
+    // formulier. Enter slaat op, shift-Enter zet een witregel — anders zou
+    // Enter in deze ene cel iets anders doen dan in alle andere.
+    if (k.type === "lang") {
+      return `<textarea data-kolom="${k.kolom}" rows="1" class="celinvoer${eerste ? " eerste" : ""}"
+        placeholder="${eerste ? "Nieuw — typ en druk op Enter" : ""}"></textarea>`;
+    }
+    const hint = eerste ? ` placeholder="Nieuw — typ en druk op Enter"` : "";
     // De id's uit invoer() zijn bedoeld voor één formulier. Hier staat een hele
     // regel tegelijk, dus krijgen ze een eigen voorvoegsel.
-    return invoer(k, null, meta, `class="celinvoer"${hint}`).replace(/id="veld-/g, 'id="nieuwveld-');
+    return invoer(k, null, meta, `class="celinvoer${eerste ? " eerste" : ""}"${hint}`)
+      .replace(/id="veld-/g, 'id="nieuwveld-');
   };
 
   const nieuwregel = !magInline ? "" : `
-    <tr class="nieuwregel">
+    <tr class="nieuwregel rust">
       ${metVinkjes ? `<td class="vink"></td><td class="sterkol"></td>` : ""}
       ${kolommen.map((k) => `<td data-kolom="${k.kolom}" class="${rechtsUit(k) ? "rechts" : ""}">${nieuwcel(k)}</td>`).join("")}
       <td class="vuller"></td>
@@ -731,19 +753,43 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   if (toevoeg) {
     const vakken = () => [...toevoeg.querySelectorAll("[data-kolom]")];
 
+    // dd/mm/jjjj is wat je typt; de database wil jjjj-mm-dd. Een datum die er
+    // niet als een datum uitziet gaat door zoals getypt — dan zegt de worker
+    // wat er mis is, in plaats van dat de lijst stilletjes iets anders opslaat.
+    const naarISO = (w) => {
+      const m = /^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/.exec(w);
+      if (!m) return w;
+      const jaar = m[3].length === 2 ? `20${m[3]}` : m[3];
+      return `${jaar}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+    };
+
     const ingevuld = () => {
       const velden = {};
       for (const el of vakken()) {
         const w = String(el.value ?? "").trim();
-        if (w !== "") velden[el.dataset.kolom] = w;
+        if (w === "") continue;
+        velden[el.dataset.kolom] = el.dataset.datum ? naarISO(w) : w;
       }
       return velden;
     };
+
+    // De regel ligt te rusten tot je begint te typen: dan is hij één
+    // uitnodiging in plaats van een rij lege vakken onder elke lijst. Zodra er
+    // iets staat, komen de andere kolommen erbij.
+    const anderen = () => vakken().filter((el) => !el.classList.contains("eerste"));
+    const rusten = (ja) => {
+      toevoeg.classList.toggle("rust", ja);
+      for (const el of anderen()) el.tabIndex = ja ? -1 : 0;
+    };
+    rusten(true);
+    const eerste = toevoeg.querySelector(".eerste");
+    if (eerste) eerste.addEventListener("input", () => rusten(eerste.value.trim() === ""));
 
     const leegmaken = () => {
       for (const el of vakken()) {
         if (el.tagName === "SELECT") el.selectedIndex = 0; else el.value = "";
       }
+      rusten(true);
     };
 
     let bezig = false;
@@ -772,7 +818,9 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     };
 
     toevoeg.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+      // Enter maakt de regel aan — ook in een tekstvak, want dat is wat je hier
+      // verwacht. Een witregel typ je met shift-Enter.
+      if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         aanmaken(e.target.dataset ? e.target.dataset.kolom : null);
       }
