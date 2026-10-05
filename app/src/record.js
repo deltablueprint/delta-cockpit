@@ -140,14 +140,9 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   const toonAanwezigen = tabelnaam === "beoordelingsmoment" && !isNieuw;
   const erbij = String(data.waarden.aanwezigen_ids || "").split(",").map((w) => w.trim()).filter(Boolean);
   const iedereen = Object.values(meta.gebruikers || {});
-  const quorumtekst = (n) => n === 0 ? "nog niemand gekozen"
-    : n === 1 ? "één persoon — dit besluit draagt een vlag en vraagt een toelichting"
-    : `${n} aanwezigen, dus ${n} inzendingen nodig`;
-
   const aanwezigenHtml = !toonAanwezigen ? "" : `
     <div class="aanwezigen">
-      <div class="stappenkop">Aanwezig bij dit besluit<span class="stappenmeta" id="quorumtekst">${
-        ontsnap(quorumtekst(erbij.length))}</span></div>
+      <div class="stappenkop">Aanwezig bij dit besluit</div>
       ${kiezerHtml({
         id: "aanwezigenkiezer",
         linkskop: "Niet aanwezig",
@@ -316,7 +311,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     ${aanwezigenHtml}
     <div class="formulier">${sectieHtml}</div>
     ${toonBroker ? `<div class="brokervak" id="brokervak">
-      <div class="brokerkop">Open posities bij Lynx<span class="feitmeta">lezend — het systeem plaatst nooit zelf een order</span></div>
+      <div class="brokerkop">Open posities bij Lynx</div>
       <div class="brokerinhoud" id="brokerinhoud">Bezig met ophalen&hellip;</div>
     </div>` : ""}
     ${relatieHtml}`;
@@ -418,8 +413,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
     paneel.innerHTML = !lijst.length
       ? `<p class="brokerleeg">Er zijn geen voorwaarden uit eerdere cycli die hier nog niet staan.
          <button class="knop tweede" data-sluit>Sluiten</button></p>`
-      : `<div class="stappenkop">Overnemen uit een eerdere cyclus<span class="stappenmeta">
-           de vraag gaat mee, de gemeten waarde niet</span></div>
+      : `<div class="stappenkop">Overnemen uit een eerdere cyclus</div>
          ${kiezerHtml({
            id: "voorwaardekiezer",
            linkskop: "Eerder gebruikt",
@@ -525,7 +519,6 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   if (toonAanwezigen) {
     const vak = inhoud.querySelector("#aanwezigenkiezer");
     const veld = inhoud.querySelector("#aanwezigen_ids");
-    const tekst = inhoud.querySelector("#quorumtekst");
     if (vak && veld) {
       // Een naam verslepen ís de wijziging — daar hoort geen tweede handeling
       // achteraan. Het wordt meteen opgeslagen, zodat de stap bovenaan afvinkt
@@ -534,7 +527,6 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       // die de code zelf zet, stuurt er zelf geen.
       kiezerAansluiten(vak, async (ids) => {
         veld.value = ids.join(",");
-        if (tekst) tekst.textContent = quorumtekst(ids.length);
         veld.dispatchEvent(new Event("change", { bubbles: true }));
         try {
           const uitkomst = await bewaar(tabelnaam, id, { aanwezigen_ids: veld.value || null },

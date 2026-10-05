@@ -195,7 +195,12 @@ export function vastVeld(veld, waarde, meta, verwijzingen = {}, rij = {}) {
     veld.type === "keuze" ||
     veld.type === "ja_nee" ||
     (veld.type === "verwijzing" && veld.verwijst_naar === "gebruiker" && meta.gebruikers);
-  if (alsLijst) return invoer(veld, waarde, meta, extra);
+  // Een persoon die vastligt is één vak, niet een grijze keuzelijst in een wit
+  // kadertje: het omhulsel draagt de achtergrond, dus dat moet mee grijs
+  // worden. Zonder deze klasse zag je links en rechts van de naam een wit
+  // randje door het vak heen lopen.
+  if (alsLijst) return invoer(veld, waarde, meta, extra)
+    .replace('class="persoonveld"', 'class="persoonveld vast"');
   if (veld.type === "lang") return invoer(veld, waarde, meta, extra);
   const tekst = plat(veld, waarde, meta, verwijzingen, rij);
   return `<input id="veld-${veld.kolom}" data-kolom="${veld.kolom}" type="text"

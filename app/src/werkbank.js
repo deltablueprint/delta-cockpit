@@ -132,7 +132,7 @@ export async function werkbankscherm(inhoud, kruimel) {
     if (kiesStand !== null) stuk.push(`barometer naar <b>${ontsnap(labelStand(kiesStand))}</b>`);
 
     return `<section class="paneel">
-      <div class="paneelkop">Stand naar de leden<span class="meta">venster en barometer</span></div>
+      <div class="paneelkop">Stand naar de leden</div>
       ${standTip !== null && kiesStand === null ? `<div class="suggestie"><span class="vk"></span><span>
         Barometer: het systeem stelt <b>${ontsnap(labelStand(standTip))}</b> voor${
           data.zwakste ? ` — ${ontsnap(data.zwakste.contract || "de zwakste positie")} staat op ${

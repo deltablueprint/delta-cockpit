@@ -90,7 +90,7 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
   const instap = data.voorwaarden.filter((v) => v.soort === "instap");
   const voorwaardenHtml = `
     <div class="feitpaneel">
-      <div class="feitkop">Instapvoorwaarden<span class="feitmeta">alleen lezen — bijwerken gebeurt op de cyclus</span></div>
+      <div class="feitkop">Instapvoorwaarden</div>
       ${instap.length === 0 ? `<p class="feitleeg">Nog geen instapvoorwaarden ingevuld.</p>` : `
       <table class="feittabel">
         <thead><tr><th>Voorwaarde</th><th>Waar gekeken</th><th>Status</th><th>Door</th></tr></thead>
@@ -108,9 +108,7 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
   const zwaar = data.events.filter((e) => e.zwaarte === "zwaar").length;
   const eventsHtml = `
     <div class="feitpaneel">
-      <div class="feitkop">Events in de looptijd
-        <span class="feitmeta">${data.events.length} events, waarvan ${zwaar} zwaar &middot;
-          de weging komt uit de eventskalender</span></div>
+      <div class="feitkop">Events in de looptijd</div>
       ${data.events.length === 0 ? `<p class="feitleeg">Geen events in deze looptijd.</p>` : `
       <table class="feittabel">
         <thead><tr><th>Datum</th><th>Tijdstip</th><th>Event</th><th>Soort</th><th>Zwaarte</th><th>Notities</th></tr></thead>
@@ -208,14 +206,13 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
          </div>
          <div class="knoprij" style="padding-left:20px">
            <button class="knop" id="versturen">Versturen</button>
-           <span class="feitmeta">Versturen vergrendelt je inzending. Daarna wijzig je haar niet meer — wie van mening verandert, doet dat in het gesprek.</span>
          </div>
        </div>`;
 
   // ---- de inzendingen naast elkaar, zodra ze open zijn ----
   const inzendingenHtml = !open ? "" : `
     <div class="feitpaneel">
-      <div class="feitkop">De inzendingen<span class="feitmeta">open sinds ${ontsnap(String(moment.quorum_gehaald_op || "").slice(0, 16))}</span></div>
+      <div class="feitkop">De inzendingen</div>
       <div class="inzendingen">
         ${perPersoon.filter(({ i }) => i).map(({ g, i }) => `
           <div class="inzending">
@@ -282,7 +279,6 @@ export async function gonogoscherm(inhoud, kruimel, cyclusId, meta) {
          </div>
          <div class="knoprij" style="padding-left:20px">
            <button class="knop" id="vastleggen">Uitkomst vastleggen</button>
-           <span class="feitmeta">Voor uitvoering zijn drie go's nodig (5.5). Het systeem rekent niets uit en plaatst nooit zelf een order: een go zet de cyclus op <em>uitvoering ophalen</em>.</span>
          </div>
        </div>`;
 

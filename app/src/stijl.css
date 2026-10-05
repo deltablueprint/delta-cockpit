@@ -550,6 +550,11 @@ tr.nieuwregel input, tr.nieuwregel select, tr.nieuwregel textarea {
   border: 1px solid transparent; border-radius: 2px;
 }
 tr.nieuwregel input::placeholder { color: var(--mut); font-style: italic; }
+/* Een invoervak erft de uitlijning van zijn cel niet: een datum of een getal
+   stond links terwijl de kolom erboven rechts uitlijnt, en dan lopen de cijfers
+   niet meer onder elkaar door. */
+tr.nieuwregel td.rechts input { text-align: right; font-variant-numeric: tabular-nums; }
+tr.nieuwregel td.rechts input::placeholder { text-align: right; }
 tr.nieuwregel input:hover, tr.nieuwregel select:hover, tr.nieuwregel textarea:hover { border-color: var(--b1); }
 tr.nieuwregel input:focus, tr.nieuwregel select:focus, tr.nieuwregel textarea:focus {
   border-color: var(--blue); background: #fff; outline: none;
@@ -557,9 +562,11 @@ tr.nieuwregel input:focus, tr.nieuwregel select:focus, tr.nieuwregel textarea:fo
 /* Tot je typt is het één uitnodiging, geen rij lege vakken onder elke lijst.
    De cellen blijven wel staan, zodat de kolommen niet verspringen zodra de
    andere velden erbij komen. */
-tr.nieuwregel.rust input:not(.eerste),
-tr.nieuwregel.rust select,
-tr.nieuwregel.rust textarea { opacity: 0; pointer-events: none; }
+/* Alles wat niet de uitnodiging zelf is, gaat weg — ook het omhulsel om een
+   invoervak heen. Een procentveld draagt zijn % in een eigen spanje naast de
+   input: verberg je alleen de input, dan blijft er een los procentteken onder
+   een lege lijst hangen. */
+tr.nieuwregel.rust td > *:not(.eerste) { opacity: 0; pointer-events: none; }
 tr.nieuwregel.bezigrij { opacity: .55; }
 
 /* --- avatars --- */
@@ -962,14 +969,20 @@ body.sleept .lijsttabel { pointer-events: none; }
    iets mist. */
 .persoonveld {
   display: inline-flex; align-items: center; gap: 7px; box-sizing: border-box;
-  width: 100%; min-width: 0; max-width: var(--veldbreedte); height: 28px; padding: 0 9px;
-  background: #fff; border: 1px solid #D8D5CE; border-radius: 2px;
+  width: 100%; min-width: 0; max-width: var(--veldbreedte); height: 32px; padding: 0 9px;
+  background: #fff; border: 1px solid #CFCBC3; border-radius: 3px;
   font-size: 12.5px; color: var(--ink);
 }
-.persoonveld.vast { background: var(--soft); color: var(--ink2); }
+.persoonveld.vast { background: var(--soft); color: var(--ink2); border-color: #DCD8D1; }
 .persoonveld select {
   flex: 1 1 auto; height: 100%; min-width: 0; padding: 0;
   border: 0; background: none; font-family: inherit; font-size: 12.5px; color: var(--ink);
+}
+/* Een uitgeschakelde keuzelijst krijgt van de browser een eigen grijze vulling.
+   Binnen een vak dat zelf al grijs is, levert dat een grijs blok met witte
+   randjes eromheen op — het vak moet één vlak zijn. */
+.persoonveld select:disabled {
+  background: none; opacity: 1; color: var(--ink2); -webkit-text-fill-color: var(--ink2);
 }
 .persoonveld select:focus { outline: none; }
 .persoonveld:focus-within { border-color: var(--blue); outline: 2px solid var(--bluebg); }
