@@ -538,6 +538,23 @@ td.bewerkt input, td.bewerkt select {
 td.bezigcel { opacity: .6; }
 td.zojuist { background: var(--grnbg); transition: background 1s; }
 
+/* --- de toevoegregel onderaan elke lijst ---
+   Een lege regel die er niet uitziet als een regel: geen randen tot je erin
+   staat, zodat de lijst erboven leesbaar blijft en de uitnodiging toch zichtbaar
+   is. Typen en Enter maakt het record. */
+tr.nieuwregel > td { background: var(--soft); border-top: 1px solid var(--b1); padding: 3px 4px; }
+tr.nieuwregel input, tr.nieuwregel select, tr.nieuwregel textarea {
+  width: 100%; height: 26px; padding: 0 6px; font-size: 12px; font-family: inherit;
+  color: var(--ink); background: transparent;
+  border: 1px solid transparent; border-radius: 2px;
+}
+tr.nieuwregel input::placeholder { color: var(--mut); font-style: italic; }
+tr.nieuwregel input:hover, tr.nieuwregel select:hover, tr.nieuwregel textarea:hover { border-color: var(--b1); }
+tr.nieuwregel input:focus, tr.nieuwregel select:focus, tr.nieuwregel textarea:focus {
+  border-color: var(--blue); background: #fff; outline: none;
+}
+tr.nieuwregel.bezigrij { opacity: .55; }
+
 /* --- avatars --- */
 .avatar {
   display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;

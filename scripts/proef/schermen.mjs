@@ -168,6 +168,20 @@ eis("de opsteller zet alles vast als het verstuurd is", opsteller.includes("cons
 eis("en toont wanneer en door wie", opsteller.includes("verstuurdRegel"));
 eis("er is geen wisknop op de opsteller", !/wissen|verwijder/i.test(opsteller.replace(/^\/\/.*$/gm, "")));
 
+// ------------------------------------------------- de toevoegregel
+// Onderaan elke lijst staat een lege regel: typen en Enter maakt het record,
+// zonder eerst op Nieuw te drukken en een formulier te openen.
+const lj = readFileSync("app/src/lijst.js", "utf8");
+const opmaak = readFileSync("app/src/stijl.css", "utf8");
+eis("de lijst heeft een toevoegregel", lj.includes('class="nieuwregel"'));
+eis("en die maakt het record aan", /tr\.nieuwregel/.test(lj) && lj.includes("maakAan(tabelnaam, velden"));
+eis("in een gerelateerde lijst draagt hij de ouder mee",
+    lj.includes("velden[ingebed.kolom] = String(ingebed.ouder.id)"));
+eis("hij staat er alleen waar je mag aanmaken",
+    lj.includes("ingebed.magNieuw !== false") && lj.includes("data.tabel.nieuw_vanuit_lijst"));
+eis("een lege toevoegregel maakt niets aan", lj.includes("if (!Object.keys(velden).length) return;"));
+eis("en hij heeft opmaak", opmaak.includes("tr.nieuwregel > td") && opmaak.includes("tr.nieuwregel.bezigrij"));
+
 // ------------------------------------------------------ de barometer
 // Het losse barometerscherm is weg: het was een tweede weg om een stand te
 // zetten, langs de regel dat de barometer slaapt tot het venster op 'In

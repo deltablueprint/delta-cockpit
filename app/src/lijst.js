@@ -42,6 +42,7 @@ const ICOON = {
 };
 
 let laatsteFocus = null;   // welk veld de cursor had vóór het opnieuw tekenen
+let nieuwFocus = null;     // in welke kolom van de toevoegregel de cursor stond
 
 // Welke lijst er nu staat. De router gebruikt dit om te zien of een
 // hashwijziging van onszelf komt — dan hoeft er niets opnieuw getekend.
@@ -401,10 +402,46 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     return `${data.tabel.label}: ${w || `#${r.id}`}`;
   };
 
+  const ingebed = toestand.ingebed;
+
+  // ---- de toevoegregel ----------------------------------------------------
+  // Onderaan elke lijst staat een lege regel. Je typt erin en drukt op Enter,
+  // en het record bestaat. De knop *Nieuw* blijft staan voor wie het hele
+  // formulier wil, maar voor een voorwaarde of een event is dat een scherm
+  // openen, drie velden invullen en terugkomen — terwijl de lijst er al staat.
+  const magInline = ingebed
+    ? ingebed.magNieuw !== false
+    : !!data.tabel.nieuw_vanuit_lijst;
+
+  // Wat je in een cel kunt typen. Een verwijzing naar een record kiest je met
+  // de loep op het formulier; hier is er niets om in te vullen. Een afbeelding
+  // evenmin, en de systeemkolommen al helemaal niet.
+  const inlineVeld = (k) => !k.alleen_lezen
+    && !["bestand", "vlag", "actief"].includes(k.type)
+    && !(k.type === "verwijzing" && k.verwijst_naar !== "gebruiker");
+
+  const eersteInvulbaar = (kolommen.find(inlineVeld) || {}).kolom || null;
+
+  const nieuwcel = (k) => {
+    if (!inlineVeld(k)) return "";
+    const hint = k.kolom === eersteInvulbaar
+      ? ` placeholder="Nieuw — typ en druk op Enter"` : "";
+    // De id's uit invoer() zijn bedoeld voor één formulier. Hier staat een hele
+    // regel tegelijk, dus krijgen ze een eigen voorvoegsel.
+    return invoer(k, null, meta, `class="celinvoer"${hint}`).replace(/id="veld-/g, 'id="nieuwveld-');
+  };
+
+  const nieuwregel = !magInline ? "" : `
+    <tr class="nieuwregel">
+      ${metVinkjes ? `<td class="vink"></td><td class="sterkol"></td>` : ""}
+      ${kolommen.map((k) => `<td data-kolom="${k.kolom}" class="${rechtsUit(k) ? "rechts" : ""}">${nieuwcel(k)}</td>`).join("")}
+      <td class="vuller"></td>
+    </tr>`;
+
   const tbody = tot === 0
     ? `<tbody><tr><td colspan="${kolommen.length + (metVinkjes ? 3 : 1)}" class="geenregels">
          ${(toestand.ingebed ? toestand.q : toestand.q || chips) ? "Geen regels die hieraan voldoen." : `Nog geen ${ontsnap(data.tabel.label_mv.toLowerCase())}.`}
-       </td></tr></tbody>`
+       </td></tr>${nieuwregel}</tbody>`
     : `<tbody>${data.rijen.map((r) => `
         <tr data-id="${r.id}">
           ${metVinkjes ? `<td class="vink"><input type="checkbox" class="vinkrij" data-id="${r.id}" aria-label="Deze regel aanvinken"></td>
@@ -420,9 +457,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
             }</td>`;
           }).join("")}
           <td class="vuller"></td>
-        </tr>`).join("")}</tbody>`;
-
-  const ingebed = toestand.ingebed;
+        </tr>`).join("")}${nieuwregel}</tbody>`;
 
   // De kop van een gerelateerde lijst draagt de naam en de knop, verder niets.
   // Een teller ('4 voorwaarden') herhaalt wat je ziet, en een zinnetje waarom
@@ -691,6 +726,60 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     });
   }
 
+  // ---- de toevoegregel: typen en Enter ----
+  const toevoeg = inhoud.querySelector("tr.nieuwregel");
+  if (toevoeg) {
+    const vakken = () => [...toevoeg.querySelectorAll("[data-kolom]")];
+
+    const ingevuld = () => {
+      const velden = {};
+      for (const el of vakken()) {
+        const w = String(el.value ?? "").trim();
+        if (w !== "") velden[el.dataset.kolom] = w;
+      }
+      return velden;
+    };
+
+    const leegmaken = () => {
+      for (const el of vakken()) {
+        if (el.tagName === "SELECT") el.selectedIndex = 0; else el.value = "";
+      }
+    };
+
+    let bezig = false;
+    const aanmaken = async (vanuit) => {
+      if (bezig) return;
+      const velden = ingevuld();
+      // Een regel die nergens uit bestaat is geen regel. Enter in een lege
+      // toevoegregel doet dus niets, in plaats van een leeg record te maken.
+      if (!Object.keys(velden).length) return;
+      bezig = true;
+      toevoeg.classList.add("bezigrij");
+      try {
+        if (ingebed) velden[ingebed.kolom] = String(ingebed.ouder.id);
+        await maakAan(tabelnaam, velden, ingebed ? ingebed.kolom : undefined);
+        leegmaken();
+        gewijzigd();
+        // De cursor blijft staan waar je typte, zodat je regel na regel kunt
+        // doorgaan zonder opnieuw te mikken.
+        nieuwFocus = vanuit || eersteInvulbaar;
+        await lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand);
+      } catch (fout) {
+        bezig = false;
+        toevoeg.classList.remove("bezigrij");
+        meld(fout.message, "fouttekst");
+      }
+    };
+
+    toevoeg.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+        e.preventDefault();
+        aanmaken(e.target.dataset ? e.target.dataset.kolom : null);
+      }
+      if (e.key === "Escape") leegmaken();
+    });
+  }
+
   // ---- cellen kiezen en in één keer zetten ----
   // Cmd- of ctrl-klik kiest losse cellen, shift-klik een reeks — altijd binnen
   // één kolom, want een waarde hoort bij een kolom. Bewerk je daarna één van
@@ -866,6 +955,11 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   });
 
   // De cursor terug in het veld waar hij stond, anders is typen onmogelijk.
+  if (nieuwFocus) {
+    const el = inhoud.querySelector(`tr.nieuwregel [data-kolom="${nieuwFocus}"]`);
+    nieuwFocus = null;
+    if (el) { el.focus(); laatsteFocus = null; return; }
+  }
   if (laatsteFocus === "q" && zoek) {
     zoek.focus();
     zoek.setSelectionRange(zoek.value.length, zoek.value.length);
