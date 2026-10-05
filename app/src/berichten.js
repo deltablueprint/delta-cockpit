@@ -27,7 +27,7 @@ function feitenHtml(b) {
 
 export async function berichtenscherm(inhoud, kruimel) {
   kruimel.innerHTML = `<span>Vastlegging</span> <span class="pijlje">&rsaquo;</span> <span>Klaar voor de leden</span>`;
-  document.title = "Klaar voor de leden · Delta Blueprint Cockpit";
+  document.title = "Klaar voor de leden · Delta Wave Cockpit";
   inhoud.innerHTML = "";
 
   let data;

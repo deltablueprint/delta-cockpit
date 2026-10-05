@@ -230,7 +230,7 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
 
   if (!toestand.ingebed) {
     kruimel.textContent = data.tabel.label_mv;
-    document.title = `${data.tabel.label_mv} · Delta Blueprint Cockpit`;
+    document.title = `${data.tabel.label_mv} · Delta Wave Cockpit`;
   }
 
   const kolommen = data.kolommen;

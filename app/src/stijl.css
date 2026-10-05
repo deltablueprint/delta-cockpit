@@ -29,11 +29,15 @@ a { color: var(--blue); }
 
 /* ---- balk bovenaan ---- */
 .appbar {
-  display: flex; align-items: center; gap: 10px; height: 44px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 10px; height: 52px; flex-shrink: 0;
   padding: 0 14px; background: var(--navbg2); color: #fff;
 }
-.appbar .merk { font-size: 14px; font-weight: 700; letter-spacing: .2px; }
-.appbar .sub { font-size: 12px; color: var(--navdim); }
+.appbar .merk { font-size: 18px; font-weight: 700; letter-spacing: .2px; }
+.appbar .sub { font-size: 15px; color: var(--navdim); }
+/* Het signaal loopt van het woord Cockpit naar rechts weg en dooft uit: de golf
+   waar de naam over gaat, niet als plaatje maar als lijn. */
+.appbar .golf { flex: 0 1 240px; min-width: 60px; height: 20px; margin-left: 2px; }
+.appbar .golf svg { display: block; width: 100%; height: 100%; }
 .appbar .rechts { margin-left: auto; display: flex; align-items: center; gap: 9px; font-size: 12.5px; }
 .appbar .bol-oud {
   width: 24px; height: 24px; border-radius: 50%; background: var(--navact);

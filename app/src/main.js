@@ -61,7 +61,7 @@ function teken() {
   teken.bezoekklok = setTimeout(() => {
     const route = location.hash.slice(1);
     const titel = (document.title || "").split(" · ")[0];
-    if (!route || !titel || titel === "Delta Blueprint Cockpit") return;
+    if (!route || !titel || titel === "Delta Wave Cockpit") return;
     zetBezoek({ route, titel, soort: soortVanRoute(route) }).catch(() => {});
   }, 1200);
 

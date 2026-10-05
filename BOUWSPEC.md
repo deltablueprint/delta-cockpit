@@ -1714,8 +1714,18 @@ De balk loopt **van verlies links naar winst rechts** — de ask daalt naar rech
 
 **De kaders staan in hetzelfde ritme als de rest van de app**: 10 px ertussen, 14 px erbinnen — zoals op het gespreksscherm. Alles in een paneel komt op dezelfde linkerlijn uit: de kop, de body, een positieregel, een kaart, de knopbalk.
 
-**De navigator heet waar hij over gaat (0141).** 'Werken' zei niets — alles hier is werken. De groep heet **Communicatie**, en het scherm **Dispatch**: daar gaat het de deur uit. *Barometer* en *Stroom* verhuizen mee: het zijn de twee logboeken van wat wij wisten en wat wij zeiden. *Mijn taken*, *Klaar voor de leden* en *Posities zonder cyclus* staan niet meer in de navigator; de schermen blijven bestaan. De barometerlijst viel zonder `db_view` terug op de eerste zeven velden en toonde dus geen enkel tijdstip — hij begint nu met *vastgesteld op*, aflopend, want de volgorde in de tijd is wat je eraan wil aflezen.
+**De navigator heet waar hij over gaat (0141, 0142, 0143).** Vier groepen die zeggen waar ze over gaan in plaats van wat ze technisch zijn:
 
+| Groep | Wat erin staat |
+|---|---|
+| **Communicatie** | Dispatch, Barometer, Stroom, Publicaties |
+| **Strategie** | Cycli, Posities, Chartanalyses, Eventskalender, Metingen, Besluiten, Inzendingen |
+| **Vastlegging** | Maandverslagen |
+| **Beheer** | ongewijzigd |
+
+'Werken' zei niets — alles hier is werken; 'Gegevens' zei wat het technisch was. De schermen waarop wij praten met de leden staan bij elkaar, en de hele gang van cyclus tot besluit staat bij elkaar. *Mijn taken*, *Klaar voor de leden* en *Posities zonder cyclus* staan niet meer in de navigator; de schermen blijven bestaan. *Inzendingen* kreeg een eigen ingang: je kwam er alleen via een besluit, en dat is te smal om over cycli heen terug te kijken. De barometerlijst viel zonder `db_view` terug op de eerste zeven velden en toonde dus geen enkel tijdstip — hij begint nu met *vastgesteld op*, aflopend.
+
+**De applicatie heet Delta Wave Cockpit.** Grotere merknaam in de balk, en achter het woord *Cockpit* loopt een signaallijn naar rechts die uitdooft: dat is de golf waar de naam over gaat. Delta Blueprint blijft het bedrijf.
 **Er loopt er één (5 okt 2026).** Bovenaan stond een keuzelijst met cycli. In productie loopt er op een gegeven moment één cyclus, dus stond daar een keuze van één — een vraag die je elke keer opnieuw moest beantwoorden. Nu staat er *Lopende cyclus: <naam>*. In demodata lopen er meerdere naast elkaar; dan toont het scherm er één.
 
 **De namen zijn wat er staat, en verder staat er niets.** Het eerste vak heet *Instap venster* en *Positie Barometer* — twee namen die zeggen wat ze zijn. De begeleidende zinnetjes eronder en achter de kopjes zijn weg (5 okt 2026): 'voorbereidingstijd voor de leden', 'wat wij van een lid vragen', de slaapregel, de uitleg van de posities-schaal en die van de publicaties. Ze legden iets uit dat het scherm zelf al laat zien, en op een scherm dat je elke dag opent is dat ruis. De barometer die slaapt is nog steeds grijs en onklikbaar — dat is de uitleg. De lijst standen naast de meter toont alleen de **namen** van de vijf standen; de ask-grenzen stonden er ook en staan al onder de posities, waardoor die lijst een tabel werd in plaats van een keuzelijst.

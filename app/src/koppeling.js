@@ -33,7 +33,7 @@ function sinds(seconden) {
 
 export async function koppelingscherm(inhoud, kruimel) {
   kruimel.innerHTML = `<span>Beheer</span> <span class="pijlje">&rsaquo;</span> <span>Brokerkoppeling</span>`;
-  document.title = "Brokerkoppeling · Delta Blueprint Cockpit";
+  document.title = "Brokerkoppeling · Delta Wave Cockpit";
   inhoud.innerHTML = `<div class="kaart leeg">Bezig met ophalen&hellip;</div>`;
 
   let data;

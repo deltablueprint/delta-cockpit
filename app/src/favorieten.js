@@ -10,7 +10,7 @@ import { haalFavorieten, wijzigFavoriet, weghaalFavoriet, zetFavorietenVolgorde 
 
 export async function favorietenscherm(inhoud, kruimel, bijWijziging) {
   kruimel.innerHTML = `<span>Favorieten inrichten</span>`;
-  document.title = "Favorieten · Delta Blueprint Cockpit";
+  document.title = "Favorieten · Delta Wave Cockpit";
   inhoud.innerHTML = `<div class="kaart leeg">Bezig met ophalen&hellip;</div>`;
 
   let lijst = [];

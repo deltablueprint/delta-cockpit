@@ -58,7 +58,7 @@ export async function opstellerscherm(inhoud, kruimel, id) {
     const dicht = p.status === "verstuurd";
     const bijEenAnder = p.status === "nalezen";
 
-    document.title = `${p.titel || "Bericht"} · Delta Blueprint Cockpit`;
+    document.title = `${p.titel || "Bericht"} · Delta Wave Cockpit`;
     kruimel.innerHTML = `<span>Werken</span> <span class="pijlje">&rsaquo;</span>
       <a href="#/berichten">Berichten</a> <span class="pijlje">&rsaquo;</span>
       <span>${ontsnap(p.titel || "Bericht")}</span>`;

@@ -2,7 +2,7 @@
 // Het menu komt uit de database — een tabel toevoegen is een regel daar,
 // geen wijziging hier (BOUWSPEC 10.0).
 
-const LOGO = `<svg viewBox="0 0 296.1 251.9" width="15" height="13" aria-hidden="true">
+const LOGO = `<svg viewBox="0 0 296.1 251.9" width="28" height="24" aria-hidden="true">
   <polygon points="226.6 133.8 108.7 67.1 148.1 0 226.6 133.8" fill="#FFFFFF"/>
   <polygon points="296.1 251.9 139.2 251.9 256.9 185.1 296.1 251.9" fill="#FFFFFF"/>
   <polygon points="76.9 251.9 0 251.9 76.7 121.6 76.9 251.9" fill="#FFFFFF"/></svg>`;
@@ -62,8 +62,17 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
   wortel.innerHTML = `
     <div class="appbar">
       ${LOGO}
-      <span class="merk">Delta Blueprint</span>
+      <span class="merk">Delta Wave</span>
       <span class="sub">Cockpit</span>
+      <span class="golf" aria-hidden="true"><svg viewBox="0 0 240 20" preserveAspectRatio="none">
+        <defs><linearGradient id="golffade" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#fff" stop-opacity=".9"/>
+          <stop offset=".45" stop-color="#fff" stop-opacity=".4"/>
+          <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+        </linearGradient></defs>
+        <path d="M0 10h26l7-6 9 12 8-9 7 3h183" fill="none" stroke="url(#golffade)"
+              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg></span>
       <span class="rechts">
         <span class="hartslagvak" title="Hoe vers wat je ziet is">
           <span id="hartslag" class="hartslag bijgewerkt"></span>

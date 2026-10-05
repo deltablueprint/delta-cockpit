@@ -16,7 +16,7 @@ const punten = (n) =>
 
 export async function onverdeeldscherm(inhoud, kruimel) {
   kruimel.innerHTML = `<span>Werken</span> <span class="pijlje">&rsaquo;</span> <span>Posities zonder cyclus</span>`;
-  document.title = "Posities zonder cyclus · Delta Blueprint Cockpit";
+  document.title = "Posities zonder cyclus · Delta Wave Cockpit";
   inhoud.innerHTML = "";
 
   let data;

@@ -83,7 +83,7 @@ function raad(kop, kolom) {
 // =========================================================== het scherm
 export function importscherm(inhoud, kruimel, meta) {
   kruimel.innerHTML = `<a href="#/t/event">Eventskalender</a> <span class="pijlje">&rsaquo;</span> <span>Inlezen uit een document</span>`;
-  document.title = "Events inlezen · Delta Blueprint Cockpit";
+  document.title = "Events inlezen · Delta Wave Cockpit";
 
   const toestand = { kop: [], rijen: [], koppeling: {}, voorbereid: null, keuzes: {} };
 

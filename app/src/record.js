@@ -61,7 +61,7 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         ?? `${data.tabel.label} ${id}`
       );
 
-  document.title = `${titel} · Delta Blueprint Cockpit`;
+  document.title = `${titel} · Delta Wave Cockpit`;
 
   // ---- breadcrumb: de hele ouderketen, zoals het bouwplan voorschrijft ----
   const kruimels = [];

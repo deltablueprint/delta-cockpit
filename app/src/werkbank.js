@@ -62,7 +62,7 @@ export async function werkbankscherm(inhoud, kruimel) {
 
   function teken() {
     if (!leeftNog()) return;
-    document.title = "Dispatch · Delta Blueprint Cockpit";
+    document.title = "Dispatch · Delta Wave Cockpit";
     kruimel.innerHTML = `<span>Communicatie</span> <span class="pijlje">&rsaquo;</span> <span>Dispatch</span>`;
 
     if (!data.cyclus) {
