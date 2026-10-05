@@ -1032,6 +1032,18 @@ body.sleept .lijsttabel { pointer-events: none; }
   box-shadow: 0 1px 2px rgba(0,0,0,.25);
 }
 .tijdpunt:focus { outline: none; }
+
+/* Het punt zelf moet omhoog zodra je erover gaat, niet alleen de kaart.
+   
+   De kaart staat op z-index 200, maar hij zit ín het punt — en een punt met
+   'position: absolute' plus een z-index maakt een eigen stapelcontext. Die 200
+   telt dan alleen binnen het punt, en het punt zelf stond op 3. De kolomkoppen
+   van de lijsten eronder plakken op z-index 4, en die wonnen dus: je zag de
+   koppen dwars door de kaart heen lopen.
+   
+   Dus: het punt gaat omhoog bij hover, en de kaart gaat vanzelf mee. */
+.tijdpunt { z-index: 2; }
+.tijdpunt:hover, .tijdpunt:focus, .tijdpunt:focus-within { z-index: 300; }
 .tijdpunt.zwaar { background: var(--red, #A1281F); }
 .tijdpunt.middel { background: #D79A2B; }
 .tijdpunt.licht { background: #B9B5AD; }
@@ -1541,7 +1553,7 @@ body.sleept .lijsttabel { pointer-events: none; }
    en de marges, blijft er ongeveer 740 px over. Daar moet alles in passen
    zonder dat de balken omvallen — die horen naast elkaar te blijven, want juist
    het vergelijken van drie tranches is waar dit scherm voor is. */
-.werkbank { padding: 18px 20px 48px; max-width: 980px; display: flex; flex-direction: column; gap: 18px; }
+.werkbank { padding: 18px 20px 48px; max-width: 980px; display: flex; flex-direction: column; gap: 10px; }
 
 /* Eén marge voor het hele scherm. Alles wat in een paneel staat — de kop, de
    body, een positieregel, een kaart, de balk onderaan — begint op dezelfde
@@ -1550,11 +1562,10 @@ body.sleept .lijsttabel { pointer-events: none; }
 
    .paneelbody bestond niet in de opmaak: het werkbankscherm gebruikte hem wel,
    en daardoor zat alles op nul padding tegen de rand geplakt. */
-.werkbank { --gutter: 18px; }
+.werkbank { --gutter: 14px; }
 .werkbank .paneel { margin-bottom: 0; }
-.werkbank .paneelkop { padding: 12px var(--gutter); border-bottom: 1px solid var(--b2); }
 .werkbank .paneelkop .meta { margin-left: auto; font-size: 11.5px; font-weight: 400; color: var(--mut); }
-.werkbank .paneelbody { padding: 16px var(--gutter) 18px; }
+.werkbank .paneelbody { padding: 14px; }
 .wbtop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .cycluskies {
   height: 30px; padding: 0 10px; border: 1px solid #D8D5CE; background: #fff; border-radius: 2px;
@@ -1743,7 +1754,6 @@ body.sleept .lijsttabel { pointer-events: none; }
    cijfers onder een positie gaan naar twee rijen, want zes naast elkaar worden
    daar te smal om te lezen. */
 @media (max-width: 1000px) {
-  .werkbank { --gutter: 16px; }
   .dfeiten { grid-template-columns: repeat(3, 1fr); }
   .meterrij { grid-template-columns: 260px minmax(0, 1fr); gap: 18px; }
   .lreg .nm { min-width: 104px; }

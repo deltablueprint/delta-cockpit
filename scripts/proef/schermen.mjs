@@ -210,6 +210,27 @@ const wbtekst = readFileSync("app/src/werkbank.js", "utf8");
 eis("de meter tekent het gekozen vak groen, niet blauw",
     /if \(gekozen\) svg \+=[^;]*stroke="#1F5E45"/.test(wbtekst));
 
+// ------------------------------------- de hoverkaart ligt boven de tabellen
+//
+// Twee keer misgegaan, en beide keren om een andere reden. Eerst werd de kaart
+// geknipt door het paneel (opgelost met position: fixed). Daarna liepen de
+// vastgeplakte kolomkoppen van de lijsten eronder dwars door de kaart heen: de
+// kaart staat op z-index 200, maar hij zit ín een punt dat zelf een
+// stapelcontext maakt, en dat punt stond lager dan die koppen.
+//
+// Dus toetsen we het punt, niet de kaart.
+const zIndexVan = (kies) => {
+  const m = new RegExp(`${kies.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[^{]*\\{[^}]*z-index:\\s*(\\d+)`, "s").exec(css);
+  return m ? Number(m[1]) : null;
+};
+const kop = zIndexVan(".lijsttabel thead .kopregel th");
+const punt = zIndexVan(".tijdpunt:hover");
+eis("de vastgeplakte kolomkoppen hebben een z-index", kop !== null);
+eis("het tijdpunt gaat omhoog zodra je erover gaat", punt !== null);
+eis(`en komt boven die koppen (${punt} tegen ${kop})`, punt !== null && kop !== null && punt > kop);
+eis("de kaart zelf staat op fixed, zodat geen paneel hem knipt",
+    /\.tijdkaart \{[^}]*position: fixed/s.test(css));
+
 // ------------------------------------------------------------- de opmaak
 for (const klasse of ["opsteller", "opfeiten", "opacties", "werkbank", "vensterrij", "meterrij", "spoorbalk", "publiceerbalk"]) {
   eis(`de opmaak kent .${klasse}`, css.includes(`.${klasse}`));

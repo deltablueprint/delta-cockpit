@@ -1661,6 +1661,8 @@ De balk loopt **van verlies links naar winst rechts** — de ask daalt naar rech
 
 **De maat van het scherm is een iPad in landscape.** 1024 px breed, min het menu en de marges: ongeveer 740 px voor de werkbank. Daar past alles in zonder horizontaal te scrollen en zonder dat de balken omvallen — juist het naast elkaar lezen van drie tranches is waar dit scherm voor is. Onder de 760 px (telefoon) valt het wel om, want dan wordt alles onleesbaar smal.
 
+**De kaders staan in hetzelfde ritme als de rest van de app**: 10 px ertussen, 14 px erbinnen — zoals op het gespreksscherm. Alles in een paneel komt op dezelfde linkerlijn uit: de kop, de body, een positieregel, een kaart, de knopbalk.
+
 **Twee kaders, twee betekenissen.** Blauw is de stand zoals hij vastligt en die de leden kennen; groen is wat je net koos en nog niet weg is. Na publiceren wordt het groene kader dus blauw. Het systeemvoorstel blijft een amberen stippellijn en is geen van beide.
 
 **Routes:** `GET /api/werkbank` (alles in één vraag — het scherm toont één samenhangend beeld, en drie losse vragen zouden drie momenten opleveren die niet bij elkaar horen), `POST /api/werkbank/publiceer`, `POST /api/kaart/:id/niet-melden`, `POST /api/kaart/:id/concept`.

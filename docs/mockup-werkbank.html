@@ -101,9 +101,11 @@ body { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif
 .lreg .vlak { width: 15px; height: 15px; border-radius: 3px; flex-shrink: 0; }
 .lreg .nm { font-weight: 600; min-width: 108px; }
 .lreg .om { color: var(--mut); font-size: 12px; }
-.lreg.nu { background: var(--b2); }
+.lreg.nu { border-color: var(--blue); border-style: solid; background: var(--bluebg); }
+.lreg.nu .nm { color: var(--blue); }
 .lreg.tip { border-color: var(--amb); border-style: dashed; }
-.lreg.gekozen { border-color: var(--blue); border-style: solid; background: var(--bluebg); }
+.lreg.gekozen { border-color: var(--grn); border-style: solid; background: var(--grnbg); }
+.lreg.gekozen .nm { color: var(--grn); font-weight: 700; }
 
 /* ── één vak voor venster en barometer ── */
 .deel { padding-bottom: 16px; }
@@ -358,9 +360,9 @@ const STOPLOSS = 60, WAARSCHUWING = 50, WINSTANKER_PCT = 70;
 const STANDEN = [
   { nr: 1, nm: "Onder druk",       kl: "#D7261E", vraag: "Paraat zijn. Wij stappen eruit volgens het exitplan." },
   { nr: 2, nm: "Krap",             kl: "#F26A21", vraag: "Bereikbaar zijn. Geen nieuwe verplichtingen aangaan deze week." },
-  { nr: 3, nm: "Ruim",             kl: "#FBC02D", vraag: "Meelezen. De positie staat nog op winst." },
+  { nr: 3, nm: "Aandacht",         kl: "#FBC02D", vraag: "Meelezen. De positie staat nog op winst, maar loopt op." },
   { nr: 4, nm: "Comfortabel",      kl: "#8DC63F", vraag: "Niets doen. Wij volgen het." },
-  { nr: 5, nm: "Vrijwel afgerond", kl: "#0A9D4E", vraag: "Niets. De premie is zo goed als binnen." },
+  { nr: 5, nm: "Veilig",           kl: "#0A9D4E", vraag: "Niets. De premie is zo goed als binnen." },
 ];
 const DIEPROOD = "#9A1C16";
 
@@ -531,7 +533,7 @@ function tekenVenster() {
   document.getElementById("vensterrij").innerHTML = VENSTERS.map((v, i) => {
     const kl = [
       i < S.venster.nu ? "gehad" : "",
-      i === S.venster.nu && S.venster.gekozen === null ? "nu" : "",
+      i === S.venster.nu ? "nu" : "",
       S.venster.tip === i && S.venster.gekozen === null ? "tip" : "",
       S.venster.gekozen === i ? "gekozen" : "",
     ].filter(Boolean).join(" ");
@@ -624,7 +626,7 @@ function tekenPosities() {
   document.getElementById("schaal").innerHTML = VAKKEN.map((v, i) => {
     const grens = [null, ijk.stoploss, ijk.waarschuwing, ijk.breakeven, ijk.helft, ijk.winstanker][i];
     return `<span style="flex:0 0 calc(${(v.tot - v.van).toFixed(2)}% - 3px)">${
-      i === 0 ? "voorbij" : kom(grens)}</span>`;
+      i === 0 ? "" : kom(grens)}</span>`;
   }).join("");
 
   document.getElementById("posities").innerHTML = POSITIES.map((p) => {
