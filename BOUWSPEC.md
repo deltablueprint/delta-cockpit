@@ -1785,6 +1785,48 @@ Het verloop per tranche wordt wél vastgelegd — `brokerpositie` kan het niet d
 
 **Wat de brug levert:** de bied- en laatprijs per contract, die hij al stuurde. Er is geen extra marktdata voor nodig — wel moet *marktdata* in de brokerinstellingen aan staan, anders komt er geen prijs door en meet de barometer niets (en zegt hij dat).
 
+## 13d. De ledenapp — ontworpen, nog niet gebouwd (6 okt 2026)
+
+De kant waar de leden kijken. Er is nog geen regel code voor; wat er wél is, zijn drie mockups die vastleggen
+wat we willen, zodat de keuzes niet opnieuw gemaakt hoeven te worden als het zover is:
+
+| Mockup | Wat erin staat |
+|---|---|
+| `docs/mockup-ledenapp.html` | Vandaag · één positie · berichtenlijst · één bericht |
+| `docs/mockup-ledenapp-sluiten.html` | de melding · een gesloten positie · een doorrol · hoe het daarna staat |
+| `docs/mockup-ledenapp-stoploss.html` | de melding · het alarm in de app · het bericht · het spoor erheen |
+
+**Het uitgangspunt: een lid dat één keer per dag kijkt, weet in drie seconden of er iets van hem verwacht wordt.**
+Vier tabs — Vandaag, Berichten, Posities, Ik — en op Vandaag twee kaarten en een lijst: het instap venster,
+de positie barometer, en wat hij volgt. Dezelfde balk, dezelfde vijf kleuren en dezelfde dagvakjes als in
+Dispatch, zodat een screenshot uit de cockpit en het scherm van een lid hetzelfde beeld tonen.
+
+**Volgen is de hele machinerie.** Een lid zet per positie aan dat hij haar volgt; dat is de rij in
+`positievolger` (0153), en die rij bepaalt wie welk bericht krijgt. Berichten over de cyclus gaan naar
+iedereen die er ergens in meekijkt. Op het bericht in de app staat onderaan de positie waar het over ging,
+met één tik te openen — de spiegel van de gerelateerde lijst in de cockpit.
+
+**Vier keuzes die in de mockups vastliggen:**
+
+1. **Een lid ziet geen euro's en geen premie.** Wel de stand, het verloop, het percentage van de premie dat
+   binnen is, en de harde feiten van de tranche. Het bedrag is het geld van Delta Blueprint, niet van het lid.
+2. **Een lid kan niet reageren.** Geen vragen, geen duimpjes. Eén stem, één richting — en geen plek waar
+   iemand om persoonlijk advies vraagt.
+3. **Bij een doorrol verhuist het volgen mee** naar de nieuwe tranche, met de uitleg erbij en een schuifje om
+   het meteen uit te zetten. Anders mist juist wie betrokken was de berichten over de positie die in de plaats
+   kwam. *Nog te bouwen: bij een doorrol de volgers overzetten en de oude rij op `gestopt_op` zetten.*
+4. **Bij een stoploss zegt de app wat wíj deden, niet wat het lid moet doen.** De melding draagt het al in de
+   titel — *stoploss geraakt, wij zijn eruit* — en in het bericht staat een blok *wat dit voor jou betekent*
+   dat uitdrukkelijk geen advies geeft. Het verschil tussen 'wij zijn eruit' en 'jij moet eruit' is het
+   verschil tussen je eigen posities delen en beleggingsadvies geven; dat is de grens waar deze hele
+   applicatie omheen gebouwd is (9).
+
+**Wat de app van de cockpit nodig heeft, en nog niet bestaat:** een publieke API voor een lid (lezen: venster,
+stand, zijn posities, zijn berichten; schrijven: volgen aan en uit), aanmelden als lid, en een kanaal voor
+de meldingen. Daarvóór ligt openstaand punt 7: marktdata richting leden moet bevestigd zijn door LYNX en IBKR.
+
+---
+
 ## 14. Openstaande punten
 
 *Opgelost in versie 1.0: versiebeheer van de rekenlaag (3.4), blootstelling en sizing op portefeuilleniveau (6.1), de handelskalender als tabel (3.2), het splitsen van voorgenomen en uitgevoerde posities (3.3), registratie van afwijking tussen besluit en uitvoering (6), plus de vier standen met "niet gemeten" (4.4), de chartanalyse volgens de metadata-lijn (4.3b) en aanmelden per persoon (1, 11).*
@@ -1798,5 +1840,5 @@ Het verloop per tranche wordt wél vastgelegd — `brokerpositie` kan het niet d
 6. **Brokerkoppeling met Lynx** — besluit plus betaald realtime Eurex-abonnement. Professionele classificatie betekent Eurex Core L2 (€ 67,50) plus STOXX Index Real-Time (€ 19) per maand. Blokkeert etappe 11.
 7. **Marktdata richting leden** — bevestiging van LYNX en IBKR vóór etappe 13.
 8. **Market Timing-panelen** — blijven voorlopig in de oude Cockpit; verhuizing later te bepalen.
-9. **'Venster gemist' per lid** — een melding aan één lid dat hij de positie niet gevolgd heeft toen de stand naar *In positie* ging. Vraagt dat de ledenkant bijhoudt óf iemand gevolgd heeft; die bestaat nog niet. Zie 13a.
+9. **'Venster gemist' per lid** — een melding aan één lid dat hij de positie niet gevolgd heeft toen de stand naar *In positie* ging. Vraagt dat de ledenkant bijhoudt óf iemand gevolgd heeft. Sinds 0153 bestaat `positievolger`, en het ontwerp staat in 13d; de app zelf nog niet.
 10. **Een positiemelding intrekken** — voor leden die hem nog niet gevolgd hebben, als het venster sluit omdat het niet meer opportuun is. Zelfde afhankelijkheid als 9.

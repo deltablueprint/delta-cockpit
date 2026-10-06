@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Delta Wave — de stoploss is geraakt</title>
+<style>
+  :root{
+    --cream:#F7F6F3; --ink:#0F0E0D; --ink2:#2E2B27; --mut:#6E6C68; --dim:#8A8884; --faint:#A5A29C;
+    --b1:#E8E6E1; --b2:#F0EEEA; --soft:#FAF9F7; --navbg:#0D3B52; --navbg2:#0A2E40;
+    --blue:#136289; --bluebg:#E6EEF3; --grn:#1F5E45; --grnbg:#DCEBE2; --amb:#8A5A00; --ambbg:#FBEFD8;
+    --red:#A1281F; --redbg:#FBE6E3;
+    --s1:#D7261E; --s2:#F26A21; --s3:#FBC02D; --s4:#8DC63F; --s5:#0A9D4E; --diep:#9A1C16;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#E9E7E2;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink)}
+  .blad{max-width:1760px;margin:0 auto;padding:30px 24px 60px}
+  h1{font-size:22px;margin:0 0 4px;letter-spacing:-.01em}
+  .intro{color:var(--mut);font-size:13.5px;max-width:720px;margin:0 0 26px}
+  .rij{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+  .kolom{width:390px}
+  .bijschrift{font-size:12px;color:var(--mut);margin:10px 2px 0;line-height:1.45}
+  .bijschrift b{color:var(--ink2)}
+
+  /* ---------- het toestel ---------- */
+  .fon{width:390px;height:872px;background:var(--cream);border-radius:38px;overflow:hidden;
+    border:9px solid #16181B;box-shadow:0 10px 34px rgba(0,0,0,.22);position:relative;display:flex;flex-direction:column}
+  .statusbalk{height:40px;background:var(--navbg2);color:#fff;display:flex;align-items:center;
+    justify-content:space-between;padding:0 20px 0 24px;font-size:11.5px;font-weight:600;flex:0 0 auto}
+  .statusbalk .punt{display:flex;gap:4px;align-items:center}
+  .statusbalk i{display:block;width:3px;height:9px;background:#fff;border-radius:1px;opacity:.9}
+  .appkop{background:var(--navbg2);color:#fff;padding:2px 18px 14px;flex:0 0 auto}
+  .merkrij{display:flex;align-items:center;gap:9px}
+  .merk{font-size:17px;font-weight:700;letter-spacing:.2px}
+  .merksub{font-size:13px;color:#8FB3C4}
+  .golf{flex:1 1 auto;height:14px}
+  .golf svg{display:block;width:100%;height:100%}
+  .romp{flex:1 1 auto;overflow:hidden;position:relative}
+  .scroll{height:100%;overflow:auto;padding:14px 16px 16px}
+
+  /* ---------- kaarten ---------- */
+  .kaart{background:#fff;border:1px solid var(--b1);border-radius:12px;padding:15px 16px;margin-bottom:12px}
+  .kaartkop{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}
+  .kaarttitel{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
+  .kaartmeta{font-size:11px;color:var(--faint)}
+
+  /* venster als balk */
+  .vgroot{font-size:20px;font-weight:700;letter-spacing:-.01em;margin:0 0 2px}
+  .vonder{font-size:12px;color:var(--mut);margin-bottom:11px}
+  .vbalk{display:flex;gap:4px}
+  .vbalk i{flex:1 1 0;height:7px;border-radius:3px;background:var(--b1)}
+  .vbalk i.gehad{background:#9DC0D5}
+  .vbalk i.nu{background:var(--blue)}
+
+  /* barometer */
+  .baro{display:flex;align-items:center;gap:14px}
+  .bolgroot{width:62px;height:62px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;
+    justify-content:center;color:#fff;font-weight:700;font-size:21px}
+  .bstand{font-size:19px;font-weight:700;letter-spacing:-.01em}
+  .bzin{font-size:12.5px;color:var(--mut);line-height:1.45;margin-top:2px}
+  .btrap{display:flex;gap:3px;margin-top:10px}
+  .btrap i{flex:1 1 0;height:5px;border-radius:3px;opacity:.26}
+  .btrap i.aan{opacity:1}
+
+  /* positie */
+  .pos{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--b1);
+    border-radius:12px;padding:14px 15px;margin-bottom:10px;font:inherit;color:inherit}
+  .posrij{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .posnaam{font-size:14px;font-weight:700;letter-spacing:-.01em}
+  .posonder{font-size:12px;color:var(--mut);margin-top:1px}
+  .vink{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+    padding:3px 8px;border-radius:20px;white-space:nowrap}
+  .vink.volgt{color:var(--grn);background:var(--grnbg)}
+  .vink.niet{color:var(--dim);background:var(--b2)}
+  .spoor{display:flex;gap:3px;margin-top:12px}
+  .spoor span{height:9px;border-radius:2px;display:block}
+  .spoorwrap{position:relative}
+  .merker{position:absolute;top:-3px;width:2px;height:15px;background:var(--ink);border-radius:1px}
+  .merkerlab{position:absolute;top:-21px;transform:translateX(-50%);font-size:10.5px;font-weight:700;white-space:nowrap}
+  .dagen{display:flex;gap:2px;margin-top:9px}
+  .dagen i{flex:1 1 0;height:11px;border-radius:2px;background:var(--b2)}
+
+  /* berichtenlijst */
+  .ber{display:flex;gap:11px;padding:13px 2px;border-bottom:1px solid var(--b1)}
+  .berbol{width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px}
+  .bertitel{font-size:13.5px;font-weight:700;line-height:1.35}
+  .bertekst{font-size:12.5px;color:var(--mut);margin-top:2px;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .bertijd{font-size:11px;color:var(--faint);margin-top:4px}
+  .nieuwstip{width:7px;height:7px;border-radius:50%;background:var(--blue);flex:0 0 auto;margin-top:6px}
+
+  /* detail */
+  .terug{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--blue);
+    font-weight:600;margin:0 0 12px}
+  .cijferrij{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px;margin-top:4px}
+  .cijfer .lab{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+  .cijfer .wrd{font-size:19px;font-weight:700;letter-spacing:-.01em}
+  .uitleg{font-size:12.5px;color:var(--mut);line-height:1.5}
+  .schaalnamen{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-top:5px}
+
+  .volgknop{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;
+    background:#fff;border:1px solid var(--b1);border-radius:12px;padding:14px 15px;margin-bottom:12px;font:inherit}
+  .volgknop.aan{border-color:var(--grn);background:var(--grnbg)}
+  .volgtitel{font-size:14px;font-weight:700}
+  .volgzin{font-size:12px;color:var(--mut);margin-top:2px;line-height:1.4}
+  .volgknop.aan .volgzin{color:#3C6B55}
+  .schuif{width:50px;height:30px;border-radius:20px;background:#D5D2CC;position:relative;flex:0 0 auto}
+  .schuif i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;
+    box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .volgknop.aan .schuif{background:var(--grn)}
+  .volgknop.aan .schuif i{left:23px}
+
+  .voet{font-size:11px;color:var(--faint);line-height:1.5;border-top:1px solid var(--b1);
+    margin-top:14px;padding-top:12px}
+
+  /* tabbalk */
+  .tabs{flex:0 0 auto;display:flex;background:#fff;border-top:1px solid var(--b1);padding:9px 0 16px}
+  .tab{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:4px;
+    font-size:10.5px;color:var(--dim);font-weight:600}
+  .tab.aan{color:var(--blue)}
+  .tab svg{display:block}
+  .tabbol{position:absolute;top:7px;right:-7px;width:7px;height:7px;border-radius:50%;background:var(--red)}
+</style>
+
+<style>
+  .slotbol{width:62px;height:62px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;
+    justify-content:center;background:var(--redbg);color:var(--diep)}
+  .groot{font-size:26px;font-weight:700;letter-spacing:-.02em}
+  .grootzin{font-size:12.5px;color:var(--mut);margin-top:3px;line-height:1.45}
+  .pos.afgerond{opacity:.78;background:var(--soft)}
+  .vink.verlies{color:var(--diep);background:var(--redbg)}
+
+  /* ---- het alarm ---- */
+  .alarm{background:var(--diep);color:#fff;border-radius:12px;padding:14px 15px;margin-bottom:12px}
+  .alarmkop{display:flex;align-items:center;gap:8px;font-size:10.5px;font-weight:700;
+    letter-spacing:.09em;text-transform:uppercase;opacity:.9}
+  .alarmkop .nu{margin-left:auto;opacity:.8;letter-spacing:.04em}
+  .alarmtitel{font-size:17px;font-weight:700;letter-spacing:-.01em;margin-top:7px;line-height:1.25}
+  .alarmzin{font-size:12.5px;line-height:1.5;margin-top:5px;color:#F6D9D5}
+  .alarmknop{display:block;width:100%;margin-top:12px;background:#fff;color:var(--diep);
+    border:0;border-radius:9px;padding:11px 12px;font:inherit;font-size:13.5px;font-weight:700}
+
+  .strook{display:flex;gap:2px;margin-top:10px}
+  .strook i{flex:1 1 0;height:11px;border-radius:2px;background:var(--b2)}
+
+  .wat{background:var(--soft);border:1px solid var(--b1);border-radius:10px;padding:13px 14px;margin-top:14px}
+  .watkop{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+  .watzin{font-size:12.5px;color:var(--ink2);line-height:1.55}
+  .watzin + .watzin{margin-top:8px}
+
+  .stap{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--ink2);line-height:1.5}
+  .stap + .stap{margin-top:9px}
+  .stapnr{flex:0 0 auto;width:19px;height:19px;border-radius:50%;background:var(--b2);color:var(--mut);
+    font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+
+  .slot{height:100%;background:linear-gradient(170deg,#0A2E40 0%,#113F57 55%,#1D5B74 100%);
+    color:#fff;padding:0 16px;display:flex;flex-direction:column}
+  .klok{text-align:center;margin:46px 0 30px}
+  .klokdag{font-size:14px;opacity:.75;font-weight:500}
+  .kloktijd{font-size:66px;font-weight:600;letter-spacing:-.03em;line-height:1}
+  .push{background:rgba(255,255,255,.93);color:var(--ink);border-radius:16px;padding:12px 14px;margin-bottom:9px;
+    box-shadow:0 6px 18px rgba(0,0,0,.18)}
+  .push.urgent{background:var(--diep);color:#fff}
+  .pushkop{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:var(--mut);margin-bottom:4px}
+  .push.urgent .pushkop{color:#F0C6C1}
+  .pushbol{width:16px;height:16px;border-radius:4px;background:var(--navbg2);display:flex;
+    align-items:center;justify-content:center}
+  .push.urgent .pushbol{background:rgba(255,255,255,.22)}
+  .pushtijd{margin-left:auto;font-weight:500;color:var(--faint)}
+  .push.urgent .pushtijd{color:#F0C6C1}
+  .pushtitel{font-size:13.5px;font-weight:700;line-height:1.3}
+  .pushtekst{font-size:12.5px;color:var(--ink2);margin-top:2px;line-height:1.4}
+  .push.urgent .pushtekst{color:#F6D9D5}
+</style>
+</head>
+<body><div class="blad">
+
+<h1>Delta Wave — de stoploss is geraakt</h1>
+<p class="intro">Het moment waarop het ertoe doet dat een bericht binnen de minuut aankomt en in één zin te lezen is.
+  Wat de app doet: zeggen wat er gebeurd is en wat wij gedaan hebben, meteen en zonder omhaal.
+  Wat de app níét doet: het lid vertellen wat hij moet doen — dat is zijn beslissing, en wij zijn geen adviseur.</p>
+
+<div class="rij">
+
+<!-- ====== 9. push -->
+<div class="kolom">
+<div class="fon">
+  <div class="slot">
+    <div class="klok"><div class="klokdag">donderdag 15 oktober</div><div class="kloktijd">15:42</div></div>
+    <div class="push urgent">
+      <div class="pushkop"><span class="pushbol"><svg viewBox="0 0 296.1 251.9" width="9" height="8"><polygon points="226.6 133.8 108.7 67.1 148.1 0 226.6 133.8" fill="#fff"/><polygon points="296.1 251.9 139.2 251.9 256.9 185.1 296.1 251.9" fill="#fff"/><polygon points="76.9 251.9 0 251.9 76.7 121.6 76.9 251.9" fill="#fff"/></svg></span>Delta Wave<span class="pushtijd">nu</span></div>
+      <div class="pushtitel">Stoploss geraakt — wij zijn eruit</div>
+      <div class="pushtekst">OESX 30 okt 5600. Wij hebben de positie zojuist gesloten op ask 60,0.</div>
+    </div>
+    <div class="push" style="opacity:.8">
+      <div class="pushkop"><span class="pushbol"><svg viewBox="0 0 296.1 251.9" width="9" height="8"><polygon points="226.6 133.8 108.7 67.1 148.1 0 226.6 133.8" fill="#fff"/><polygon points="296.1 251.9 139.2 251.9 256.9 185.1 296.1 251.9" fill="#fff"/><polygon points="76.9 251.9 0 251.9 76.7 121.6 76.9 251.9" fill="#fff"/></svg></span>Delta Wave<span class="pushtijd">11:20</span></div>
+      <div class="pushtitel">De barometer gaat naar Onder druk</div>
+      <div class="pushtekst">Deze stand komt van OESX 30 okt 5600.</div>
+    </div>
+  </div>
+</div>
+<p class="bijschrift"><b>De melding.</b> De enige die een eigen kleur krijgt. In de titel staat al wat er gebeurd is
+  en dat wij er uit zijn — wie alleen zijn vergrendelscherm ziet, weet het dan al.
+  Eén melding, geen herhaling: twee keer piepen maakt het niet waarder.</p>
+</div>
+
+<!-- ====== 10. vandaag met alarm -->
+<div class="kolom">
+<div class="fon">
+  <div class="statusbalk"><span>15:43</span><span class="punt"><i></i><i></i><i></i><i style="opacity:.4"></i></span></div>
+  <div class="appkop"><div class="merkrij">
+    <svg viewBox="0 0 296.1 251.9" width="20" height="17"><polygon points="226.6 133.8 108.7 67.1 148.1 0 226.6 133.8" fill="#fff"/><polygon points="296.1 251.9 139.2 251.9 256.9 185.1 296.1 251.9" fill="#fff"/><polygon points="76.9 251.9 0 251.9 76.7 121.6 76.9 251.9" fill="#fff"/></svg>
+    <span class="merk">Delta Wave</span></div></div>
+
+  <div class="romp"><div class="scroll">
+
+    <div class="alarm">
+      <div class="alarmkop">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 3l9.5 17H2.5z"/><path d="M12 10v4M12 17.2v.1"/></svg>
+        Stoploss geraakt<span class="nu">1 minuut geleden</span></div>
+      <div class="alarmtitel">OESX 30 okt · 5600 is gesloten</div>
+      <div class="alarmzin">De ask raakte 60,0 — ons vooraf afgesproken uitstappunt. Wij zijn om 15:42 uit de
+        positie gestapt, met een verlies van 21,5 punten.</div>
+      <button class="alarmknop">Lees wat er gebeurde</button>
+    </div>
+
+    <div class="kaart">
+      <div class="kaartkop"><span class="kaarttitel">Positie barometer</span><span class="kaartmeta">15:42</span></div>
+      <div class="baro">
+        <div class="bolgroot" style="background:var(--s1)">1</div>
+        <div><div class="bstand">Onder druk</div>
+          <div class="bzin">De cyclus loopt nog met één tranche. Die staat ruim voor haar grens.</div></div>
+      </div>
+      <div class="btrap">
+        <i class="aan" style="background:var(--s1)"></i><i style="background:var(--s2)"></i>
+        <i style="background:var(--s3)"></i><i style="background:var(--s4)"></i><i style="background:var(--s5)"></i>
+      </div>
+    </div>
+
+    <div class="kaartkop" style="margin:4px 2px 8px">
+      <span class="kaarttitel">Wat ik volg</span><span class="kaartmeta">1 lopend · 1 gesloten</span></div>
+
+    <button class="pos afgerond">
+      <div class="posrij">
+        <div><div class="posnaam">OESX 30 okt · 5600</div>
+          <div class="posonder">gesloten op de stoploss · 15:42</div></div>
+        <span class="vink verlies">−21,5 pt</span>
+      </div>
+      <div class="strook"><i style="background:var(--s4)"></i><i style="background:var(--s3)"></i><i style="background:var(--s3)"></i><i style="background:var(--s2)"></i><i style="background:var(--s2)"></i><i style="background:var(--s2)"></i><i style="background:var(--s1)"></i><i style="background:var(--s1)"></i><i style="background:var(--s1)"></i><i style="background:var(--diep)"></i></div>
+    </button>
+
+  </div></div>
+  <div class="tabs">
+    <span class="tab aan"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Vandaag</span>
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 6h18v12H3z"/><path d="M3 7l9 6 9-6"/></svg>Berichten</span>
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Posities</span>
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>Ik</span>
+  </div>
+</div>
+<p class="bijschrift"><b>In de app.</b> Eén rode band bovenaan, en daarin staat alles: wat er geraakt is,
+  wanneer wij eruit zijn, en met welk verlies. De band verdwijnt pas als je hem gelezen hebt —
+  niet na tien seconden, want dit is het bericht dat niemand mag missen.</p>
+</div>
+
+<!-- ====== 11. het bericht -->
+<div class="kolom">
+<div class="fon">
+  <div class="statusbalk"><span>15:43</span><span class="punt"><i></i><i></i><i></i><i style="opacity:.4"></i></span></div>
+  <div class="appkop"><div class="merkrij"><span class="merk" style="font-size:15px">Bericht</span></div></div>
+
+  <div class="romp"><div class="scroll">
+    <div class="terug">&lsaquo;&nbsp; Vandaag</div>
+
+    <div class="kaart">
+      <div class="kaartkop"><span class="kaarttitel" style="color:var(--diep)">Stoploss geraakt</span>
+        <span class="kaartmeta">vandaag 15:42</span></div>
+
+      <div class="baro" style="margin:2px 0">
+        <div class="slotbol">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3l9.5 17H2.5z"/><path d="M12 10v4M12 17.2v.1"/></svg>
+        </div>
+        <div><div class="groot">Eruit</div>
+          <div class="grootzin">OESX 30 okt · 5600, gesloten op ask 60,0.</div></div>
+      </div>
+
+      <div class="cijferrij" style="margin-top:18px">
+        <div class="cijfer"><div class="lab">Afgesproken grens</div><div class="wrd">ask 60,0</div></div>
+        <div class="cijfer"><div class="lab">Eruit op</div><div class="wrd">ask 60,0</div></div>
+        <div class="cijfer"><div class="lab">Resultaat</div><div class="wrd" style="color:var(--diep)">−21,5 pt</div></div>
+        <div class="cijfer"><div class="lab">Looptijd</div><div class="wrd">24 dagen</div></div>
+      </div>
+
+      <div class="kaartkop" style="margin:18px 0 6px"><span class="kaarttitel">Het hele verloop</span>
+        <span class="kaartmeta">21 sep – 15 okt</span></div>
+      <div class="strook" style="margin-top:2px"><i style="background:var(--s4)"></i><i style="background:var(--s3)"></i><i style="background:var(--s3)"></i><i style="background:var(--s2)"></i><i style="background:var(--s2)"></i><i style="background:var(--s2)"></i><i style="background:var(--s1)"></i><i style="background:var(--s1)"></i><i style="background:var(--s1)"></i><i style="background:var(--diep)"></i></div>
+      <div class="schaalnamen"><span>21 sep</span><span>15 okt · stoploss</span></div>
+
+      <p class="uitleg" style="margin:16px 0 0">
+        <b>Waarom:</b> de index zakte in twee dagen door 5600 heen. Onze exitregel zegt: bij een ask van 60,0
+        gaan wij eruit, zonder discussie. Die regel lag vast voordat wij de positie innamen, en wij hebben
+        hem gevolgd. Verruimen doen wij nooit.</p>
+
+      <div class="wat">
+        <div class="watkop">Wat dit voor jou betekent</div>
+        <p class="watzin">Als je deze positie zelf ook had, sta je nu voor dezelfde keuze als wij een uur
+          geleden. Wij kunnen die niet voor je maken en geven geen advies — wij vertellen alleen wat wij
+          gedaan hebben en waarom.</p>
+        <p class="watzin">Wat wij wél kunnen zeggen: wij hebben onze afspraak uitgevoerd op het moment
+          dat ze geraakt werd, niet later.</p>
+      </div>
+
+      <p class="voet">Delta Blueprint deelt kennis en de eigen posities van de oprichters.
+        Dit is geen individueel beleggingsadvies.</p>
+    </div>
+  </div></div>
+  <div class="tabs">
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Vandaag</span>
+    <span class="tab aan"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 6h18v12H3z"/><path d="M3 7l9 6 9-6"/></svg>Berichten</span>
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Posities</span>
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>Ik</span>
+  </div>
+</div>
+<p class="bijschrift"><b>Het bericht.</b> Vier getallen die samen het hele verhaal zijn: de grens die vastlag,
+  waar wij eruit gingen, wat het kostte, hoe lang ze liep. En de strook die laat zien dat het niet
+  uit de lucht kwam vallen — oranje, dan rood, dan eruit.</p>
+</div>
+
+<!-- ====== 12. wat er daarna gebeurt -->
+<div class="kolom">
+<div class="fon">
+  <div class="statusbalk"><span>15:44</span><span class="punt"><i></i><i></i><i></i><i style="opacity:.4"></i></span></div>
+  <div class="appkop"><div class="merkrij"><span class="merk" style="font-size:15px">OESX 30 okt · 5600</span></div></div>
+
+  <div class="romp"><div class="scroll">
+    <div class="terug">&lsaquo;&nbsp; Vandaag</div>
+
+    <div class="kaart">
+      <div class="kaartkop"><span class="kaarttitel">Afgerond</span><span class="kaartmeta">15 okt · 15:42</span></div>
+      <div class="baro" style="gap:12px">
+        <div class="slotbol" style="width:52px;height:52px">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3l9.5 17H2.5z"/><path d="M12 10v4M12 17.2v.1"/></svg>
+        </div>
+        <div><div class="bstand" style="font-size:17px">Gesloten op de stoploss</div>
+          <div class="bzin">−21,5 punten · 24 dagen gelopen</div></div>
+      </div>
+      <div class="strook" style="margin-top:14px"><i style="background:var(--s4)"></i><i style="background:var(--s3)"></i><i style="background:var(--s3)"></i><i style="background:var(--s2)"></i><i style="background:var(--s2)"></i><i style="background:var(--s2)"></i><i style="background:var(--s1)"></i><i style="background:var(--s1)"></i><i style="background:var(--s1)"></i><i style="background:var(--diep)"></i></div>
+      <div class="schaalnamen"><span>21 sep</span><span>15 okt</span></div>
+    </div>
+
+    <div class="kaart">
+      <div class="kaartkop"><span class="kaarttitel">Hoe het liep</span></div>
+      <div class="stap"><span class="stapnr">1</span>
+        <span><b>21 sep</b> — positie geopend op 5600, premie 38,5.</span></div>
+      <div class="stap"><span class="stapnr">2</span>
+        <span><b>8 okt</b> — barometer naar Krap. De index zakte, de ask liep op.</span></div>
+      <div class="stap"><span class="stapnr">3</span>
+        <span><b>13 okt</b> — barometer naar Onder druk, vlak onder de waarschuwing.</span></div>
+      <div class="stap"><span class="stapnr">4</span>
+        <span><b>15 okt 15:42</b> — de ask raakte 60,0. Wij zijn eruit.</span></div>
+    </div>
+
+    <div class="volgknop" style="border-radius:12px">
+      <span><span class="volgtitel" style="font-size:13.5px">Deze positie is afgelopen</span>
+        <span class="volgzin">Je krijgt hier niets meer over. Volg je de cyclus, dan hoor je het
+          wanneer er een nieuwe positie komt.</span></span>
+    </div>
+
+    <p class="voet" style="margin:0 2px">Delta Blueprint deelt kennis en de eigen posities van de oprichters.
+      Dit is geen individueel beleggingsadvies.</p>
+  </div></div>
+  <div class="tabs">
+    <span class="tab aan"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Vandaag</span>
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 6h18v12H3z"/><path d="M3 7l9 6 9-6"/></svg>Berichten</span>
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Posities</span>
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>Ik</span>
+  </div>
+</div>
+<p class="bijschrift"><b>Daarna.</b> De tranche blijft staan met haar hele geschiedenis in vier regels —
+  wat wij zagen, wanneer, en wat wij toen zeiden. Dat is waar een stoploss om vraagt: niet alleen
+  het slechte nieuws, maar het spoor ernaartoe.</p>
+</div>
+
+</div>
+
+</div></body></html>

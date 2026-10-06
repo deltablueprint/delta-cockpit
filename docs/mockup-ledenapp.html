@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Delta Wave — de app voor leden</title>
+<style>
+  :root{
+    --cream:#F7F6F3; --ink:#0F0E0D; --ink2:#2E2B27; --mut:#6E6C68; --dim:#8A8884; --faint:#A5A29C;
+    --b1:#E8E6E1; --b2:#F0EEEA; --soft:#FAF9F7; --navbg:#0D3B52; --navbg2:#0A2E40;
+    --blue:#136289; --bluebg:#E6EEF3; --grn:#1F5E45; --grnbg:#DCEBE2; --amb:#8A5A00; --ambbg:#FBEFD8;
+    --red:#A1281F; --redbg:#FBE6E3;
+    --s1:#D7261E; --s2:#F26A21; --s3:#FBC02D; --s4:#8DC63F; --s5:#0A9D4E; --diep:#9A1C16;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#E9E7E2;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink)}
+  .blad{max-width:1760px;margin:0 auto;padding:30px 24px 60px}
+  h1{font-size:22px;margin:0 0 4px;letter-spacing:-.01em}
+  .intro{color:var(--mut);font-size:13.5px;max-width:720px;margin:0 0 26px}
+  .rij{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+  .kolom{width:390px}
+  .bijschrift{font-size:12px;color:var(--mut);margin:10px 2px 0;line-height:1.45}
+  .bijschrift b{color:var(--ink2)}
+
+  /* ---------- het toestel ---------- */
+  .fon{width:390px;height:872px;background:var(--cream);border-radius:38px;overflow:hidden;
+    border:9px solid #16181B;box-shadow:0 10px 34px rgba(0,0,0,.22);position:relative;display:flex;flex-direction:column}
+  .statusbalk{height:40px;background:var(--navbg2);color:#fff;display:flex;align-items:center;
+    justify-content:space-between;padding:0 20px 0 24px;font-size:11.5px;font-weight:600;flex:0 0 auto}
+  .statusbalk .punt{display:flex;gap:4px;align-items:center}
+  .statusbalk i{display:block;width:3px;height:9px;background:#fff;border-radius:1px;opacity:.9}
+  .appkop{background:var(--navbg2);color:#fff;padding:2px 18px 14px;flex:0 0 auto}
+  .merkrij{display:flex;align-items:center;gap:9px}
+  .merk{font-size:17px;font-weight:700;letter-spacing:.2px}
+  .merksub{font-size:13px;color:#8FB3C4}
+  .golf{flex:1 1 auto;height:14px}
+  .golf svg{display:block;width:100%;height:100%}
+  .romp{flex:1 1 auto;overflow:hidden;position:relative}
+  .scroll{height:100%;overflow:auto;padding:14px 16px 16px}
+
+  /* ---------- kaarten ---------- */
+  .kaart{background:#fff;border:1px solid var(--b1);border-radius:12px;padding:15px 16px;margin-bottom:12px}
+  .kaartkop{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}
+  .kaarttitel{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
+  .kaartmeta{font-size:11px;color:var(--faint)}
+
+  /* venster als balk */
+  .vgroot{font-size:20px;font-weight:700;letter-spacing:-.01em;margin:0 0 2px}
+  .vonder{font-size:12px;color:var(--mut);margin-bottom:11px}
+  .vbalk{display:flex;gap:4px}
+  .vbalk i{flex:1 1 0;height:7px;border-radius:3px;background:var(--b1)}
+  .vbalk i.gehad{background:#9DC0D5}
+  .vbalk i.nu{background:var(--blue)}
+
+  /* barometer */
+  .baro{display:flex;align-items:center;gap:14px}
+  .bolgroot{width:62px;height:62px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;
+    justify-content:center;color:#fff;font-weight:700;font-size:21px}
+  .bstand{font-size:19px;font-weight:700;letter-spacing:-.01em}
+  .bzin{font-size:12.5px;color:var(--mut);line-height:1.45;margin-top:2px}
+  .btrap{display:flex;gap:3px;margin-top:10px}
+  .btrap i{flex:1 1 0;height:5px;border-radius:3px;opacity:.26}
+  .btrap i.aan{opacity:1}
+
+  /* positie */
+  .pos{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--b1);
+    border-radius:12px;padding:14px 15px;margin-bottom:10px;font:inherit;color:inherit}
+  .posrij{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .posnaam{font-size:14px;font-weight:700;letter-spacing:-.01em}
+  .posonder{font-size:12px;color:var(--mut);margin-top:1px}
+  .vink{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+    padding:3px 8px;border-radius:20px;white-space:nowrap}
+  .vink.volgt{color:var(--grn);background:var(--grnbg)}
+  .vink.niet{color:var(--dim);background:var(--b2)}
+  .spoor{display:flex;gap:3px;margin-top:12px}
+  .spoor span{height:9px;border-radius:2px;display:block}
+  .spoorwrap{position:relative}
+  .merker{position:absolute;top:-3px;width:2px;height:15px;background:var(--ink);border-radius:1px}
+  .merkerlab{position:absolute;top:-21px;transform:translateX(-50%);font-size:10.5px;font-weight:700;white-space:nowrap}
+  .dagen{display:flex;gap:2px;margin-top:9px}
+  .dagen i{flex:1 1 0;height:11px;border-radius:2px;background:var(--b2)}
+
+  /* berichtenlijst */
+  .ber{display:flex;gap:11px;padding:13px 2px;border-bottom:1px solid var(--b1)}
+  .berbol{width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px}
+  .bertitel{font-size:13.5px;font-weight:700;line-height:1.35}
+  .bertekst{font-size:12.5px;color:var(--mut);margin-top:2px;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .bertijd{font-size:11px;color:var(--faint);margin-top:4px}
+  .nieuwstip{width:7px;height:7px;border-radius:50%;background:var(--blue);flex:0 0 auto;margin-top:6px}
+
+  /* detail */
+  .terug{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--blue);
+    font-weight:600;margin:0 0 12px}
+  .cijferrij{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px;margin-top:4px}
+  .cijfer .lab{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+  .cijfer .wrd{font-size:19px;font-weight:700;letter-spacing:-.01em}
+  .uitleg{font-size:12.5px;color:var(--mut);line-height:1.5}
+  .schaalnamen{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-top:5px}
+
+  .volgknop{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;
+    background:#fff;border:1px solid var(--b1);border-radius:12px;padding:14px 15px;margin-bottom:12px;font:inherit}
+  .volgknop.aan{border-color:var(--grn);background:var(--grnbg)}
+  .volgtitel{font-size:14px;font-weight:700}
+  .volgzin{font-size:12px;color:var(--mut);margin-top:2px;line-height:1.4}
+  .volgknop.aan .volgzin{color:#3C6B55}
+  .schuif{width:50px;height:30px;border-radius:20px;background:#D5D2CC;position:relative;flex:0 0 auto}
+  .schuif i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;
+    box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .volgknop.aan .schuif{background:var(--grn)}
+  .volgknop.aan .schuif i{left:23px}
+
+  .voet{font-size:11px;color:var(--faint);line-height:1.5;border-top:1px solid var(--b1);
+    margin-top:14px;padding-top:12px}
+
+  /* tabbalk */
+  .tabs{flex:0 0 auto;display:flex;background:#fff;border-top:1px solid var(--b1);padding:9px 0 16px}
+  .tab{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:4px;
+    font-size:10.5px;color:var(--dim);font-weight:600}
+  .tab.aan{color:var(--blue)}
+  .tab svg{display:block}
+  .tabbol{position:absolute;top:7px;right:-7px;width:7px;height:7px;border-radius:50%;background:var(--red)}
+</style></head>
+<body><div class="blad">
+
+<h1>Delta Wave — de app voor leden</h1>
+<p class="intro">Vier schermen. Het uitgangspunt: een lid dat één keer per dag kijkt, moet in drie seconden weten
+  of er iets van hem verwacht wordt. Hij volgt zelf welke posities hij wil zien, en krijgt alleen daarover bericht.</p>
+
+<div class="rij">
+
+<!-- ===================================================== 1. vandaag -->
+<div class="kolom">
+<div class="fon">
+  <div class="statusbalk"><span>9:41</span><span class="punt"><i></i><i></i><i></i><i style="opacity:.4"></i></span></div>
+  <div class="appkop">
+    <div class="merkrij">
+      <svg viewBox="0 0 296.1 251.9" width="20" height="17" aria-hidden="true">
+        <polygon points="226.6 133.8 108.7 67.1 148.1 0 226.6 133.8" fill="#fff"/>
+        <polygon points="296.1 251.9 139.2 251.9 256.9 185.1 296.1 251.9" fill="#fff"/>
+        <polygon points="76.9 251.9 0 251.9 76.7 121.6 76.9 251.9" fill="#fff"/></svg>
+      <span class="merk">Delta Wave</span>
+      <span class="golf"><svg viewBox="0 0 240 14" preserveAspectRatio="none">
+        <defs><linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity=".85"/>
+          <stop offset=".5" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+        </linearGradient></defs>
+        <path d="M0 7h22l6-5 8 10 7-7 6 2h191" fill="none" stroke="url(#g1)" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+  </div>
+
+  <div class="romp"><div class="scroll">
+
+    <div class="kaart">
+      <div class="kaartkop"><span class="kaarttitel">Instap venster</span><span class="kaartmeta">sinds 24 sep</span></div>
+      <div class="vgroot">In positie</div>
+      <div class="vonder">Wij zitten erin. Wie mee wil, kon instappen.</div>
+      <div class="vbalk"><i class="gehad"></i><i class="gehad"></i><i class="gehad"></i><i class="gehad"></i><i class="nu"></i><i></i></div>
+    </div>
+
+    <div class="kaart">
+      <div class="kaartkop"><span class="kaarttitel">Positie barometer</span><span class="kaartmeta">bijgewerkt 17:12</span></div>
+      <div class="baro">
+        <div class="bolgroot" style="background:var(--s3)">3</div>
+        <div>
+          <div class="bstand">Aandacht</div>
+          <div class="bzin">De 5600 liep op tot vlak onder onze waarschuwing. Wij doen niets; we kijken mee.</div>
+        </div>
+      </div>
+      <div class="btrap">
+        <i style="background:var(--s1)"></i><i style="background:var(--s2)"></i>
+        <i class="aan" style="background:var(--s3)"></i><i style="background:var(--s4)"></i><i style="background:var(--s5)"></i>
+      </div>
+    </div>
+
+    <div class="kaartkop" style="margin:18px 2px 8px">
+      <span class="kaarttitel">Wat ik volg</span><span class="kaartmeta">2 van 3</span></div>
+
+    <button class="pos">
+      <div class="posrij">
+        <div><div class="posnaam">OESX 30 okt · 5600</div>
+          <div class="posonder">24 dagen te gaan</div></div>
+        <span class="vink volgt">volgt</span>
+      </div>
+      <div class="spoorwrap" style="margin-top:20px">
+        <span class="merkerlab" style="left:60%">+18 %</span>
+        <div class="spoor" style="margin-top:0">
+          <span style="flex:0 0 8%;background:var(--diep)"></span>
+          <span style="flex:0 0 18%;background:var(--s1)"></span>
+          <span style="flex:0 0 24%;background:var(--s2)"></span>
+          <span style="flex:0 0 18%;background:var(--s3)"></span>
+          <span style="flex:0 0 16%;background:var(--s4)"></span>
+          <span style="flex:0 0 16%;background:var(--s5)"></span>
+        </div>
+        <span class="merker" style="left:60%"></span>
+      </div>
+      <div class="dagen">
+        <i style="background:var(--s4)"></i><i style="background:var(--s4)"></i><i style="background:var(--s3)"></i>
+        <i style="background:var(--s3)"></i><i style="background:var(--s3)"></i><i style="background:var(--s2)"></i>
+        <i style="background:var(--s3)"></i><i style="background:var(--s3)"></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+    </button>
+
+    <button class="pos">
+      <div class="posrij">
+        <div><div class="posnaam">OESX 30 okt · 5300</div>
+          <div class="posonder">24 dagen te gaan</div></div>
+        <span class="vink volgt">volgt</span>
+      </div>
+      <div class="spoorwrap" style="margin-top:20px">
+        <span class="merkerlab" style="left:88%">+86 %</span>
+        <div class="spoor" style="margin-top:0">
+          <span style="flex:0 0 8%;background:var(--diep)"></span>
+          <span style="flex:0 0 18%;background:var(--s1)"></span>
+          <span style="flex:0 0 24%;background:var(--s2)"></span>
+          <span style="flex:0 0 18%;background:var(--s3)"></span>
+          <span style="flex:0 0 16%;background:var(--s4)"></span>
+          <span style="flex:0 0 16%;background:var(--s5)"></span>
+        </div>
+        <span class="merker" style="left:88%"></span>
+      </div>
+      <div class="dagen">
+        <i style="background:var(--s4)"></i><i style="background:var(--s5)"></i><i style="background:var(--s5)"></i>
+        <i style="background:var(--s5)"></i><i style="background:var(--s5)"></i><i style="background:var(--s5)"></i>
+        <i style="background:var(--s5)"></i><i style="background:var(--s5)"></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+    </button>
+
+    <button class="pos" style="opacity:.62">
+      <div class="posrij">
+        <div><div class="posnaam">OESX 30 okt · 5450</div>
+          <div class="posonder">je volgt deze niet</div></div>
+        <span class="vink niet">volgen</span>
+      </div>
+    </button>
+
+  </div></div>
+
+  <div class="tabs">
+    <span class="tab aan">
+      <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+      Vandaag</span>
+    <span class="tab" style="position:relative">
+      <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 6h18v12H3z"/><path d="M3 7l9 6 9-6"/></svg>
+      Berichten<i class="tabbol" style="right:26px;top:2px"></i></span>
+    <span class="tab">
+      <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
+      Posities</span>
+    <span class="tab">
+      <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
+      Ik</span>
+  </div>
+</div>
+<p class="bijschrift"><b>Vandaag.</b> Twee kaarten en een lijst. Het venster zegt of er iets van je verwacht wordt,
+  de barometer wat wij van de posities vinden — in een woord, met één zin eronder. Daarna wat jij volgt,
+  met dezelfde balk en dezelfde dagvakjes als in de cockpit.</p>
+</div>
+
+<!-- ===================================================== 2. positie -->
+<div class="kolom">
+<div class="fon">
+  <div class="statusbalk"><span>9:41</span><span class="punt"><i></i><i></i><i></i><i style="opacity:.4"></i></span></div>
+  <div class="appkop"><div class="merkrij"><span class="merk" style="font-size:15px">OESX 30 okt · 5600</span></div></div>
+
+  <div class="romp"><div class="scroll">
+    <div class="terug">&lsaquo;&nbsp; Vandaag</div>
+
+    <button class="volgknop aan">
+      <span><span class="volgtitel">Je volgt deze positie</span>
+        <span class="volgzin">Je krijgt bericht zodra er iets verandert: openen, sluiten, doorrollen,
+          of een nieuwe stand.</span></span>
+      <span class="schuif"><i></i></span>
+    </button>
+
+    <div class="kaart">
+      <div class="kaartkop"><span class="kaarttitel">Hoe staat ze ervoor</span>
+        <span class="kaartmeta">17:12</span></div>
+      <div class="baro" style="gap:12px">
+        <div class="bolgroot" style="background:var(--s3);width:52px;height:52px;font-size:18px">3</div>
+        <div><div class="bstand">Aandacht</div>
+          <div class="bzin">Dichter bij de grens dan vorige week, nog ruim ervoor.</div></div>
+      </div>
+      <div class="spoorwrap" style="margin-top:26px">
+        <span class="merkerlab" style="left:60%">+18 % binnen</span>
+        <div class="spoor" style="margin-top:0">
+          <span style="flex:0 0 8%;background:var(--diep)"></span>
+          <span style="flex:0 0 18%;background:var(--s1)"></span>
+          <span style="flex:0 0 24%;background:var(--s2)"></span>
+          <span style="flex:0 0 18%;background:var(--s3)"></span>
+          <span style="flex:0 0 16%;background:var(--s4)"></span>
+          <span style="flex:0 0 16%;background:var(--s5)"></span>
+        </div>
+        <span class="merker" style="left:60%"></span>
+      </div>
+      <div class="schaalnamen"><span>grens</span><span>break-even</span><span>afgerond</span></div>
+    </div>
+
+    <div class="kaart">
+      <div class="kaartkop"><span class="kaarttitel">Het verloop</span>
+        <span class="kaartmeta">21 sep – 30 okt</span></div>
+      <div class="dagen" style="margin-top:2px">
+        <i style="background:var(--s4)"></i><i style="background:var(--s4)"></i><i style="background:var(--s3)"></i>
+        <i style="background:var(--s3)"></i><i style="background:var(--s3)"></i><i style="background:var(--s2)"></i>
+        <i style="background:var(--s3)"></i><i style="background:var(--s3)"></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+      <div class="schaalnamen"><span>21 sep</span><span>30 okt</span></div>
+    </div>
+
+    <div class="kaart">
+      <div class="kaartkop"><span class="kaarttitel">De tranche</span></div>
+      <div class="cijferrij">
+        <div class="cijfer"><div class="lab">Geopend</div><div class="wrd">21 sep</div></div>
+        <div class="cijfer"><div class="lab">Expiratie</div><div class="wrd">30 okt</div></div>
+        <div class="cijfer"><div class="lab">Strike</div><div class="wrd">5600</div></div>
+        <div class="cijfer"><div class="lab">Dagen te gaan</div><div class="wrd">24</div></div>
+      </div>
+      <p class="voet">Delta Blueprint deelt kennis en de eigen posities van de oprichters.
+        Dit is geen individueel beleggingsadvies.</p>
+    </div>
+  </div></div>
+
+  <div class="tabs">
+    <span class="tab aan"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Vandaag</span>
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 6h18v12H3z"/><path d="M3 7l9 6 9-6"/></svg>Berichten</span>
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Posities</span>
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>Ik</span>
+  </div>
+</div>
+<p class="bijschrift"><b>Eén positie.</b> De knop om te volgen staat bovenaan en zegt in gewone woorden wat hij doet —
+  dat vinkje bepaalt wie welk bericht krijgt. Geen euro's en geen premie: dat is het geld van Delta Blueprint,
+  niet van het lid.</p>
+</div>
+
+<!-- ===================================================== 3. berichten -->
+<div class="kolom">
+<div class="fon">
+  <div class="statusbalk"><span>9:41</span><span class="punt"><i></i><i></i><i></i><i style="opacity:.4"></i></span></div>
+  <div class="appkop"><div class="merkrij"><span class="merk" style="font-size:15px">Berichten</span></div></div>
+
+  <div class="romp"><div class="scroll" style="padding-top:4px">
+
+    <div class="ber">
+      <span class="berbol" style="background:var(--s3)"></span>
+      <div style="min-width:0">
+        <div class="bertitel">De barometer gaat naar Aandacht</div>
+        <div class="bertekst">Deze stand komt van OESX 30 okt 5600. Waarom: de ask liep op tot vlak
+          onder onze waarschuwing.</div>
+        <div class="bertijd">vandaag 17:14 · over 5600</div>
+      </div>
+      <span class="nieuwstip"></span>
+    </div>
+
+    <div class="ber">
+      <span class="berbol" style="background:var(--blue)"></span>
+      <div style="min-width:0">
+        <div class="bertitel">Doorrol: 18 sep 5050 → 30 okt 5450</div>
+        <div class="bertekst">De septemberput liep waardeloos af; wij zijn doorgerold naar oktober.</div>
+        <div class="bertijd">1 okt · over 5450</div>
+      </div>
+      <span class="nieuwstip"></span>
+    </div>
+
+    <div class="ber">
+      <span class="berbol" style="background:var(--grn)"></span>
+      <div style="min-width:0">
+        <div class="bertitel">Nieuwe positie: OESX 30 okt 5600</div>
+        <div class="bertekst">Wij zijn een positie ingegaan op OESX. Waarom: de daling kwam snel en
+          de volatiliteit liep op.</div>
+        <div class="bertijd">21 sep · over 5600</div>
+      </div>
+    </div>
+
+    <div class="ber">
+      <span class="berbol" style="background:var(--blue)"></span>
+      <div style="min-width:0">
+        <div class="bertitel">Het venster staat op In positie</div>
+        <div class="bertekst">Wij zitten erin. Wie mee wilde doen, kon instappen.</div>
+        <div class="bertijd">24 sep · over de cyclus</div>
+      </div>
+    </div>
+
+    <div class="ber" style="border-bottom:0">
+      <span class="berbol" style="background:var(--dim)"></span>
+      <div style="min-width:0">
+        <div class="bertitel">Het venster opent binnenkort</div>
+        <div class="bertekst">Wij bereiden een positie voor op OESX. Je hoort het zodra ze er is.</div>
+        <div class="bertijd">19 sep · over de cyclus</div>
+      </div>
+    </div>
+
+    <p class="bijschrift" style="margin:16px 2px 0">Je ziet alleen berichten over wat je volgt,
+      plus de berichten over de cyclus zelf.</p>
+
+  </div></div>
+
+  <div class="tabs">
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Vandaag</span>
+    <span class="tab aan"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 6h18v12H3z"/><path d="M3 7l9 6 9-6"/></svg>Berichten</span>
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Posities</span>
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>Ik</span>
+  </div>
+</div>
+<p class="bijschrift"><b>Berichten.</b> Eén lijst, nieuwste boven, met een bolletje in de kleur van waar het over ging.
+  Achter elke regel staat over welke positie het gaat — precies de koppeling die in de cockpit bepaalt
+  wie het bericht krijgt.</p>
+</div>
+
+<!-- ===================================================== 4. bericht -->
+<div class="kolom">
+<div class="fon">
+  <div class="statusbalk"><span>9:41</span><span class="punt"><i></i><i></i><i></i><i style="opacity:.4"></i></span></div>
+  <div class="appkop"><div class="merkrij"><span class="merk" style="font-size:15px">Bericht</span></div></div>
+
+  <div class="romp"><div class="scroll">
+    <div class="terug">&lsaquo;&nbsp; Berichten</div>
+
+    <div class="kaart">
+      <div class="kaartkop"><span class="kaarttitel">Stand naar de leden</span>
+        <span class="kaartmeta">vandaag 17:14</span></div>
+      <div class="vgroot" style="font-size:18px;line-height:1.3">De barometer gaat naar Aandacht</div>
+
+      <div class="baro" style="margin:16px 0 4px;gap:12px">
+        <div class="bolgroot" style="background:var(--s3);width:46px;height:46px;font-size:17px">3</div>
+        <div><div class="bstand" style="font-size:16px">Aandacht</div>
+          <div class="bzin">was Comfortabel</div></div>
+      </div>
+
+      <p class="uitleg" style="margin:14px 0 0">
+        Vanaf vandaag gaat de barometer naar <b>Aandacht</b>.<br><br>
+        Instap venster: In positie<br>
+        Barometer: Aandacht<br>
+        Deze stand komt van OESX 30 okt 5600.<br><br>
+        <b>Waarom:</b> de ask liep op tot vlak onder onze waarschuwing. Wij doen niets en blijven
+        binnen het exitplan; verandert dat, dan hoor je het dezelfde dag.</p>
+
+      <p class="voet">Delta Blueprint deelt kennis en de eigen posities van de oprichters.
+        Dit is geen individueel beleggingsadvies.</p>
+    </div>
+
+    <button class="pos" style="margin-top:2px">
+      <div class="posrij">
+        <div><div class="posnaam">OESX 30 okt · 5600</div>
+          <div class="posonder">de positie waar dit over gaat</div></div>
+        <span class="vink volgt">volgt</span>
+      </div>
+    </button>
+  </div></div>
+
+  <div class="tabs">
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Vandaag</span>
+    <span class="tab aan"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 6h18v12H3z"/><path d="M3 7l9 6 9-6"/></svg>Berichten</span>
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Posities</span>
+    <span class="tab"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>Ik</span>
+  </div>
+</div>
+<p class="bijschrift"><b>Eén bericht.</b> Letterlijk de tekst die in de opsteller staat, met de vaste voet eronder —
+  wat jij verstuurt is wat het lid leest. Onderaan de positie waar het over ging, met één tik te openen.</p>
+</div>
+
+</div>
+</div></body></html>
