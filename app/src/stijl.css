@@ -1925,8 +1925,23 @@ body.sleept .lijsttabel { pointer-events: none; }
 /* Het voorstel van het systeem: rood gestippeld. Wat wij ervan vinden en nog
    niet gemeld hebben: blauw gestippeld. De doorlopende blauwe rand blijft voor
    wat de leden kennen — dat is ook waar de wijzer staat. */
-.lreg.tip { border-color: var(--red); border-style: dashed; }
+/* Het voorstel van het systeem pulseert van rood naar oranje: het is het enige
+   op dit scherm dat om een handeling vraagt, en een stille stippellijn tussen
+   vijf andere regels zie je over het hoofd. */
+@keyframes voorstelpuls {
+  0%, 100% { border-color: #9A3227; }
+  50%      { border-color: #E8742A; }
+}
+@keyframes voorstelringpuls {
+  0%, 100% { stroke: #9A3227; opacity: 1; }
+  50%      { stroke: #E8742A; opacity: .7; }
+}
+.lreg.tip { border-color: var(--red); border-style: dashed; animation: voorstelpuls 1.5s ease-in-out infinite; }
 .lreg.tip .nm { color: var(--red); }
+.gauge .tipring { animation: voorstelringpuls 1.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .lreg.tip, .gauge .tipring { animation: none; }
+}
 .lreg.gekozen { border-color: var(--blue); border-style: dashed; background: #fff; }
 .lreg.gekozen .nm { color: var(--blue); font-weight: 700; }
 

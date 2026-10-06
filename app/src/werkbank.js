@@ -476,7 +476,7 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
       const voorgesteld = tip === stand && !onsHier;
       svg += `<path class="seg" data-stand="${stand}" d="${sector(a0, a1, RO, RI)}" fill="${KLEUR[stand - 1]}"
         opacity="${stand === toon ? 1 : onsHier || voorgesteld ? 0.85 : 0.72}"></path>`;
-      if (voorgesteld) svg += `<path d="${sector(a0, a1, RO + 5, RI - 5)}" fill="none" stroke="#9A3227" stroke-width="2.5" stroke-dasharray="6 4"></path>`;
+      if (voorgesteld) svg += `<path class="tipring" d="${sector(a0, a1, RO + 5, RI - 5)}" fill="none" stroke="#9A3227" stroke-width="2.5" stroke-dasharray="6 4"></path>`;
       if (onsHier) svg += `<path d="${sector(a0, a1, RO + 5, RI - 5)}" fill="none" stroke="#136289" stroke-width="3" stroke-dasharray="6 4"></path>`;
     }
     if (toon) {
