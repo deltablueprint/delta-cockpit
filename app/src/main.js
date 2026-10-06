@@ -69,7 +69,9 @@ function teken() {
   if (pad === "/werkbank") {
     huidigeLijst.tabelnaam = null;
     huidigeLijst.url = null;
-    werkbankscherm(inhoud, kruimel);
+    werkbankscherm(inhoud, kruimel, {
+      cyclus: new URLSearchParams(zoekdeel).get("cyclus"),
+    });
     return;
   }
 

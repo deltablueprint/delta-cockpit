@@ -23,7 +23,7 @@ const LOGO = `<svg viewBox="0 0 296.1 251.9" width="15" height="13" aria-hidden=
 import { volgLive, stopLive, HARTSLAG } from "./live.js";
 import { avatar, avatarMetNaam } from "./avatar.js";
 import { kiezerHtml, kiezerAansluiten } from "./kiezer.js";
-import { balkHtml, schaalHtml, standBadge, metriekHtml } from "./positiebalk.js";
+import { balkHtml, schaalHtml, metriekHtml } from "./positiebalk.js";
 import { haalPositieMeting } from "./api.js";
 import { voorwaardeSjablonen, voorwaardenOvernemen, stappenVan } from "./api.js";
 
@@ -757,7 +757,6 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         <div class="posmeterrij">
           <span class="posmeternaam">${ontsnap(p.contract || `Tranche ${p.tranche}`)}</span>
           ${balkHtml(p, m.vakken || [])}
-          <span class="posstand">${standBadge(p, naam ? naam.label : null)}</span>
         </div>
         ${schaalHtml(m.vakken || [], p.ijk)}
         ${metriekHtml(p)}`;

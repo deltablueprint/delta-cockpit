@@ -22,7 +22,7 @@ import { ontsnap } from "./veld.js";
 // beheer; de kleuren staan hier omdat ze de meter tekenen.
 // Stand 1..5: 1 is onder druk, 5 is vrijwel afgerond (BOUWSPEC §10.1). De balk
 // loopt van verlies links naar winst rechts, dus van rood naar groen.
-import { KLEUR, DIEPROOD, balkHtml, schaalHtml, standBadge, metriekHtml } from "./positiebalk.js";
+import { KLEUR, DIEPROOD, balkHtml, schaalHtml, metriekHtml } from "./positiebalk.js";
 import { tijdas, plaatsTijdkaarten } from "./tijdas.js";
 
 // Elk bezoek krijgt een nummer. Klik je weg terwijl de peiling loopt, dan tekent
@@ -30,16 +30,23 @@ import { tijdas, plaatsTijdkaarten } from "./tijdas.js";
 // bent. Dat is een keer misgegaan en kostte iemand zijn halve formulier.
 let bezoek = 0;
 
-export async function werkbankscherm(inhoud, kruimel) {
+export async function werkbankscherm(inhoud, kruimel, opties = {}) {
   const dit = ++bezoek;
   const leeftNog = () =>
     dit === bezoek
     && location.hash.slice(1).split("?")[0] === "/werkbank"
     && document.body.contains(inhoud);
 
+  // Een terugblik is elke cyclus die niet de lopende is. Daar gaat niets meer
+  // naar de leden: het scherm leest, het schrijft niet.
+  const terugblik = () => !!(data && data.cyclus && data.actief && data.cyclus.id !== data.actief);
+
   inhoud.innerHTML = `<div class="werkbank">Bezig…</div>`;
 
-  let cyclusId = null;
+  // Welke cyclus je bekijkt staat in de url (#/werkbank?cyclus=12). Zonder is
+  // het de lopende; met is het een terugblik op een afgelopen cyclus.
+  let cyclusId = Number(opties.cyclus) || null;
+  let strookX = 0;              // hoever de tegels van de afgelopen cycli staan
   let kiesStand = null;      // welke barometerstand je aanklikte
   let kiesVenster = null;    // welke vensterstand je aanklikte
   let open = new Set();      // welke posities uitgeklapt staan
@@ -96,11 +103,14 @@ export async function werkbankscherm(inhoud, kruimel) {
     kruimel.innerHTML = `<span>Communicatie</span> <span class="pijlje">&rsaquo;</span> <span>Dispatch</span>`;
 
     if (!data.cyclus) {
-      inhoud.innerHTML = `<div class="werkbank"><p class="wbleeg">Er loopt geen cyclus. Open er een om te beginnen.</p></div>`;
+      inhoud.innerHTML = `<div class="werkbank">${cyclusbalk()}
+        <p class="wbleeg">Er loopt geen cyclus. Open er een om te beginnen.</p></div>`;
+      naStrook();
       return;
     }
 
     inhoud.innerHTML = `<div class="werkbank">
+      ${cyclusbalk()}
       ${kop()}
       <div class="wbkolommen">
         <div class="wbhoofd">
@@ -112,9 +122,61 @@ export async function werkbankscherm(inhoud, kruimel) {
       </div>
     </div>`;
 
+    naStrook();
+
     // De hoverkaarten op de tijdas zweven boven alles; waar ze komen te staan is
     // pas te weten als het scherm er staat.
     plaatsTijdkaarten(inhoud);
+  }
+
+  // ---------------------------------------------------- welke cyclus je ziet
+  //
+  // Dispatch is niet alleen het nu. Een afgelopen cyclus openen laat zien hoe de
+  // standen zich over de hele looptijd ontwikkeld hebben — de strook
+  // handelsdagen, de berichten die eruit gingen, de tranches zoals ze eindigden.
+  // Links de lopende cyclus, rechts de tegels van wat erop zit.
+  function cyclusbalk() {
+    const lopend = (data.cycli || []).find((c) => c.id === data.actief) || null;
+    const nu = data.cyclus ? data.cyclus.id : null;
+
+    const tegels = (data.afgelopen || []).map((c) => {
+      const periode = [c.geopend_op, c.gesloten_op || c.doelexpiratie]
+        .filter(Boolean).map(kortedatum).join(" – ");
+      const res = c.resultaat === null || c.resultaat === undefined ? null : Number(c.resultaat);
+      return `<a class="cbtegel${c.id === nu ? " aan" : ""}" href="#/werkbank?cyclus=${c.id}">
+        <b>${ontsnap(c.label || `Cyclus ${c.id}`)}</b>
+        <span class="cbper">${ontsnap(periode || "—")}</span>
+        <span class="cbuit">${c.tranches || 0} ${c.tranches === 1 ? "tranche" : "tranches"}${
+          res === null ? "" : ` · <i class="${res < 0 ? "verlies" : "winst"}">${getalMet(res)}</i>`}</span>
+      </a>`;
+    }).join("");
+
+    return `<div class="cyclusbalk">
+      <div class="cbactief">
+        <span class="cblabel">Actieve cyclus</span>
+        ${lopend
+          ? `<a class="cbnaam${nu === data.actief ? " aan" : ""}" href="#/werkbank">${
+              ontsnap(lopend.label)}</a>`
+          : `<span class="cbnaam leeg">geen</span>`}
+      </div>
+      <div class="cbafgelopen">
+        <span class="cblabel">Afgelopen cycli</span>
+        ${tegels ? `
+          <button class="cbpijl" data-schuif="-1" aria-label="Naar links">&lsaquo;</button>
+          <div class="cbstrook">${tegels}</div>
+          <button class="cbpijl" data-schuif="1" aria-label="Naar rechts">&rsaquo;</button>`
+          : `<span class="cbgeen">Er is er nog geen afgerond.</span>`}
+      </div>
+    </div>`;
+  }
+
+  // De strook onthoudt waar hij stond: het scherm tekent zichzelf elke tien
+  // seconden opnieuw, en een strook die dan terugspringt is niet te gebruiken.
+  function naStrook() {
+    const strook = inhoud.querySelector(".cbstrook");
+    if (!strook) return;
+    strook.scrollLeft = strookX;
+    strook.addEventListener("scroll", () => { strookX = strook.scrollLeft; });
   }
 
   // ------------------------------------------------------------------- kop
@@ -172,7 +234,7 @@ export async function werkbankscherm(inhoud, kruimel) {
 
     return `<section class="paneel">
       <div class="paneelkop">Stand naar de leden</div>
-      ${standTip !== null && kiesStand === null ? `<div class="suggestie"><span class="vk"></span><span>
+      ${standTip !== null && kiesStand === null && !terugblik() ? `<div class="suggestie"><span class="vk"></span><span>
         Barometer: het systeem stelt <b>${ontsnap(labelStand(standTip))}</b> voor${
           data.zwakste ? ` — ${ontsnap(data.zwakste.contract || "de zwakste positie")} staat op ${
             getal(data.zwakste.ask)} van een stoploss op ${getal(data.zwakste.stoploss)}` : ""
@@ -206,6 +268,9 @@ export async function werkbankscherm(inhoud, kruimel) {
         </div>
       </div>
 
+      ${terugblik() ? `<div class="publiceerbalk"><div class="pubrij">
+        <span class="pubtekst">Terugblik: deze cyclus is afgerond. Er gaat hier niets meer naar de leden.</span>
+      </div></div>` : `
       <div class="publiceerbalk${stuk.length ? " open" : ""}">
         ${stuk.length ? `
           <label class="pubvraag" for="pubreden">Waarom verandert de stand? Dat is wat de leden lezen.</label>
@@ -217,7 +282,7 @@ export async function werkbankscherm(inhoud, kruimel) {
           ${stuk.length ? `<button class="knop tweede" data-afbreken>Laat maar</button>` : ""}
           <button class="knop" data-publiceer disabled>Concept nalezen</button>
         </div>
-      </div>
+      </div>`}
     </section>`;
   }
 
@@ -398,6 +463,18 @@ export async function werkbankscherm(inhoud, kruimel) {
     // dat hij geplaatst werd tot zijn expiratie. Zo zie je in één oogopslag welk
     // event binnen welke looptijd valt — dat is precies de vraag die je bij een
     // event stelt: raakt dit een positie die we nog hebben?
+    // In welke zone de tranche staat, als pil aan het eind van haar balk. De
+    // balk zelf is rustig grijs — die gaat over tijd — maar waar de tranche
+    // staat hoort er wel bij: anders moet je twee panelen naast elkaar leggen.
+    const zonepil = (p) => {
+      if (p.voorbij_de_grens) {
+        return `<span class="looppil" style="background:${DIEPROOD}">Voorbij de stoploss</span>`;
+      }
+      if (!p.stand) return "";
+      return `<span class="looppil" style="background:${KLEUR[Number(p.stand) - 1]}">${
+        ontsnap(labelStand(Number(p.stand)))}</span>`;
+    };
+
     const lopend = (data.posities || []).filter((p) => p.open);
     const balken = lopend.map((p) => {
       const a = as.plek(p.geopend_op);
@@ -405,13 +482,16 @@ export async function werkbankscherm(inhoud, kruimel) {
       if (a === null || b === null) return "";
       const links = Math.min(a, b);
       const breed = Math.max(2, Math.abs(b - a));
-      const kleur = p.voorbij_de_grens ? DIEPROOD : p.stand ? KLEUR[p.stand - 1] : "#B9B5AD";
+      // Allemaal dezelfde rustige kleur. De stand van een tranche staat in haar
+      // eigen balk; hier gaat het over tijd, en drie felle kleuren naast elkaar
+      // zeiden iets over gezondheid wat deze strook helemaal niet toont.
+      const kleur = "#8C98A0";
       const naam = p.contract || `Tranche ${p.tranche}`;
       return `<div class="tijdrij looprij"><div class="tijdspoor loopspoor">
         <span class="loopnu" style="left:${as.vandaagP}%"></span>
         <span class="loopbalk" style="left:${links}%;width:${breed}%;background:${kleur}"
           title="${ontsnap(naam)} — ${ontsnap(kortedatum(p.geopend_op))} tot ${ontsnap(kortedatum(p.expiratiedatum))}">
-          <span class="loopnaam">${ontsnap(naam)}</span></span>
+          <span class="loopnaam">${ontsnap(naam)}</span>${zonepil(p)}</span>
       </div></div>`;
     }).join("");
 
@@ -441,7 +521,6 @@ export async function werkbankscherm(inhoud, kruimel) {
               net ? `<span class="netvlag">zojuist ${ontsnap(net)}</span>` : ""}<br>
             <span class="posonder">${ontsnap(onderschrift(p))}</span></span></span>
           ${balkHtml(p, VAKKEN)}
-          <span class="posstand">${standBadge(p, p.stand ? labelStand(p.stand) : null)}</span>
         </button>
         ${dagen(p)}
         ${uit ? detail(p) : ""}
@@ -551,7 +630,7 @@ export async function werkbankscherm(inhoud, kruimel) {
       ${k.rol ? rolvak(k.rol) : ""}
       ${k.feiten.length ? `<div class="feiten">${k.feiten.map(([l, w]) =>
         `<span class="feit"><span class="flab">${ontsnap(l)}</span><span class="fwaarde">${ontsnap(w)}</span></span>`).join("")}</div>` : ""}
-      ${nietMeldenVoor === k.id ? `
+      ${terugblik() ? "" : nietMeldenVoor === k.id ? `
         <div class="kaartreden">
           <label for="nietreden">Waarom gaat dit niet naar de leden?</label>
           <textarea id="nietreden" rows="2" placeholder="Bijvoorbeeld: dit is dezelfde tranche als gisteren."></textarea>
@@ -588,12 +667,30 @@ export async function werkbankscherm(inhoud, kruimel) {
   let bezigMetKnop = false;
 
   async function opKlik(e) {
+    // De pijlen onder de tegels van de afgelopen cycli. Eén tegel per klik: dat
+    // leest als bladeren, een sprong van een halve strook leest als springen.
+    const pijl = e.target.closest("[data-schuif]");
+    if (pijl) {
+      const strook = inhoud.querySelector(".cbstrook");
+      if (strook) {
+        strookX = Math.max(0, Math.min(
+          strook.scrollWidth - strook.clientWidth,
+          strook.scrollLeft + Number(pijl.dataset.schuif) * 196));
+        strook.scrollTo({ left: strookX, behavior: "smooth" });
+      }
+      return;
+    }
+
     const posKnop = e.target.closest("[data-pos]");
     if (posKnop) {
       const id = Number(posKnop.dataset.pos);
       open.has(id) ? open.delete(id) : open.add(id);
       return teken();
     }
+    // In een terugblik verandert er niets meer: wat deze cyclus geweest is, is
+    // geweest. Er valt dus ook niets te kiezen.
+    if (terugblik()) return;
+
     const seg = e.target.closest("[data-stand]");
     if (seg && data.barometer.wakker) {
       const n = Number(seg.dataset.stand);

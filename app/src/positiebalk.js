@@ -24,12 +24,39 @@ export const getalMet = (n, cijfers = 1) => {
   return `${w > 0 ? "+" : w < 0 ? "−" : ""}${Math.abs(w).toFixed(cijfers).replace(".", ",")}`;
 };
 
-// De vakken met de markering erop. 'dof' voor een tranche die niet meer loopt.
+// De vakken met de markering erop.
+//
+// Eén vak draagt kleur: dat waar de tranche nu in staat. De andere vijf staan er
+// bleek bij — je ziet wel welke kleur het is, maar niets trekt je blik weg van
+// waar het om gaat. Zes volle kleuren naast elkaar lazen als een waarschuwing
+// die altijd aanstaat, en dan zegt kleur niets meer.
+//
+// Elk vak draagt zijn eigen ask-bereik als hover: dat is de vraag die je bij een
+// kleur stelt — bij welke prijs komt deze tranche daar terecht?
 export function balkHtml(p, vakken = []) {
-  const vakjes = vakken.map((v) => {
+  const ijk = p.ijk || null;
+  const boven = ijk ? [null, ijk.stoploss, ijk.waarschuwing, ijk.breakeven, ijk.helft, ijk.winstanker] : [];
+  const onder = ijk ? [ijk.stoploss, ijk.waarschuwing, ijk.breakeven, ijk.helft, ijk.winstanker, 0] : [];
+
+  // Waar de markering staat, is het vak dat kleur houdt. Staat er geen verse
+  // prijs, dan valt de balk terug op de stand die vastligt.
+  const hier = (v) => (p.plek !== null && p.plek !== undefined
+    ? p.plek >= v.van && p.plek <= v.tot
+    : Number(p.stand) === Number(v.stand));
+
+  const vakjes = vakken.map((v, i) => {
     const breed = v.tot - v.van;
     const kleur = v.stand === 0 ? DIEPROOD : KLEUR[v.stand - 1];
-    return `<span class="z" style="flex:0 0 calc(${breed.toFixed(2)}% - 3px);background:${kleur};opacity:${p.open ? 0.9 : 0.4}"></span>`;
+    const aan = hier(v);
+    const naam = String(v.naam || "").charAt(0).toUpperCase() + String(v.naam || "").slice(1);
+    const bereik = !ijk ? ""
+      : i === 0 ? ` · ask boven ${getal(boven[1])}`
+      : v.stand === 5 ? ` · ask onder ${getal(boven[i])}`
+      : ` · ask ${getal(boven[i])} tot ${getal(onder[i])}`;
+    const tip = `${naam}${bereik}${aan && p.ask !== null && p.ask !== undefined ? ` · nu ${getal(p.ask)}` : ""}`;
+    return `<span class="z${aan ? " aan" : ""}" title="${ontsnap(tip)}"
+      style="flex:0 0 calc(${breed.toFixed(2)}% - 3px);background:${kleur};opacity:${
+        !p.open ? 0.22 : aan ? 1 : 0.3}"></span>`;
   }).join("");
 
   const merker = p.plek === null || p.plek === undefined ? ""

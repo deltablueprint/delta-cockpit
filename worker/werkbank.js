@@ -173,8 +173,28 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
       order by case when status = 'in positie' then 0 else 1 end, geopend_op desc`
   ).all()).results;
 
-  const id = cyclus || (cycli[0] && cycli[0].id) || null;
-  if (!id) return { cycli, cyclus: null };
+  // En de cycli die erop zitten. Dispatch is niet alleen het nu: een afgelopen
+  // cyclus openen laat zien hoe de standen zich over de hele looptijd ontwikkeld
+  // hebben, en dat is het enige plek waar dat verhaal in één beeld staat.
+  const afgelopen = (await env.DB.prepare(
+    `select c.id, c.label, c.status, c.geopend_op, c.doelexpiratie,
+            (select count(*) from positie p where p.cyclus = c.id and p.archief = 0) as tranches,
+            (select max(date(p.sluittijdstip)) from positie p
+              where p.cyclus = c.id and p.archief = 0) as gesloten_op,
+            (select round(sum(coalesce(p.resultaat_pt, 0)), 1) from positie p
+              where p.cyclus = c.id and p.archief = 0) as resultaat
+       from cyclus c
+      where c.archief = 0 and c.status in ('afgesloten', 'geannuleerd')
+      order by coalesce(c.geopend_op, '') desc, c.id desc limit 60`
+  ).all().then((r) => r.results).catch(() => []));
+
+  // Welke cyclus nu loopt staat los van welke je bekijkt: je kunt een afgelopen
+  // cyclus openen, en dan moet het scherm nog steeds weten dat dit een terugblik
+  // is en er niets meer naar de leden gaat.
+  const actief = (cycli[0] && cycli[0].id) || null;
+
+  const id = cyclus || actief || (afgelopen[0] && afgelopen[0].id) || null;
+  if (!id) return { cycli, afgelopen, actief, cyclus: null };
 
   const [baro, meet, kaartlijst, verstuurd, gebeurtenissen] = await Promise.all([
     barometerstand(env, id),
@@ -257,7 +277,14 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
     verloop[p.id] = rijen;
   }
 
-  const cyclusrij = cycli.find((c) => c.id === id) || null;
+  // Niet alleen uit de lopende cycli: wie een afgelopen cyclus opent moet zijn
+  // naam en status zien en niet 'er loopt geen cyclus'.
+  const cyclusrij = cycli.find((c) => c.id === id)
+    || afgelopen.find((c) => c.id === id)
+    || await env.DB.prepare(
+      "select id, label, status, geopend_op from cyclus where id = ?"
+    ).bind(id).first()
+    || null;
   const venster = baro.wij ? baro.wij.venster.waarde : "pre_analyse";
 
   // De barometer slaapt tot wij erin zitten. Daarvoor is er geen positie om een
@@ -265,7 +292,7 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
   const wakker = venster === IN_POSITIE;
 
   return {
-    cycli, cyclus: cyclusrij,
+    cycli, afgelopen, actief, cyclus: cyclusrij,
     barometer: {
       ...baro,
       wakker,
