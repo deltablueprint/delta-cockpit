@@ -1802,6 +1802,34 @@ body.sleept .lijsttabel { pointer-events: none; }
 .werkbank .paneel { margin-bottom: 0; }
 .werkbank .paneelkop .meta { margin-left: auto; font-size: 11.5px; font-weight: 400; color: var(--mut); }
 .werkbank .paneelbody { padding: 14px; }
+
+/* Links de standen, rechts wat er met die stand onderweg is naar de leden. Die
+   tussenruimte had geen plek op het scherm: een stand kon vastliggen terwijl het
+   bericht erover bleef hangen, en niemand zag dat. */
+.standbody { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 0; padding: 0 !important; }
+.standlinks { padding: 14px; min-width: 0; }
+.keten { padding: 14px; border-left: 1px solid var(--b2); background: var(--soft); min-width: 0; }
+.ketenkop { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--faint); margin-bottom: 12px; }
+.ketenleeg { margin: 0; font-size: 12px; color: var(--mut); }
+.kstap { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 10px; }
+.kspoor { display: flex; flex-direction: column; align-items: center; }
+.kbol { width: 11px; height: 11px; border-radius: 50%; background: #D8D5CF; margin-top: 3px; flex: 0 0 auto; }
+.kbol.klaar { background: var(--grn); }
+.kbol.nu { background: var(--amb); box-shadow: 0 0 0 3px var(--ambbg); }
+.klijn { width: 2px; flex: 1 1 auto; min-height: 18px; background: var(--b1); margin: 3px 0; }
+.kinh { padding-bottom: 10px; min-width: 0; }
+.knaam { font-size: 12.5px; font-weight: 600; color: var(--faint); }
+.knaam.klaar { color: var(--ink); }
+.knaam.nu { color: var(--amb); }
+.knoot { font-size: 11px; color: var(--mut); overflow-wrap: anywhere; }
+.ketenknoppen { display: flex; gap: 8px; margin: 2px 0 10px; }
+.ketenlet { display: flex; gap: 8px; align-items: flex-start; background: var(--ambbg);
+  border: 1px solid #E8D3A4; border-radius: 8px; padding: 8px 10px; font-size: 11.5px; color: #6B4A10; }
+.ketenlet span:first-child { font-weight: 700; }
+
+/* Een dag waarop de leden achterliepen: open vakje met onze kleur als rand. */
+.strook i.open { background: #fff; border: 1.5px solid var(--b1); }
 .wbtop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .wbcyclus { font-size: 13px; color: var(--ink2); }
 .wbcyclus b { color: var(--ink); }
@@ -1863,13 +1891,16 @@ body.sleept .lijsttabel { pointer-events: none; }
 .deel.uit .meterrij { opacity: .32; filter: grayscale(1); pointer-events: none; }
 .deel.uit .dkent { display: none; }
 
-.meterrij { display: grid; grid-template-columns: 300px 230px; gap: 24px; align-items: center;
+.meterrij { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 230px); gap: 24px; align-items: center;
   justify-content: start; }
 .gauge { position: relative; }
 .gauge svg { display: block; width: 100%; height: auto; }
 .gauge .seg { cursor: pointer; }
 .gauge .seg:hover { opacity: .82; }
-.gaugetekst { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; }
+/* De naam staat onder de meter, niet eroverheen: zodra de kolom smaller wordt
+   krimpt de svg wel mee maar de letters niet, en dan loopt de naam door de
+   wijzerplaat. */
+.gaugetekst { text-align: center; margin-top: -10px; }
 .gaugenaam { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
 .gaugeonder { font-size: 11px; color: var(--mut); }
 
@@ -2018,9 +2049,12 @@ a.vreg:hover { background: var(--hov, #F6F4F0); }
    daar te smal om te lezen. */
 @media (max-width: 1000px) {
   .dfeiten { grid-template-columns: repeat(3, 1fr); }
-  .meterrij { grid-template-columns: 260px 210px; gap: 18px; }
+  .meterrij { grid-template-columns: minmax(0, 260px) minmax(0, 210px); gap: 18px; }
   .lreg .nm { min-width: 104px; }
   .pos, .werkbank .schaalrij { grid-template-columns: 178px 1fr; gap: 12px; }
+  /* Op een smaller scherm gaat de keten onder de standen staan. */
+  .standbody { grid-template-columns: minmax(0, 1fr); }
+  .keten { border-left: 0; border-top: 1px solid var(--b2); }
   .detail { padding-left: 38px; }
   /* Liever twee regels dan 'Opent binnen…': de naam van een vensterstand is
      wat een lid straks te horen krijgt, en die hoort leesbaar te blijven. */

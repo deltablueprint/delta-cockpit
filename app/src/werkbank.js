@@ -240,7 +240,8 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
             getal(data.zwakste.ask)} van een stoploss op ${getal(data.zwakste.stoploss)}` : ""
         }. Klik de omstippelde stand en publiceer.</span></div>` : ""}
 
-      <div class="paneelbody">
+      <div class="paneelbody standbody">
+        <div class="standlinks">
         <div class="deel">
           <div class="deelkop"><span class="dtitel">Instap venster</span></div>
           <div class="dstaat">${vensteronder()}</div>
@@ -264,6 +265,8 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
           ${(b.ongemeten || []).length ? `<p class="wbnoot wblet">Niet meegewogen, want niet te meten: ${
             ontsnap(b.ongemeten.map((p) => p.contract || `positie ${p.id}`).join(", "))}.</p>` : ""}
         </div>
+        </div>
+        ${ketenvak()}
       </div>
 
       ${terugblik() ? `<div class="publiceerbalk"><div class="pubrij">
@@ -283,6 +286,67 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
       </div>`}
     </section>`;
   }
+
+  // ------------------------------------------- onderweg naar de leden
+  //
+  // Tussen 'wij hebben iets vastgelegd' en 'de leden weten het' zit een bericht.
+  // Dat bericht kan blijven liggen — bij de opsteller, of bij een nalezer — en
+  // zolang dat zo is lopen de leden achter zonder dat iemand het ziet. Deze
+  // kolom is die tussenruimte, als vier stappen: vastgelegd, geschreven, bij de
+  // nalezer, bij de leden. Waar het stilstaat, staat het stil in beeld.
+  function ketenvak() {
+    const o = data.onderweg;
+
+    if (!o) {
+      return `<aside class="keten klaar">
+        <div class="ketenkop">Onderweg naar de leden</div>
+        <p class="ketenleeg">Er ligt niets klaar. Wat wij weten, weten de leden.</p>
+      </aside>`;
+    }
+
+    const bericht = o.publicatie ? o.bericht_status : null;
+    const stap = !o.publicatie ? 1                       // vastgelegd, nog geen bericht
+      : bericht === "nalezen" ? 2                        // ligt bij een nalezer
+      : bericht === "klaar" ? 3                          // nagelezen, nog niet weg
+      : 2;                                               // concept bij de opsteller
+
+    const stappen = [
+      { naam: "Stand vastgelegd",
+        noot: `${o.venster ? labelVenster(o.venster) : ""}${o.venster && o.stand ? " · " : ""}${
+          o.stand ? labelStand(Number(o.stand)) : ""} · ${klok(o.vastgesteld_op)}${
+          o.wie ? ` · ${o.wie}` : ""}` },
+      { naam: o.publicatie ? "Concept geschreven" : "Nog geen bericht",
+        noot: o.publicatie ? (o.titel || "zonder titel") : "er is niets opgesteld om te versturen" },
+      { naam: o.nalezer ? `Ligt bij ${o.nalezer}` : "Ligt bij jou",
+        noot: bericht === "klaar" ? "nagelezen · klaar om te versturen"
+          : o.publicatie ? "nog niet verstuurd" : "—" },
+      { naam: "Bij de leden",
+        noot: o.leden ? `${o.leden} ${o.leden === 1 ? "lid" : "leden"} krijgen dit` : "nog niemand" },
+    ];
+
+    const rijen = stappen.map((x, i) => {
+      const kl = i < stap ? "klaar" : i === stap ? "nu" : "";
+      return `<div class="kstap">
+        <div class="kspoor"><span class="kbol ${kl}"></span>${
+          i < stappen.length - 1 ? `<span class="klijn"></span>` : ""}</div>
+        <div class="kinh"><div class="knaam ${kl}">${ontsnap(x.naam)}</div>
+          <div class="knoot">${ontsnap(x.noot)}</div></div>
+      </div>`;
+    }).join("");
+
+    return `<aside class="keten">
+      <div class="ketenkop">Onderweg naar de leden</div>
+      ${rijen}
+      ${o.publicatie ? `<div class="ketenknoppen">
+        <a class="knop" href="#/bericht/${o.publicatie}?van=werkbank">Concept openen</a>
+      </div>` : ""}
+      <div class="ketenlet"><span>!</span><span>${o.publicatie
+        ? "Dit bericht moet eerst weg. Zolang het ligt, kennen de leden de oude stand."
+        : "Er is een stand vastgelegd zonder bericht. De leden horen er niets van tot er een bericht uitgaat."}</span></div>
+    </aside>`;
+  }
+
+  const klok = (t) => String(t || "").slice(0, 16).replace("T", " ");
 
   const vensters = () => (data.barometer.vensters || []).length
     ? data.barometer.vensters
@@ -386,24 +450,42 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
       else weken.push({ week: d.week, dagen: [d] });
     }
 
+    // De strook tekent wat de léden die dag wisten, niet wat wij die dag
+    // vastlegden. Dat was precies de dubbelzinnigheid: onder de barometer stond
+    // twee dagen een stand die de leden nooit gekregen hadden, terwijl de regel
+    // ernaast zei dat zij iets anders kenden. Eén strook, één betekenis — en de
+    // dagen waarop wij al meer wisten staan open, met onze kleur als rand. Zo
+    // zie je in één blik hoeveel dagen zij achterlopen.
     const vakje = (d) => {
       if (wat === "venster") {
-        const i = (data.venster.verloop || []).indexOf(d.venster);
-        const kleur = i < 0 ? "var(--b2)" : VENSTERBLAUW[i];
-        return `<i style="background:${kleur}" data-tip="${ontsnap(
-          `${kortedatum(d.dag)} · ${d.venster ? labelVenster(d.venster) : "nog niets vastgelegd"}`)}"></i>`;
+        const verloop = data.venster.verloop || [];
+        const iZij = verloop.indexOf(d.gemeld_venster);
+        const iWij = verloop.indexOf(d.venster);
+        const achter = iWij >= 0 && iWij !== iZij;
+        const kleur = iZij < 0 ? "var(--b2)" : VENSTERBLAUW[iZij];
+        const tip = `${kortedatum(d.dag)} · de leden: ${
+          d.gemeld_venster ? labelVenster(d.gemeld_venster) : "nog niets gemeld"}${
+          achter ? ` · wij: ${labelVenster(d.venster)}` : ""}`;
+        return achter
+          ? `<i class="open" style="border-color:${iWij < 0 ? "var(--b1)" : VENSTERBLAUW[iWij]}" data-tip="${ontsnap(tip)}"></i>`
+          : `<i style="background:${kleur}" data-tip="${ontsnap(tip)}"></i>`;
       }
       // De barometer slaapt tot wij in positie zitten: op die dagen is er geen
       // stand, en dan hoort er ook geen kleur te staan.
-      const inPositie = d.venster === "in_positie";
-      const kleur = inPositie && d.stand >= 1 && d.stand <= 5 ? KLEUR[d.stand - 1] : "var(--b2)";
-      return `<i style="background:${kleur}" data-tip="${ontsnap(
-        `${kortedatum(d.dag)} · ${inPositie && d.stand ? labelStand(d.stand) : "geen stand"}`)}"></i>`;
+      const inPositie = d.gemeld_venster === "in_positie" || d.venster === "in_positie";
+      const zij = inPositie && d.gemeld_stand >= 1 && d.gemeld_stand <= 5 ? Number(d.gemeld_stand) : null;
+      const wij = inPositie && d.stand >= 1 && d.stand <= 5 ? Number(d.stand) : null;
+      const achter = wij !== null && wij !== zij;
+      const tip = `${kortedatum(d.dag)} · de leden: ${zij ? labelStand(zij) : "geen stand gemeld"}${
+        achter ? ` · wij: ${labelStand(wij)}` : ""}`;
+      return achter
+        ? `<i class="open" style="border-color:${KLEUR[wij - 1]}" data-tip="${ontsnap(tip)}"></i>`
+        : `<i style="background:${zij ? KLEUR[zij - 1] : "var(--b2)"}" data-tip="${ontsnap(tip)}"></i>`;
     };
 
     const eerste = dagen[0].dag, laatste = dagen[dagen.length - 1].dag;
     return `<div class="strookvak">
-      <div class="strooklab">Verloop<span class="strooknoot">${dagen.length} handelsdagen</span></div>
+      <div class="strooklab">Wat de leden wisten<span class="strooknoot">${dagen.length} handelsdagen</span></div>
       <div class="strook">
         ${weken.map((w) => `<span class="week" title="week ${w.week}">${
           w.dagen.map(vakje).join("")}</span>`).join("")}

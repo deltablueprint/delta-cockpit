@@ -277,6 +277,26 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
     verloop[p.id] = rijen;
   }
 
+  // Wat er onderweg is naar de leden. Tussen 'wij hebben iets vastgelegd' en 'de
+  // leden weten het' zit een bericht, en dat bericht kan blijven liggen — bij de
+  // opsteller, of bij een nalezer. Zolang dat zo is lopen de leden achter, en
+  // dat is precies het ding dat dit scherm niet mag verzwijgen. Eén vraag: de
+  // laatste vastlegging die nog niet gemeld is, met het bericht dat eraan hangt.
+  const onderweg = await env.DB.prepare(
+    `select b.id, b.stand, b.venster, b.reden, b.vastgesteld_op,
+            coalesce(gv.korte_naam, gv.naam, b.vastgesteld_door) as wie,
+            p.id as publicatie, p.titel, p.status as bericht_status, p.aangemaakt_op,
+            coalesce(gn.korte_naam, gn.naam, p.nalezer) as nalezer,
+            (select count(*) from publicatie_ontvanger o
+              where o.publicatie = p.id and o.archief = 0) as leden
+       from barometerstand b
+       left join publicatie p on p.id = b.publicatie and p.archief = 0
+       left join gebruiker gv on gv.id = b.vastgesteld_door
+       left join gebruiker gn on gn.id = p.nalezer
+      where b.cyclus = ? and b.archief = 0 and b.gepubliceerd_op is null
+      order by b.vastgesteld_op desc, b.id desc limit 1`
+  ).bind(id).first().catch(() => null);
+
   // Niet alleen uit de lopende cycli: wie een afgelopen cyclus opent moet zijn
   // naam en status zien en niet 'er loopt geen cyclus'.
   const cyclusrij = cycli.find((c) => c.id === id)
@@ -293,6 +313,7 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
 
   return {
     cycli, afgelopen, actief, cyclus: cyclusrij,
+    onderweg: onderweg || null,
     barometer: {
       ...baro,
       wakker,
@@ -501,7 +522,7 @@ export async function nietMelden(env, ik, gebeurtenis, reden) {
 // klopt dan een lege strook.
 export async function dagstanden(env, cyclusId, { nu = null, maxdagen = 90 } = {}) {
   const standen = (await env.DB.prepare(
-    `select stand, venster, vastgesteld_op from barometerstand
+    `select stand, venster, vastgesteld_op, gepubliceerd_op from barometerstand
       where cyclus = ? and archief = 0 order by vastgesteld_op, id`
   ).bind(cyclusId).all()).results;
   if (!standen.length) return [];
@@ -517,7 +538,18 @@ export async function dagstanden(env, cyclusId, { nu = null, maxdagen = 90 } = {
     for (const s of standen) {
       if (String(s.vastgesteld_op).slice(0, 10) <= d.dag) gold = s; else break;
     }
-    return { ...d, stand: gold ? Number(gold.stand) : null, venster: gold ? gold.venster : null };
+    // En wat de léden die dag wisten. Dat is niet hetzelfde: tussen vastleggen
+    // en melden zit een bericht, en zolang dat niet weg is lopen zij achter. De
+    // strook tekent wat zij zagen; waar wij al meer wisten, staat het vakje open.
+    let bij = null;
+    for (const s of standen) {
+      if (s.gepubliceerd_op && String(s.gepubliceerd_op).slice(0, 10) <= d.dag) bij = s; else if (!s.gepubliceerd_op) continue; else break;
+    }
+    return {
+      ...d,
+      stand: gold ? Number(gold.stand) : null, venster: gold ? gold.venster : null,
+      gemeld_stand: bij ? Number(bij.stand) : null, gemeld_venster: bij ? bij.venster : null,
+    };
   });
   // De laatste dagen zijn de interessante; bij een lange cyclus valt het begin af.
   return uit.slice(-maxdagen);
