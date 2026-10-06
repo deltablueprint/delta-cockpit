@@ -576,6 +576,22 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
   font-size: 10.5px; color: var(--faint); }
 .posdagen .strookdata { max-width: 420px; }
 
+/* Een positie die veranderde terwijl je keek. Het merkteken leeft zolang deze
+   pagina openstaat: het gaat over het kijken, niet over het record. Een korte
+   aanloop, en daarna een rustig randje — knipperen zou elke tien seconden om
+   aandacht vragen voor iets dat je al gezien hebt. */
+.posblok.net { position: relative; background: #FFFCF2; box-shadow: inset 3px 0 0 var(--amb); }
+.posblok.net::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: var(--ambbg); opacity: 0; animation: netop 1.4s ease-out 1;
+}
+@keyframes netop { 0% { opacity: .85; } 100% { opacity: 0; } }
+.netvlag {
+  margin-left: 8px; font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--amb); background: var(--ambbg);
+  border-radius: 2px; padding: 2px 6px; vertical-align: 2px;
+}
+
 /* De strook dagen van een tranche staat onder haar eigen regel en loopt over de
    hele looptijd: wat geweest is in de kleur van die dag, wat nog komt grijs. */
 .posdagen { padding: 0 var(--gutter) 12px; margin-top: -4px; }

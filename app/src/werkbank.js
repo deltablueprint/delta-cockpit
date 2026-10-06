@@ -47,10 +47,40 @@ export async function werkbankscherm(inhoud, kruimel) {
   let nietMeldenVoor = null;   // de kaart waarvan je aan het opschrijven bent waarom hij niet weg gaat
   let data = null;
 
+  // Wat er veranderde terwijl jij keek.
+  //
+  // De brug ziet een positie opengaan of sluiten; tien seconden later staat het
+  // op dit scherm. Zonder merkteken schuift er dan een regel in de lijst zonder
+  // dat je weet dat hij nieuw is — en dat is precies het moment waarop er iets
+  // naar de leden moet. Het merkteken hoort bij het kijken, niet bij het record:
+  // het leeft zolang deze pagina openstaat en is na een herlaadbeurt weg. Wat er
+  // nog gemeld moet worden staat niet hier maar in de kaarten.
+  let gezien = null;             // null = nog niet gepeild; dan is niets 'nieuw'
+  const netVeranderd = new Map();  // positie -> geopend | gesloten
+
+  function merkVerandering(uit) {
+    const nu = new Map();
+    for (const k of uit.kaarten || []) {
+      const wat = k.soort === "positie_gesloten" ? "gesloten"
+                : k.soort === "doorrol" ? "doorgerold" : "geopend";
+      for (const id of k.ids || []) nu.set(id, { wat, positie: k.positie, tweede: k.tweede_positie });
+    }
+    // De eerste peiling van deze pagina is de nulmeting: wat er dan al staat,
+    // stond er al voor je kwam kijken.
+    if (gezien === null) { gezien = new Set(nu.keys()); return; }
+    for (const [id, v] of nu) {
+      if (gezien.has(id)) continue;
+      gezien.add(id);
+      if (v.positie) netVeranderd.set(v.positie, v.wat);
+      if (v.tweede) netVeranderd.set(v.tweede, v.wat);
+    }
+  }
+
   async function haal() {
     try {
       const uit = await haalWerkbank(cyclusId);
       if (!leeftNog()) return;
+      merkVerandering(uit);
       data = uit;
       if (data.cyclus) cyclusId = data.cyclus.id;
       teken();
@@ -225,10 +255,10 @@ export async function werkbankscherm(inhoud, kruimel) {
           <textarea id="pubreden" class="pubreden" rows="2"
             placeholder="Bijvoorbeeld: de ask liep op tot vlak onder de stoploss."></textarea>` : ""}
         <div class="pubrij">
-          <span class="pubtekst">${stuk.length ? `Klaar om te publiceren: ${stuk.join(" en ")}.` : "Klik een stand aan om hem te veranderen."}</span>
+          <span class="pubtekst">${stuk.length ? `Vastleggen en het bericht opstellen: ${stuk.join(" en ")}.` : "Klik een stand aan om hem te veranderen."}</span>
           ${melding ? `<span class="wbmelding">${ontsnap(melding)}</span>` : ""}
           ${stuk.length ? `<button class="knop tweede" data-afbreken>Laat maar</button>` : ""}
-          <button class="knop" data-publiceer disabled>Publiceren</button>
+          <button class="knop" data-publiceer disabled>Concept nalezen</button>
         </div>
       </div>
     </section>`;
@@ -425,10 +455,12 @@ export async function werkbankscherm(inhoud, kruimel) {
 
     const regels = data.posities.map((p) => {
       const uit = open.has(p.id);
-      return `<div class="posblok ${uit ? "uitgeklapt" : ""}">
+      const net = netVeranderd.get(p.id) || null;
+      return `<div class="posblok ${uit ? "uitgeklapt" : ""}${net ? " net" : ""}">
         <button class="pos ${p.open ? "" : "posdicht"}" data-pos="${p.id}">
           <span class="poslinks"><span class="chev">${uit ? "▾" : "▸"}</span><span>
-            <span class="posnaam">${ontsnap(p.contract || `Tranche ${p.tranche}`)}</span><br>
+            <span class="posnaam">${ontsnap(p.contract || `Tranche ${p.tranche}`)}</span>${
+              net ? `<span class="netvlag">zojuist ${ontsnap(net)}</span>` : ""}<br>
             <span class="posonder">${ontsnap(onderschrift(p))}</span></span></span>
           ${balkHtml(p, VAKKEN)}
           <span class="posstand">${standBadge(p, p.stand ? labelStand(p.stand) : null)}</span>

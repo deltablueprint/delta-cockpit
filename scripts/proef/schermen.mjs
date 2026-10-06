@@ -168,6 +168,18 @@ eis("de opsteller zet alles vast als het verstuurd is", opsteller.includes("cons
 eis("en toont wanneer en door wie", opsteller.includes("verstuurdRegel"));
 eis("er is geen wisknop op de opsteller", !/wissen|verwijder/i.test(opsteller.replace(/^\/\/.*$/gm, "")));
 
+// ------------------------------------------- wat er veranderde terwijl je keek
+// De brug ziet een positie opengaan; tien seconden later schuift die regel het
+// scherm in. Zonder merkteken weet je niet dat hij nieuw is — en dat is precies
+// het moment waarop er iets naar de leden moet.
+const wbs = readFileSync("app/src/werkbank.js", "utf8");
+eis("een positie die veranderde terwijl je keek krijgt een merkteken",
+    wbs.includes("netVeranderd") && wbs.includes('class="netvlag"'));
+eis("de eerste peiling is de nulmeting, anders licht alles op bij het openen",
+    wbs.includes("if (gezien === null)"));
+eis("het merkteken leeft bij de pagina, niet bij het record",
+    /let gezien = null/.test(wbs) && !/localStorage/.test(wbs));
+
 // ------------------------------------------------- de aanwezigenkiezer
 // Een naam verslepen is de wijziging. Blijft hij in het scherm hangen tot je
 // opslaat, dan staat de stap bovenaan open terwijl het werk gedaan is, en
