@@ -54,7 +54,7 @@ export function balkHtml(p, vakken = []) {
       : v.stand === 5 ? ` · ask onder ${getal(boven[i])}`
       : ` · ask ${getal(boven[i])} tot ${getal(onder[i])}`;
     const tip = `${naam}${bereik}${aan && p.ask !== null && p.ask !== undefined ? ` · nu ${getal(p.ask)}` : ""}`;
-    return `<span class="z${aan ? " aan" : ""}" title="${ontsnap(tip)}"
+    return `<span class="z${aan ? " aan" : ""}" data-tip="${ontsnap(tip)}"
       style="flex:0 0 calc(${breed.toFixed(2)}% - 3px);background:${kleur};opacity:${
         !p.open ? 0.22 : aan ? 1 : 0.3}"></span>`;
   }).join("");

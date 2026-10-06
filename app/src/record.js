@@ -24,6 +24,7 @@ import { volgLive, stopLive, HARTSLAG } from "./live.js";
 import { avatar, avatarMetNaam } from "./avatar.js";
 import { kiezerHtml, kiezerAansluiten } from "./kiezer.js";
 import { balkHtml, schaalHtml, metriekHtml } from "./positiebalk.js";
+import { plaatsStrooktips } from "./tijdas.js";
 import { haalPositieMeting } from "./api.js";
 import { voorwaardeSjablonen, voorwaardenOvernemen, stappenVan } from "./api.js";
 
@@ -760,6 +761,8 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         </div>
         ${schaalHtml(m.vakken || [], p.ijk)}
         ${metriekHtml(p)}`;
+      // De zones van de balk dragen hun ask-bereik als hover.
+      plaatsStrooktips(posmeter);
     }).catch(() => { posmeter.remove(); });
   }
 

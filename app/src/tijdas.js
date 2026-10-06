@@ -212,7 +212,11 @@ export function plaatsStrooktips(wortel) {
     tip.style.top = `${Math.round(boven < 8 ? r.bottom + 7 : boven)}px`;
   };
 
-  for (const vak of wortel.querySelectorAll(".strook i[data-tip]")) {
+  // De vakjes van de strook én de zones van een positiebalk: dezelfde tip, en
+  // dezelfde reden. Een native 'title' werkte niet overal even betrouwbaar —
+  // binnen een opengeklapte positie bleef hij weg — en werd geknipt door de
+  // kolom waarin het scherm scrolt.
+  for (const vak of wortel.querySelectorAll(".strook i[data-tip], .spoorbalk .z[data-tip]")) {
     vak.addEventListener("mouseenter", () => toon(vak));
     vak.addEventListener("mouseleave", verberg);
   }
