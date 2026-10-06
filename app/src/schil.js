@@ -8,7 +8,7 @@ const LOGO = `<svg viewBox="0 0 296.1 251.9" width="28" height="24" aria-hidden=
   <polygon points="76.9 251.9 0 251.9 76.7 121.6 76.9 251.9" fill="#FFFFFF"/></svg>`;
 
 import { avatar, verklein } from "./avatar.js";
-import { zetAvatar, leesVoorkeur, zetVoorkeur } from "./api.js";
+import { zetAvatar, leesVoorkeur, zetVoorkeur, brugStand, brugInstelling } from "./api.js";
 import { navtabsHtml, navpanelenHtml, navtabsAansluiten,
          favorietenKaart, wisselFavoriet, STERTJE } from "./navtabs.js";
 
@@ -74,6 +74,9 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
               stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
       </svg></span>
       <span class="rechts">
+        <button class="brugschakelaar" id="brugschakelaar" hidden>
+          <span class="brugstip"></span><span class="brugtekst">Brug</span>
+        </button>
         <span class="hartslagvak" title="Hoe vers wat je ziet is">
           <span id="hartslag" class="hartslag bijgewerkt"></span>
           <span id="hartslagtekst" class="hartslagtekst"></span>
@@ -104,6 +107,8 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
     e.preventDefault();
     afmelden();
   });
+
+  brugschakelaar(wortel);
 
   // Op je eigen foto klikken opent de bestandskiezer. De afbeelding wordt
   // eerst verkleind tot 128 bij 128, zodat er geen megabytes in de database
@@ -216,3 +221,66 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
 }
 
 export function schilVergeten() { gebouwd = null; }
+
+// ------------------------------------------------- de brug aan en uit
+//
+// IBKR laat per login één sessie toe. Zolang de Gateway aangemeld is, kun jij
+// zelf niet in LYNX — en dat merk je pas op het moment dat je wil handelen.
+// Daarom staat die schakelaar hier, in de kop, en niet drie schermen diep: het
+// is het laatste wat je doet voordat je een order plaatst, en het eerste daarna.
+//
+// Hij stuurt niets naar de brug. Hij zet een instelling; de brug leest die af in
+// het antwoord op zijn eigen zending, binnen één hartslag. Het verkeer blijft
+// één kant op.
+function brugschakelaar(wortel) {
+  const knop = wortel.querySelector("#brugschakelaar");
+  if (!knop) return;
+  const stip = knop.querySelector(".brugstip");
+  const tekst = knop.querySelector(".brugtekst");
+  let aan = null;
+  let bezig = false;
+
+  const teken = (stand, live) => {
+    aan = stand;
+    knop.hidden = false;
+    knop.classList.toggle("uit", !stand);
+    knop.classList.toggle("stil", Boolean(stand) && !live);
+    tekst.textContent = stand ? (live ? "Brug live" : "Brug wacht") : "Brug uit";
+    knop.title = stand
+      ? (live
+        ? "De Gateway is aangemeld en de brug hoort haar. Klik om af te melden, bijvoorbeeld om zelf te handelen."
+        : "De Gateway start op of meldt zich aan; dat duurt ongeveer een minuut.")
+      : "De Gateway staat uit, dus jij kunt zelf handelen in LYNX. Klik om haar weer aan te melden.";
+    stip.className = `brugstip ${stand ? (live ? "live" : "wacht") : "uit"}`;
+  };
+
+  const kijk = async () => {
+    if (bezig) return;
+    try {
+      const d = await brugStand();
+      const inst = (d.instellingen || []).find((r) => r.sleutel === "gateway_aan");
+      // Staat de instelling er niet, dan draait deze omgeving nog op een oudere
+      // migratie: dan tonen we de knop niet in plaats van iets te verzinnen.
+      if (!inst) { knop.hidden = true; return; }
+      teken(Number(inst.waarde) === 1, Boolean(d.live));
+    } catch { /* niet aangemeld of even niet bereikbaar; de volgende ronde weer */ }
+  };
+
+  knop.addEventListener("click", async () => {
+    if (bezig || aan === null) return;
+    bezig = true;
+    const naar = !aan;
+    teken(naar, false);
+    try {
+      await brugInstelling({ gateway_aan: naar ? "1" : "0" });
+    } catch {
+      teken(!naar, false);
+    } finally {
+      bezig = false;
+      setTimeout(kijk, 2000);
+    }
+  });
+
+  kijk();
+  setInterval(kijk, 15000);
+}

@@ -39,6 +39,22 @@ a { color: var(--blue); }
 .appbar .golf { flex: 0 1 240px; min-width: 60px; height: 20px; margin-left: 2px; }
 .appbar .golf svg { display: block; width: 100%; height: 100%; }
 .appbar .rechts { margin-left: auto; display: flex; align-items: center; gap: 9px; font-size: 12.5px; }
+
+/* De schakelaar van de brug, in de kop. Groen als de Gateway aangemeld is en de
+   brug haar hoort, amber terwijl ze opstart, grijs als ze uit staat omdat jij
+   zelf wil handelen. Hij staat hier en niet drie schermen diep: het is het
+   laatste wat je doet voordat je een order plaatst, en het eerste daarna. */
+.brugschakelaar {
+  display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px;
+  border: 1px solid rgba(255, 255, 255, .22); border-radius: 13px; background: rgba(255, 255, 255, .06);
+  color: var(--navtxt); font-family: inherit; font-size: 12px; cursor: pointer;
+}
+.brugschakelaar:hover { background: rgba(255, 255, 255, .13); }
+.brugstip { width: 8px; height: 8px; border-radius: 50%; background: var(--navdim); flex: 0 0 auto; }
+.brugstip.live { background: #4CC38A; }
+.brugstip.wacht { background: #E8A33D; }
+.brugstip.uit { background: #8794A0; }
+.brugschakelaar.uit { color: var(--navdim); }
 .appbar .bol-oud {
   width: 24px; height: 24px; border-radius: 50%; background: var(--navact);
   display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700;

@@ -162,6 +162,18 @@ StandardError=append:/var/log/delta-brug.log
 WantedBy=multi-user.target
 EOF
 touch /var/log/delta-brug.log && chown $GEBRUIKER:$GEBRUIKER /var/log/delta-brug.log
+
+# De schakelaar in de cockpit zet de Gateway aan en uit — nodig zolang de brug
+# op dezelfde login zit als de mens, want IBKR laat per login één sessie toe.
+# Daarvoor mag de brug precies twee commando's draaien en verder niets: geen
+# shell, geen pakketbeheer, geen andere dienst. Zonder wachtwoord, want er zit
+# niemand achter het scherm.
+cat > /etc/sudoers.d/delta-brug <<EOF
+$GEBRUIKER ALL=(root) NOPASSWD: /usr/bin/systemctl start ibgateway, /usr/bin/systemctl stop ibgateway, /usr/bin/systemctl status ibgateway
+EOF
+chmod 440 /etc/sudoers.d/delta-brug
+visudo -cf /etc/sudoers.d/delta-brug >/dev/null || { echo "FOUT: sudoers-regel klopt niet"; rm -f /etc/sudoers.d/delta-brug; }
+
 systemctl daemon-reload
 systemctl enable --now xvfb
 

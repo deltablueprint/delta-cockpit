@@ -29,6 +29,7 @@
 // Draaien: node brug.mjs
 
 import { IBApi, EventName } from "@stoqey/ib";
+import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -175,8 +176,54 @@ function zetHartslag(seconden) {
   hartslagklok = setInterval(() => stuur(vuil ? "wijziging" : "hartslag"), n * 1000);
 }
 
+// De Gateway aan of uit, gezegd vanuit de cockpit.
+//
+// IBKR laat per login één sessie toe. Zolang de Gateway aangemeld is, kan Simon
+// zelf niet in LYNX. Dat moest met ssh en systemctl; nu staat het als schakelaar
+// in de kop van de cockpit. Het verkeer blijft één kant op: de brug leest deze
+// instelling af in het antwoord op zijn eigen zending. Hij neemt geen opdrachten
+// aan — dit gaat over hemzelf, en het is het enige wat hij op de machine mag:
+// sudo staat precies deze twee regels toe en verder niets (installeer.sh).
+let gatewayAan = true;
+let bezigMetGateway = false;
+
+function systemd(wat) {
+  return new Promise((klaar) => {
+    execFile("sudo", ["-n", "/usr/bin/systemctl", wat, "ibgateway"], (fout, uit, err) => {
+      if (fout) log(`systemctl ${wat} ibgateway lukte niet: ${String(err || fout).trim().slice(0, 200)}`);
+      else log(`Gateway ${wat === "stop" ? "afgemeld" : "gestart"} vanuit de cockpit`);
+      klaar(!fout);
+    });
+  });
+}
+
+async function zetGateway(aan) {
+  if (aan === gatewayAan || bezigMetGateway) return;
+  bezigMetGateway = true;
+  gatewayAan = aan;
+  try {
+    if (!aan) {
+      // Eerst zelf loslaten, dan pas de Gateway stoppen: anders staat er een
+      // halve seconde een verbinding open naar iets wat al aan het afsluiten is.
+      stopKoersen();
+      try { ib.disconnect(); } catch { /* lag er al uit */ }
+      verbonden = false;
+      await systemd("stop");
+      await stuur("gateway uit");
+    } else {
+      await systemd("start");
+      // De Gateway heeft een halve minuut nodig om aan te melden; verbind()
+      // probeert daarna vanzelf opnieuw tot het lukt.
+      setTimeout(verbind, 20000);
+    }
+  } finally {
+    bezigMetGateway = false;
+  }
+}
+
 function pasAan(nieuw) {
   if (nieuw.hartslag_seconden) zetHartslag(nieuw.hartslag_seconden);
+  if (nieuw.gateway_aan !== undefined) zetGateway(Number(nieuw.gateway_aan) === 1);
   const wil = Number(nieuw.marktdata) === 1;
   if (wil !== marktdataAan) {
     marktdataAan = wil;
@@ -232,6 +279,10 @@ ib.on(EventName.connected, () => {
 
 ib.on(EventName.disconnected, () => {
   verbonden = false;
+  if (!gatewayAan) {
+    log("verbinding met IB Gateway weg — de Gateway staat uit vanuit de cockpit");
+    return;
+  }
   log("verbinding met IB Gateway weg — opnieuw proberen");
   stuur("verbinding weg");
   setTimeout(verbind, 5000);
@@ -313,6 +364,7 @@ ib.on(EventName.tickPrice, (reqId, veld, prijs) => {
 });
 
 function verbind() {
+  if (!gatewayAan) return;
   try {
     ib.connect();
   } catch (fout) {

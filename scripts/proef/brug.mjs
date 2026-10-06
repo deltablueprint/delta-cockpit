@@ -141,3 +141,40 @@ console.log("na 2 minuten stilte — live:", s.live, "| stil:", s.stil_seconden,
   console.log(`naam en schaal: ${f === 0 ? "klopt" : f + " fout(en)"}`);
   if (f) process.exit(1);
 }
+
+// ----------------------------------------- de Gateway aan en uit vanuit de kop
+//
+// IBKR laat per login één sessie toe: zolang de Gateway aangemeld is kan er geen
+// mens in LYNX. De schakelaar in de kop zet die Gateway uit — en dat gaat langs
+// dezelfde weg als elke andere instelling: de brug leest hem af in het antwoord
+// op zijn eigen zending. De cockpit stuurt niets naar de brug.
+{
+  const { zetInstellingen, stand } = await import("../../worker/brug.js");
+
+  let f = 0;
+  const e = (wat, goed) => { if (!goed) { f++; console.log(`FOUT  ${wat}`); } };
+
+  const uit = await zetInstellingen(env, { id: "simon" }, { gateway_aan: "0" });
+  e("de schakelaar is te zetten", !uit.fout);
+
+  const s2 = await stand(env);
+  const inst = (s2.instellingen || []).find((r) => r.sleutel === "gateway_aan");
+  e("en staat in de stand die het scherm ophaalt", inst && inst.waarde === "0");
+
+  // De brug haalt hem op in het antwoord op zijn eigen zending — geen tweede
+  // weg, geen inkomende verbinding.
+  const antwoord = await neemStand(env, {
+    verbonden: true, rekening: "DUR234269", kapitaal: 1, posities: [], gebeurtenissen: [],
+  });
+  e("de brug krijgt hem mee in zijn eigen antwoord",
+    antwoord.instellingen && Number(antwoord.instellingen.gateway_aan) === 0);
+
+  await zetInstellingen(env, { id: "simon" }, { gateway_aan: "1" });
+  const terug = await neemStand(env, {
+    verbonden: true, rekening: "DUR234269", kapitaal: 1, posities: [], gebeurtenissen: [],
+  });
+  e("en weer aan ook", Number(terug.instellingen.gateway_aan) === 1);
+
+  console.log(`de schakelaar: ${f === 0 ? "klopt" : f + " fout(en)"}`);
+  if (f) process.exit(1);
+}
