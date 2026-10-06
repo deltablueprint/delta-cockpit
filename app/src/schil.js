@@ -74,9 +74,10 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
               stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
       </svg></span>
       <span class="rechts">
-        <button class="brugschakelaar" id="brugschakelaar" hidden>
-          <span class="brugstip"></span><span class="brugtekst">Brug</span>
-        </button>
+        <div class="brugstand" id="brugstand" hidden role="group" aria-label="De brug">
+          <button class="bsknop" data-aan="0" type="button">Trading</button>
+          <button class="bsknop" data-aan="1" type="button"><span class="brugstip"></span><span class="bslabel">Sync</span></button>
+        </div>
         <span class="hartslagvak" title="Hoe vers wat je ziet is">
           <span id="hartslag" class="hartslag bijgewerkt"></span>
           <span id="hartslagtekst" class="hartslagtekst"></span>
@@ -222,36 +223,68 @@ export function schil(persoon, meta, actieveRoute, afmelden) {
 
 export function schilVergeten() { gebouwd = null; }
 
-// ------------------------------------------------- de brug aan en uit
+// --------------------------------------- de brug: Trading of Sync
 //
-// IBKR laat per login één sessie toe. Zolang de Gateway aangemeld is, kun jij
-// zelf niet in LYNX — en dat merk je pas op het moment dat je wil handelen.
-// Daarom staat die schakelaar hier, in de kop, en niet drie schermen diep: het
-// is het laatste wat je doet voordat je een order plaatst, en het eerste daarna.
+// Eén paper account, één actieve gebruiker — dat is de keuze. IBKR laat per
+// login maar één sessie toe, dus zijn het twee standen die elkaar uitsluiten:
 //
-// Hij stuurt niets naar de brug. Hij zet een instelling; de brug leest die af in
-// het antwoord op zijn eigen zending, binnen één hartslag. Het verkeer blijft
-// één kant op.
+//   Trading — de Gateway is afgemeld. Jij bent de sessie en kunt orders
+//             plaatsen in LYNX. De cockpit leest niets bij; wat er staat is van
+//             het laatste moment dat de brug luisterde.
+//   Sync    — de Gateway is aangemeld en de brug luistert. De cockpit haalt
+//             posities en uitvoeringen op. Inloggen in LYNX lukt dan niet.
+//
+// Daarom staat hij in de kop en niet drie schermen diep: het is het laatste wat
+// je doet voordat je een order plaatst, en het eerste daarna.
+//
+// De schakelaar stuurt niets naar de brug. Hij zet een instelling; de brug leest
+// die af in het antwoord op zijn eigen zending, binnen één hartslag. Het verkeer
+// blijft één kant op, en het systeem plaatst nooit zelf een order.
 function brugschakelaar(wortel) {
-  const knop = wortel.querySelector("#brugschakelaar");
-  if (!knop) return;
-  const stip = knop.querySelector(".brugstip");
-  const tekst = knop.querySelector(".brugtekst");
+  const vak = wortel.querySelector("#brugstand");
+  if (!vak) return;
+  const knoppen = [...vak.querySelectorAll(".bsknop")];
+  const kSync = knoppen.find((k) => k.dataset.aan === "1");
+  const kTrade = knoppen.find((k) => k.dataset.aan === "0");
+  const stip = kSync.querySelector(".brugstip");
+  const label = kSync.querySelector(".bslabel");
   let aan = null;
   let bezig = false;
 
-  const teken = (stand, live) => {
+  // Hoe lang het stil is, in woorden. Staat de brug op Trading, dan is dat geen
+  // storing maar het gevolg van de stand — en dan hoort er wél te staan hoe oud
+  // het beeld is, want daarop kijk je.
+  const geleden = (sec) => {
+    if (sec === null || sec === undefined) return "nog nooit";
+    if (sec < 90) return "net nog";
+    if (sec < 5400) return `${Math.round(sec / 60)} min geleden`;
+    if (sec < 172800) return `${Math.round(sec / 3600)} uur geleden`;
+    return `${Math.round(sec / 86400)} dagen geleden`;
+  };
+
+  const teken = (stand, live, stil) => {
     aan = stand;
-    knop.hidden = false;
-    knop.classList.toggle("uit", !stand);
-    knop.classList.toggle("stil", Boolean(stand) && !live);
-    tekst.textContent = stand ? (live ? "Brug live" : "Brug wacht") : "Brug uit";
-    knop.title = stand
-      ? (live
-        ? "De Gateway is aangemeld en de brug hoort haar. Klik om af te melden, bijvoorbeeld om zelf te handelen."
-        : "De Gateway start op of meldt zich aan; dat duurt ongeveer een minuut.")
-      : "De Gateway staat uit, dus jij kunt zelf handelen in LYNX. Klik om haar weer aan te melden.";
+    vak.hidden = false;
+    vak.classList.toggle("bezig", bezig);
+    kSync.classList.toggle("actief", Boolean(stand));
+    kTrade.classList.toggle("actief", !stand);
+    kSync.setAttribute("aria-pressed", stand ? "true" : "false");
+    kTrade.setAttribute("aria-pressed", stand ? "false" : "true");
+
+    // Op Sync zegt het woord wat de brug doet: aangemeld en gehoord, of nog
+    // bezig met opstarten. Dat duurt ongeveer een minuut, en zonder dat woord
+    // lijkt die minuut op een storing.
+    label.textContent = !stand ? "Sync" : live ? "Sync" : bezig ? "Aanmelden…" : "Verbinden…";
     stip.className = `brugstip ${stand ? (live ? "live" : "wacht") : "uit"}`;
+
+    kSync.title = stand
+      ? (live
+        ? "De Gateway is aangemeld en de brug hoort haar. De cockpit leest posities en uitvoeringen bij."
+        : "De Gateway start op en meldt zich aan; dat duurt ongeveer een minuut.")
+      : "Zet de brug aan: de cockpit leest weer bij. Inloggen in LYNX lukt dan niet meer.";
+    kTrade.title = stand
+      ? "Meld de Gateway af, zodat jij de sessie bent en kunt handelen in LYNX. De cockpit leest dan niets bij."
+      : `De Gateway is afgemeld; jij kunt handelen in LYNX. De cockpit las voor het laatst bij: ${geleden(stil)}.`;
   };
 
   const kijk = async () => {
@@ -260,26 +293,32 @@ function brugschakelaar(wortel) {
       const d = await brugStand();
       const inst = (d.instellingen || []).find((r) => r.sleutel === "gateway_aan");
       // Staat de instelling er niet, dan draait deze omgeving nog op een oudere
-      // migratie: dan tonen we de knop niet in plaats van iets te verzinnen.
-      if (!inst) { knop.hidden = true; return; }
-      teken(Number(inst.waarde) === 1, Boolean(d.live));
+      // migratie: dan tonen we de schakelaar niet in plaats van iets te verzinnen.
+      if (!inst) { vak.hidden = true; return; }
+      teken(Number(inst.waarde) === 1, Boolean(d.live), d.stil_seconden);
     } catch { /* niet aangemeld of even niet bereikbaar; de volgende ronde weer */ }
   };
 
-  knop.addEventListener("click", async () => {
-    if (bezig || aan === null) return;
-    bezig = true;
-    const naar = !aan;
-    teken(naar, false);
-    try {
-      await brugInstelling({ gateway_aan: naar ? "1" : "0" });
-    } catch {
-      teken(!naar, false);
-    } finally {
+  for (const k of knoppen) {
+    k.addEventListener("click", async () => {
+      const naar = k.dataset.aan === "1";
+      // De stand waar je al op staat is geen knop. Twee keer op Sync drukken
+      // mag de Gateway niet opnieuw laten opstarten.
+      if (bezig || aan === null || naar === aan) return;
+      bezig = true;
+      teken(naar, false, null);
+      try {
+        await brugInstelling({ gateway_aan: naar ? "1" : "0" });
+      } catch {
+        bezig = false;
+        teken(!naar, false, null);
+        return;
+      }
       bezig = false;
+      teken(naar, false, null);
       setTimeout(kijk, 2000);
-    }
-  });
+    });
+  }
 
   kijk();
   setInterval(kijk, 15000);

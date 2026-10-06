@@ -40,21 +40,34 @@ a { color: var(--blue); }
 .appbar .golf svg { display: block; width: 100%; height: 100%; }
 .appbar .rechts { margin-left: auto; display: flex; align-items: center; gap: 9px; font-size: 12.5px; }
 
-/* De schakelaar van de brug, in de kop. Groen als de Gateway aangemeld is en de
-   brug haar hoort, amber terwijl ze opstart, grijs als ze uit staat omdat jij
-   zelf wil handelen. Hij staat hier en niet drie schermen diep: het is het
-   laatste wat je doet voordat je een order plaatst, en het eerste daarna. */
-.brugschakelaar {
-  display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px;
-  border: 1px solid rgba(255, 255, 255, .22); border-radius: 13px; background: rgba(255, 255, 255, .06);
-  color: var(--navtxt); font-family: inherit; font-size: 12px; cursor: pointer;
+/* De schakelaar van de brug, in de kop. Twee standen die elkaar uitsluiten,
+   want IBKR laat per login één sessie toe: Trading (de Gateway is afgemeld, jij
+   handelt) of Sync (de Gateway is aangemeld, de cockpit leest bij). Daarom geen
+   aan-uitknop maar twee vakjes naast elkaar: je ziet wat er staat én wat het
+   alternatief is, zonder te klikken. Groen als de brug gehoord wordt, amber
+   terwijl de Gateway opstart, grijs wanneer ze uit staat omdat jij wil handelen. */
+.brugstand {
+  display: inline-flex; align-items: center; height: 26px; padding: 2px;
+  border: 1px solid rgba(255, 255, 255, .22); border-radius: 13px;
+  background: rgba(255, 255, 255, .06);
 }
-.brugschakelaar:hover { background: rgba(255, 255, 255, .13); }
+.brugstand .bsknop {
+  display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 11px;
+  border: 0; border-radius: 11px; background: none;
+  color: var(--navdim); font-family: inherit; font-size: 12px; cursor: pointer;
+}
+.brugstand .bsknop:hover { color: var(--navtxt); }
+/* De stand waar je op staat is geen knop meer: hij licht op en laat zich niet
+   nog een keer indrukken — twee keer Sync mag de Gateway niet opnieuw laten
+   opstarten. */
+.brugstand .bsknop.actief {
+  background: rgba(255, 255, 255, .16); color: #fff; cursor: default;
+}
+.brugstand.bezig { opacity: .75; }
 .brugstip { width: 8px; height: 8px; border-radius: 50%; background: var(--navdim); flex: 0 0 auto; }
 .brugstip.live { background: #4CC38A; }
 .brugstip.wacht { background: #E8A33D; }
 .brugstip.uit { background: #8794A0; }
-.brugschakelaar.uit { color: var(--navdim); }
 .appbar .bol-oud {
   width: 24px; height: 24px; border-radius: 50%; background: var(--navact);
   display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700;
@@ -1484,6 +1497,9 @@ body.sleept .lijsttabel { pointer-events: none; }
 }
 .verbindinglamp.live { background: #2FA84F; box-shadow: 0 0 0 4px rgba(47,168,79,.18); }
 .verbindinglamp.weg { background: #E04434; box-shadow: 0 0 0 4px rgba(224,68,52,.16); }
+/* Trading: er is geen verbinding omdat jij de sessie bent. Blauw, niet rood —
+   rood is voor wat stuk is, en dit is een keuze die je zelf maakte. */
+.verbindinglamp.trading { background: #136289; box-shadow: 0 0 0 4px rgba(19,98,137,.16); }
 .verbindingtekst { display: flex; flex-direction: column; gap: 2px; min-width: 240px; flex: 1 1 auto; }
 .verbindingtekst b { font-size: 15px; }
 .verbindingtekst span { font-size: 12.5px; color: var(--ink2); line-height: 1.5; }

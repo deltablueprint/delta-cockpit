@@ -48,6 +48,13 @@ export async function koppelingscherm(inhoud, kruimel) {
   const teken = () => {
     const live = Boolean(data.live);
     const nooit = data.laatste_bericht === null || data.laatste_bericht === undefined;
+    // Staat de schakelaar in de kop op Trading, dan is er geen verbinding omdat
+    // jij dat zo wou: jij bent de sessie bij IBKR, en de brug heeft zich
+    // afgemeld om plaats te maken. Dat is geen storing en hoort er dus ook niet
+    // als storing te staan — een rode lamp waar niets aan de hand is, leert je
+    // de rode lamp te negeren.
+    const gw = (data.instellingen || []).find((r) => r.sleutel === "gateway_aan");
+    const trading = gw ? Number(gw.waarde) === 0 : false;
 
     // De kop zegt in één zin wat er aan de hand is. Geen vinkje zonder tekst:
     // wie hier komt kijken wil weten of hij iets moet doen.
@@ -56,12 +63,14 @@ export async function koppelingscherm(inhoud, kruimel) {
         <div class="paneelkop">De verbinding met Lynx
           <span class="paneelmeta">via IB Gateway en de brug</span></div>
         <div class="verbindingvak">
-          <span class="verbindinglamp ${live ? "live" : nooit ? "nooit" : "weg"}"></span>
+          <span class="verbindinglamp ${live ? "live" : trading ? "trading" : nooit ? "nooit" : "weg"}"></span>
           <div class="verbindingtekst">
-            <b>${live ? "Live" : nooit ? "Nog nooit verbinding gehad" : "Geen verbinding"}</b>
+            <b>${live ? "Live" : trading ? "Trading — jij bent de sessie" : nooit ? "Nog nooit verbinding gehad" : "Geen verbinding"}</b>
             <span>${live
               ? `De brug meldde zich ${ontsnap(sinds(data.stil_seconden))}. Wat hieronder staat, is wat er nú open staat.`
-              : nooit
+              : trading
+                ? `De Gateway is afgemeld, zodat jij kunt handelen in LYNX. De brug las voor het laatst bij ${ontsnap(sinds(data.stil_seconden))}; wat hieronder staat is van dat moment. Zet de schakelaar in de kop op Sync om weer bij te lezen.`
+                : nooit
                 ? "De brug heeft zich nog niet gemeld. Staat hij aan, en staat de sleutel aan beide kanten gelijk?"
                 : `Laatste bericht ${ontsnap(sinds(data.stil_seconden))}${
                     data.verbonden ? "" : " — en toen was de verbinding met IB Gateway al weg"

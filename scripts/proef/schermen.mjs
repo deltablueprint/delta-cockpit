@@ -433,5 +433,22 @@ for (const bestand of lees("app/src").filter((f) => f.endsWith(".js"))) {
   eis("de rijen worden niet twee keer opgehaald", /stilleData = \{ vak: inhoud, data: verse \}/.test(l));
 }
 
+// ----------------------------------- de brug: twee standen, geen aan-uitknop
+//
+// Eén paper account, één actieve gebruiker: wie de sessie is, is een keuze
+// tussen Trading en Sync. Een enkele aan-uitknop verzwijgt het alternatief, en
+// een stand waar je al op staat mag de Gateway niet opnieuw laten opstarten.
+{
+  const sch = readFileSync("app/src/schil.js", "utf8");
+  eis("de kop draagt twee standen", /data-aan="0"/.test(sch) && /data-aan="1"/.test(sch));
+  eis("ze heten Trading en Sync", /Trading</.test(sch) && />Sync</.test(sch));
+  eis("de stand waar je op staat doet niets", /naar === aan\) return/.test(sch));
+  eis("tijdens het aanmelden zegt hij dat", /Verbinden…|Aanmelden…/.test(sch));
+  eis("en op Trading zie je hoe oud het beeld is", /stil_seconden/.test(sch) && /geleden\(stil\)/.test(sch));
+  eis("de schakelaar verdwijnt op een oudere migratie", /if \(!inst\) \{ vak\.hidden = true/.test(sch));
+  eis("de vormtaal kent de twee vakjes", css.includes(".brugstand") && css.includes(".bsknop.actief"));
+  eis("de oude aan-uitknop is weg", !sch.includes("brugschakelaar\"") && !css.includes(".brugschakelaar"));
+}
+
 console.log(fouten === 0 ? "alles klopt." : `${fouten} fout(en).`);
 process.exit(fouten === 0 ? 0 : 1);

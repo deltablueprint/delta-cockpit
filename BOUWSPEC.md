@@ -1902,3 +1902,24 @@ de meldingen. Daarvóór ligt openstaand punt 7: marktdata richting leden moet b
 8. **Market Timing-panelen** — blijven voorlopig in de oude Cockpit; verhuizing later te bepalen.
 9. **'Venster gemist' per lid** — een melding aan één lid dat hij de positie niet gevolgd heeft toen de stand naar *In positie* ging. Vraagt dat de ledenkant bijhoudt óf iemand gevolgd heeft. Sinds 0153 bestaat `positievolger`, en het ontwerp staat in 13d; de app zelf nog niet.
 10. **Een positiemelding intrekken** — voor leden die hem nog niet gevolgd hebben, als het venster sluit omdat het niet meer opportuun is. Zelfde afhankelijkheid als 9.
+
+---
+
+## 13e. Trading of Sync — één account, één sessie (migraties 0158, 0159, 6 okt 2026)
+
+**De keuze.** Eén paper account (DUR234269), **één actieve gebruiker**. Geen tweede login naast de brug, geen machinegebruiker met eigen handelsvolmacht — dat papierwerk lost een probleem op dat we ook met één schakelaar kunnen oplossen, en het antwoord of zo'n gebruiker hetzelfde paper account krijgt was niet met zekerheid te geven.
+
+**Wat daaruit volgt.** IBKR laat per login één sessie toe. Dus is de vraag niet *staat de Gateway aan* maar *wie is op dit moment de sessie*. Dat zijn twee standen die elkaar uitsluiten, en zo staan ze ook in de kop van de cockpit:
+
+| Stand | De Gateway | Jij | De cockpit |
+|---|---|---|---|
+| **Trading** | afgemeld | plaatst orders in LYNX | leest niets bij; het beeld is van het laatste moment dat de brug luisterde |
+| **Sync** | aangemeld, de brug luistert | kunt niet inloggen in LYNX | haalt posities, nettowaarde en uitvoeringen op |
+
+**Geen aan-uitknop maar twee vakjes naast elkaar.** Een enkele knop verzwijgt het alternatief: je ziet dat iets aan staat, niet wat er gebeurt als je drukt. Twee vakjes zeggen beide standen zonder dat je klikt, en de stand waar je op staat laat zich niet nog een keer indrukken — twee keer *Sync* mag de Gateway niet opnieuw laten opstarten. Omschakelen naar Sync duurt ongeveer een minuut; zolang staat er *Verbinden…* met een amber stip, want zonder dat woord lijkt die minuut op een storing. Op Trading zegt de tooltip hoe oud het beeld is.
+
+**Trading is geen storing.** Op de koppelingspagina stond bij elke stilte *Geen verbinding* met een rode lamp. Staat de schakelaar op Trading, dan is er geen verbinding omdat jij dat zo wou, en dan leest de pagina **Trading — jij bent de sessie**, met een blauwe lamp, wanneer de brug voor het laatst bijlas, en hoe je terugschakelt. Rood is voor wat stuk is; een rode lamp waar niets aan de hand is, leert je de rode lamp te negeren.
+
+**Het verkeer blijft één kant op.** De schakelaar stuurt niets naar de brug: hij zet de instelling `gateway_aan`, en de brug leest die af in het antwoord op zijn eigen zending, net als de hartslag en de koersen (zie 12). Op *uit* laat de brug de API-verbinding los en stopt hij de Gateway via een sudoers-regel die precies drie commando's toestaat; hij blijft wél zijn hartslag sturen, zodat de cockpit het verschil kent tussen *staat uit omdat jij dat wou* en *ik hoor niets meer*. Hard uitgangspunt 1 blijft overeind: er is geen route die een order plaatst, in geen van de twee standen.
+
+**Migratie 0159 herschrijft alleen de woorden** van de instelling uit 0158 (*Sync aan (anders: Trading)*), zodat de instellingenpagina hetzelfde zegt als de schakelaar. De waarde blijft dezelfde ja/nee — ja is Sync. Een migratie wordt nooit bijgewerkt; dit is de correctie erop.
