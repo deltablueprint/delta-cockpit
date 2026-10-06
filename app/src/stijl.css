@@ -1932,7 +1932,18 @@ body.sleept .lijsttabel { pointer-events: none; }
 .publiceerbalk { display: flex; align-items: center; gap: 12px; padding: 12px var(--gutter);
   background: var(--soft); border-top: 1px solid var(--b1); }
 .publiceerbalk.open { display: block; }
-.pubrij { display: flex; align-items: center; gap: 12px; }
+/* De balk verschijnt pas als je een stand aanklikt; zolang er niets gekozen is
+   staat er niets. Een knop die altijd klaarstaat voor iets wat je nog niet
+   gevraagd hebt, nodigt uit tot klikken zonder reden. */
+.pubvak { max-width: 560px; }
+.pubwissels { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.pubwissel { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.publabel { font-size: 9.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--faint); width: 108px; flex: 0 0 auto; }
+.pubchip { padding: 3px 10px; border-radius: 9px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.pubchip.leeg { background: var(--b1); color: var(--mut); font-weight: 600; }
+.pubpijl { color: var(--dim); font-size: 14px; }
+.pubrij { display: flex; align-items: center; gap: 10px; }
 .publiceerbalk.open .pubrij { margin-top: 10px; }
 .pubvraag { display: block; font-size: 12.5px; color: var(--ink2); margin-bottom: 6px; }
 .pubreden, .kaartreden textarea {

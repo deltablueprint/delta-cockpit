@@ -31,6 +31,16 @@ import { tijdas, plaatsTijdkaarten, plaatsStrooktips } from "./tijdas.js";
 // een oordeel — groen is goed — terwijl het gewoon het eind van het verloop is.
 const VENSTERKLEUR = ["#DCE7EE", "#C3D9E5", "#A3C3D6", "#7FA8C2", "#4A83A6", "#0E4E70"];
 
+// Witte letters op een lichte chip lees je niet. Dit kijkt hoe donker de kleur
+// is en kiest wit of zwart; geel en lichtblauw krijgen dus donkere letters.
+function donkerGenoeg(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim());
+  if (!m) return false;
+  const n = parseInt(m[1], 16);
+  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return lum < 0.62;
+}
+
 // Elk bezoek krijgt een nummer. Klik je weg terwijl de peiling loopt, dan tekent
 // het antwoord dat daarna binnenkomt niet meer over het scherm waar je inmiddels
 // bent. Dat is een keer misgegaan en kostte iemand zijn halve formulier.
@@ -263,9 +273,29 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
         <span class="nm">${ontsnap(x.label)}</span></button>`;
     };
 
-    const stuk = [];
-    if (kiesVenster !== null) stuk.push(`venster naar <b>${ontsnap(labelVenster(kiesVenster))}</b>`);
-    if (kiesStand !== null) stuk.push(`barometer naar <b>${ontsnap(labelStand(kiesStand))}</b>`);
+    // Wat er verandert, in beeld: van welke stand naar welke, in de kleuren van
+    // de balk en de meter zelf. Een zin met twee vette woorden erin liet je nog
+    // steeds zelf uitzoeken wat er nu precies anders wordt.
+    const chip = (tekst, kleur) => `<span class="pubchip" style="background:${kleur};color:${
+      donkerGenoeg(kleur) ? "#fff" : "var(--ink)"}">${ontsnap(tekst)}</span>`;
+    const vensterkleur = (w) => VENSTERKLEUR[(v.verloop || []).indexOf(w)] || "var(--b1)";
+    const standkleur = (n) => KLEUR[Number(n) - 1] || "var(--dim)";
+
+    const wissels = [];
+    if (kiesVenster !== null) {
+      wissels.push(`<div class="pubwissel"><span class="publabel">Instap venster</span>
+        ${chip(labelVenster(v.nu), vensterkleur(v.nu))}
+        <span class="pubpijl">→</span>
+        ${chip(labelVenster(kiesVenster), vensterkleur(kiesVenster))}</div>`);
+    }
+    if (kiesStand !== null) {
+      const vanaf = b.wij ? Number(b.wij.stand.waarde) : (b.leden ? Number(b.leden.stand.waarde) : null);
+      wissels.push(`<div class="pubwissel"><span class="publabel">Positie Barometer</span>
+        ${vanaf ? chip(labelStand(vanaf), standkleur(vanaf)) : `<span class="pubchip leeg">nog niets</span>`}
+        <span class="pubpijl">→</span>
+        ${chip(labelStand(kiesStand), standkleur(kiesStand))}</div>`);
+    }
+    const stuk = wissels;
 
     return `<section class="paneel">
       <div class="paneelkop">Stand naar de leden</div>
@@ -305,19 +335,21 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
 
       ${terugblik() ? `<div class="publiceerbalk"><div class="pubrij">
         <span class="pubtekst">Terugblik: deze cyclus is afgerond. Er gaat hier niets meer naar de leden.</span>
-      </div></div>` : `
-      <div class="publiceerbalk${stuk.length ? " open" : ""}">
-        ${stuk.length ? `
+      </div></div>` : stuk.length ? `
+      <div class="publiceerbalk open">
+        <div class="pubvak">
+          <div class="pubwissels">${stuk.join("")}</div>
           <label class="pubvraag" for="pubreden">Waarom verandert de stand? Dat is wat de leden lezen.</label>
           <textarea id="pubreden" class="pubreden" rows="2"
-            placeholder="Bijvoorbeeld: de ask liep op tot vlak onder de stoploss."></textarea>` : ""}
-        <div class="pubrij">
-          <span class="pubtekst">${stuk.length ? `Vastleggen en het bericht opstellen: ${stuk.join(" en ")}.` : "Klik een stand aan om hem te veranderen."}</span>
-          ${melding ? `<span class="wbmelding">${ontsnap(melding)}</span>` : ""}
-          ${stuk.length ? `<button class="knop tweede" data-afbreken>Laat maar</button>` : ""}
-          <button class="knop" data-publiceer disabled>Publiceren</button>
+            placeholder="Bijvoorbeeld: de ask liep op tot vlak onder de stoploss."></textarea>
+          <div class="pubrij">
+            <button class="knop" data-publiceer disabled>Publiceren</button>
+            <button class="knop tweede" data-afbreken>Annuleren</button>
+            ${melding ? `<span class="wbmelding">${ontsnap(melding)}</span>` : ""}
+          </div>
         </div>
-      </div>`}
+      </div>` : melding ? `<div class="publiceerbalk"><div class="pubrij">
+        <span class="wbmelding">${ontsnap(melding)}</span></div></div>` : ""}
     </section>`;
   }
 
