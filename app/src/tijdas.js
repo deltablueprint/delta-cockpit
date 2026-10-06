@@ -180,3 +180,41 @@ export function plaatsTijdkaarten(inhoud) {
     punt.addEventListener("focus", () => plaats(punt));
   }
 }
+
+// De hovertip op een vakje van de strook zweeft boven alles.
+//
+// Als gewone absolute tip werd hij geknipt door de kolom waarin het scherm
+// scrolt: ging je over een vakje aan de linkerrand, dan verdween de helft van de
+// tekst achter de navigator. Daarom staat hij op 'fixed' — dan geldt geen enkele
+// ouder meer — en rekent dit uit waar hij komt. Eén tip voor het hele scherm:
+// er is er altijd maar één tegelijk te zien.
+export function plaatsStrooktips(wortel) {
+  let tip = document.getElementById("strooktip");
+  if (!tip) {
+    tip = document.createElement("div");
+    tip.id = "strooktip";
+    tip.className = "zweeftip";
+    document.body.appendChild(tip);
+  }
+  const verberg = () => { tip.style.display = "none"; };
+  verberg();
+
+  const toon = (vak) => {
+    tip.textContent = vak.getAttribute("data-tip") || "";
+    if (!tip.textContent) return verberg();
+    tip.style.display = "block";
+    const r = vak.getBoundingClientRect();
+    const breed = tip.offsetWidth, hoog = tip.offsetHeight;
+    let links = r.left + r.width / 2 - breed / 2;
+    links = Math.max(8, Math.min(links, window.innerWidth - breed - 8));
+    const boven = r.top - hoog - 7;
+    tip.style.left = `${Math.round(links)}px`;
+    tip.style.top = `${Math.round(boven < 8 ? r.bottom + 7 : boven)}px`;
+  };
+
+  for (const vak of wortel.querySelectorAll(".strook i[data-tip]")) {
+    vak.addEventListener("mouseenter", () => toon(vak));
+    vak.addEventListener("mouseleave", verberg);
+  }
+  wortel.addEventListener("scroll", verberg, true);
+}

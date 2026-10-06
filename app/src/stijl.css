@@ -584,12 +584,14 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
 /* De datum hoort meteen te verschijnen, niet na een seconde wachten zoals bij
    een title van de browser. Eén vakje is te klein om zonder bijschrift te
    lezen. */
-.strook i:hover::after {
-  content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%;
-  transform: translateX(-50%); z-index: 60;
+/* De tip hangt aan de body en staat op 'fixed': in de kolom zelf werd hij
+   geknipt, en dan verdween de helft achter de navigator. plaatsStrooktips()
+   rekent uit waar hij komt. */
+.zweeftip {
+  display: none; position: fixed; z-index: 400;
   background: var(--ink); color: #fff; font-size: 11px; line-height: 1.3;
   padding: 4px 8px; border-radius: 3px; white-space: nowrap; pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,.18);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .18);
 }
 .strooknoot { font-size: 10.5px; font-weight: 400; letter-spacing: 0; text-transform: none;
   color: var(--faint); }

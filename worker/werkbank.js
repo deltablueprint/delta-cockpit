@@ -527,9 +527,20 @@ export async function dagstanden(env, cyclusId, { nu = null, maxdagen = 90 } = {
   ).bind(cyclusId).all()).results;
   if (!standen.length) return [];
 
-  const cyclusrij = await env.DB.prepare("select geopend_op from cyclus where id = ?").bind(cyclusId).first();
+  const cyclusrij = await env.DB.prepare(
+    "select geopend_op, status, afgesloten_op from cyclus where id = ?"
+  ).bind(cyclusId).first();
   const eerste = String(cyclusrij && cyclusrij.geopend_op ? cyclusrij.geopend_op : standen[0].vastgesteld_op).slice(0, 10);
-  const laatste = (nu ? new Date(nu) : new Date()).toISOString().slice(0, 10);
+
+  // Een afgelopen cyclus stopt op de dag dat hij afliep, niet vandaag. Een cyclus
+  // die afgerond is wordt gesloten; hij kan dus niet weken lang vakjes blijven
+  // verzamelen in 'afgerond', en een maand zou er een half jaar uitzien.
+  const vandaag = (nu ? new Date(nu) : new Date()).toISOString().slice(0, 10);
+  const dicht = cyclusrij && ["afgesloten", "geannuleerd"].includes(cyclusrij.status);
+  const eind = dicht
+    ? String(cyclusrij.afgesloten_op || standen[standen.length - 1].vastgesteld_op).slice(0, 10)
+    : vandaag;
+  const laatste = eind < eerste ? eerste : eind;
 
   const uit = (await handelsdagen(env, eerste, laatste, maxdagen)).map((d) => {
     // De laatste vastlegging van of vóór deze dag. Vóór de eerste vastlegging is

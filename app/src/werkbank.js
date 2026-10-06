@@ -23,7 +23,7 @@ import { ontsnap } from "./veld.js";
 // Stand 1..5: 1 is onder druk, 5 is vrijwel afgerond (BOUWSPEC §10.1). De balk
 // loopt van verlies links naar winst rechts, dus van rood naar groen.
 import { KLEUR, DIEPROOD, balkHtml, schaalHtml, metriekHtml } from "./positiebalk.js";
-import { tijdas, plaatsTijdkaarten } from "./tijdas.js";
+import { tijdas, plaatsTijdkaarten, plaatsStrooktips } from "./tijdas.js";
 
 // Het instap venster in zes tinten blauw, van licht naar donker. Eén reeks voor
 // het hele scherm: de balkjes boven en de vakjes van de strook eronder horen
@@ -36,6 +36,14 @@ const VENSTERKLEUR = ["#DCE7EE", "#C3D9E5", "#A3C3D6", "#7FA8C2", "#4A83A6", "#0
 // bent. Dat is een keer misgegaan en kostte iemand zijn halve formulier.
 let bezoek = 0;
 
+// Wat we de vorige keer tekenden. Klik je in de bovenste strip een andere cyclus
+// aan, dan hoort die strip te blijven staan terwijl de schermen eronder laden:
+// het is de plek waar je zonet klikte, en een balk die wegvalt om een halve
+// seconde later terug te komen laat je twijfelen of je klik aankwam. Ook hoever
+// de strip geschoven stond blijft zo bewaard.
+let vorige = null;
+let strookX = 0;
+
 export async function werkbankscherm(inhoud, kruimel, opties = {}) {
   const dit = ++bezoek;
   const leeftNog = () =>
@@ -47,18 +55,15 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
   // naar de leden: het scherm leest, het schrijft niet.
   const terugblik = () => !!(data && data.cyclus && data.actief && data.cyclus.id !== data.actief);
 
-  inhoud.innerHTML = `<div class="werkbank">Bezig…</div>`;
-
   // Welke cyclus je bekijkt staat in de url (#/werkbank?cyclus=12). Zonder is
   // het de lopende; met is het een terugblik op een afgelopen cyclus.
   let cyclusId = Number(opties.cyclus) || null;
-  let strookX = 0;              // hoever de tegels van de afgelopen cycli staan
   let kiesStand = null;      // welke barometerstand je aanklikte
   let kiesVenster = null;    // welke vensterstand je aanklikte
   let open = new Set();      // welke posities uitgeklapt staan
   let melding = null;
   let nietMeldenVoor = null;   // de kaart waarvan je aan het opschrijven bent waarom hij niet weg gaat
-  let data = null;
+  let data = vorige;
 
   // Wat er veranderde terwijl jij keek.
   //
@@ -89,6 +94,13 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     }
   }
 
+  // De eerste tekening: de strip van de vorige keer blijft staan, daaronder
+  // 'Bezig…'. Kom je vers binnen, dan is er nog geen strip.
+  inhoud.innerHTML = data && data.cyclus
+    ? `<div class="werkbank">${cyclusbalk()}<p class="wbleeg">Bezig…</p></div>`
+    : `<div class="werkbank">Bezig…</div>`;
+  naStrook();
+
   async function haal() {
     try {
       const uit = await haalWerkbank(cyclusId);
@@ -105,6 +117,7 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
 
   function teken() {
     if (!leeftNog()) return;
+    vorige = data;
     document.title = "Dispatch · Delta Wave Cockpit";
     kruimel.innerHTML = `<span>Communicatie</span> <span class="pijlje">&rsaquo;</span> <span>Dispatch</span>`;
 
@@ -133,6 +146,7 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     // De hoverkaarten op de tijdas zweven boven alles; waar ze komen te staan is
     // pas te weten als het scherm er staat.
     plaatsTijdkaarten(inhoud);
+    plaatsStrooktips(inhoud);
   }
 
   // ---------------------------------------------------- welke cyclus je ziet
@@ -143,7 +157,7 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
   // Links de lopende cyclus, rechts de tegels van wat erop zit.
   function cyclusbalk() {
     const lopend = (data.cycli || []).find((c) => c.id === data.actief) || null;
-    const nu = data.cyclus ? data.cyclus.id : null;
+    const nu = cyclusId || (data.cyclus ? data.cyclus.id : null);
 
     // Elke tegel is hetzelfde opgebouwd: naam, periode, status. Alleen het
     // uiterlijk verschilt — de lopende cyclus staat wit met een blauwe rand, de
@@ -491,7 +505,7 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
 
     const eerste = dagen[0].dag, laatste = dagen[dagen.length - 1].dag;
     return `<div class="strookvak">
-      <div class="strooklab">Wat de leden wisten<span class="strooknoot">${dagen.length} handelsdagen</span></div>
+      <div class="strooklab">Historie</div>
       <div class="strook">
         ${weken.map((w) => `<span class="week" title="week ${w.week}">${
           w.dagen.map(vakje).join("")}</span>`).join("")}
