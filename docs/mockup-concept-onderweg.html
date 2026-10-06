@@ -1,0 +1,275 @@
+<!doctype html><html lang="nl"><head><meta charset="utf-8">
+<title>Concept onderweg — mockups</title>
+<style>
+:root{
+  --cream:#F7F6F3; --b1:#E8E6E1; --b2:#F0EEEA; --soft:#FAF9F6;
+  --ink:#0F0E0D; --ink2:#3A3835; --mut:#6E6C68; --dim:#8A8884; --faint:#A5A29C;
+  --blue:#136289; --bluebg:#E6EEF3; --grn:#1F5E45; --grnbg:#DCEBE2;
+  --amb:#8A5A12; --ambbg:#F7E7C6; --red:#9A3227; --redbg:#F7E0DC;
+  --s1:#D7261E; --s2:#F26A21; --s3:#FBC02D; --s4:#8DC63F; --s5:#0A9D4E;
+}
+*{box-sizing:border-box} body{margin:0;background:var(--cream);font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial;color:var(--ink)}
+.wrap{padding:24px;max-width:1180px}
+h1{font-size:15px;margin:0 0 4px} .sub{color:var(--mut);font-size:12px;margin:0 0 22px}
+.variant{margin-bottom:30px}
+.vtitel{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:0 0 8px}
+.paneel{background:#fff;border:1px solid var(--b1);border-radius:10px;overflow:hidden}
+.paneelkop{padding:11px 18px;border-bottom:1px solid var(--b2);font-weight:700;font-size:13px}
+.body{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:0}
+.links{padding:16px 18px;border-right:1px solid var(--b2)}
+.rechts{padding:16px 18px;background:var(--soft)}
+.dtitel{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.vnu{font-size:17px;font-weight:700;margin:4px 0 2px}
+.dstaat{font-size:11px;color:var(--mut);margin-bottom:10px}
+.gauge{display:flex;gap:18px;align-items:center}
+svg{width:230px;height:152px}
+.legenda{display:flex;flex-direction:column;gap:4px}
+.lreg{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink2)}
+.lreg .vlak{width:13px;height:13px;border-radius:3px}
+.lreg.nu{font-weight:700;color:var(--ink)}
+.strook{display:flex;gap:3px;margin-top:12px;flex-wrap:wrap}
+.vk{width:11px;height:11px;border-radius:2px;background:#E4E1DB}
+.vk.gemeld{box-shadow:none}
+.vk.open{background:#fff;border:1.5px solid var(--s4)}
+.strooklabel{font-size:10px;color:var(--faint);margin-top:4px}
+
+/* A — keten */
+.keten{display:flex;flex-direction:column;gap:0}
+.stap{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start}
+.spoor{display:flex;flex-direction:column;align-items:center;height:100%}
+.bol{width:13px;height:13px;border-radius:50%;background:#D8D5CF;border:2px solid #fff;box-shadow:0 0 0 1px #D8D5CF}
+.bol.klaar{background:var(--grn);box-shadow:0 0 0 1px var(--grn)}
+.bol.nu{background:var(--amb);box-shadow:0 0 0 3px var(--ambbg)}
+.lijn{width:2px;flex:1;min-height:26px;background:#E4E1DB}
+.stapinh{padding-bottom:12px}
+.stapnaam{font-size:12.5px;font-weight:600}
+.stapnaam.wacht{color:var(--amb)}
+.stapnoot{font-size:11px;color:var(--mut)}
+.knoprij{display:flex;gap:8px;margin-top:10px}
+.knop{border:1px solid var(--blue);background:var(--blue);color:#fff;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
+.knop.tweede{background:#fff;color:var(--ink2);border-color:var(--b1)}
+.waarsch{display:flex;gap:8px;align-items:flex-start;background:var(--ambbg);border:1px solid #E8D3A4;border-radius:8px;padding:9px 11px;font-size:11.5px;color:#6B4A10;margin-top:12px}
+
+/* B — twee kolommen wij/leden */
+.tweekol{display:grid;grid-template-columns:1fr 26px 1fr;align-items:center;gap:8px}
+.kolkaart{border:1px solid var(--b1);background:#fff;border-radius:9px;padding:10px 12px;text-align:center}
+.kolkaart .wie{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.kolkaart .wat{font-size:15px;font-weight:700;margin-top:3px}
+.kolkaart .pil{display:inline-block;margin-top:6px;padding:2px 9px;border-radius:9px;font-size:10px;font-weight:700;color:#fff}
+.pijl{text-align:center;color:var(--dim);font-size:18px}
+.tussen{margin-top:12px;border:1px dashed #D9B877;background:#FFFBF2;border-radius:9px;padding:10px 12px}
+.tussenkop{font-size:11px;font-weight:700;color:var(--amb);text-transform:uppercase;letter-spacing:.05em}
+.tussenrij{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink2);margin-top:5px}
+
+/* C — brief/envelop */
+.brief{border:1px solid var(--b1);border-radius:9px;background:#fff;overflow:hidden}
+.briefkop{padding:9px 12px;background:var(--ambbg);border-bottom:1px solid #E8D3A4;font-size:11.5px;font-weight:700;color:#6B4A10;display:flex;justify-content:space-between}
+.briefbody{padding:11px 12px}
+.brieftitel{font-size:12.5px;font-weight:700;margin-bottom:3px}
+.brieftekst{font-size:11.5px;color:var(--mut);line-height:1.5}
+.meta{display:flex;gap:14px;margin-top:9px;font-size:11px;color:var(--faint)}
+.slot{display:flex;gap:7px;align-items:center;margin-top:12px;font-size:11.5px;color:var(--ink2)}
+.slot b{color:var(--amb)}
+
+/* D — baan onder de meter */
+.baan{display:flex;align-items:center;gap:0;margin-top:4px}
+.bstap{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--faint)}
+.bstap b{font-weight:600}
+.bstap.klaar{color:var(--grn)} .bstap.nu{color:var(--amb);font-weight:700}
+.bbol{width:10px;height:10px;border-radius:50%;background:#D8D5CF}
+.bstap.klaar .bbol{background:var(--grn)} .bstap.nu .bbol{background:var(--amb);box-shadow:0 0 0 3px var(--ambbg)}
+.bstreep{height:2px;width:26px;background:#E4E1DB;margin:0 9px}
+</style></head><body><div class="wrap">
+
+<h1>Wat er met een stand gebeurt voordat de leden hem kennen</h1>
+<p class="sub">Vier manieren om rechts van de barometer te tonen dat er een concept klaarligt dat eerst de deur uit moet. Dezelfde situatie in alle vier: wij legden <b>Comfortabel</b> vast, de leden kennen nog <b>Veilig</b>, en het concept ligt bij Jacqueline.</p>
+
+<!-- ============ A ============ -->
+<div class="variant">
+  <p class="vtitel">A · De keten — drie stappen onder elkaar</p>
+  <div class="paneel">
+    <div class="paneelkop">Stand naar de leden</div>
+    <div class="body">
+      <div class="links">
+        <span class="dtitel">Positie Barometer</span>
+        <div class="vnu">Comfortabel</div>
+        <div class="dstaat">vastgelegd vandaag 09:12 · nog niet bij de leden</div>
+        <div class="gauge">
+          <svg viewBox="0 0 320 212" id="meter"></svg>
+          <div class="legenda">
+            <div class="lreg"><span class="vlak" style="background:var(--s1)"></span>Onder druk</div>
+            <div class="lreg"><span class="vlak" style="background:var(--s2)"></span>Krap</div>
+            <div class="lreg"><span class="vlak" style="background:var(--s3)"></span>Aandacht</div>
+            <div class="lreg nu"><span class="vlak" style="background:var(--s4)"></span>Comfortabel</div>
+            <div class="lreg"><span class="vlak" style="background:var(--s5)"></span>Veilig</div>
+          </div>
+        </div>
+        <div class="strook" id="strookA"></div>
+        <div class="strooklabel">De vakjes tonen wat de léden die dag wisten. Open vakje = wij wisten al meer.</div>
+      </div>
+      <div class="rechts">
+        <span class="dtitel">Onderweg naar de leden</span>
+        <div class="keten" style="margin-top:10px">
+          <div class="stap"><div class="spoor"><span class="bol klaar"></span><span class="lijn"></span></div>
+            <div class="stapinh"><div class="stapnaam">Stand vastgelegd</div>
+              <div class="stapnoot">Veilig → Comfortabel · vandaag 09:12 · Simon</div></div></div>
+          <div class="stap"><div class="spoor"><span class="bol klaar"></span><span class="lijn"></span></div>
+            <div class="stapinh"><div class="stapnaam">Concept geschreven</div>
+              <div class="stapnoot">“De barometer gaat naar Comfortabel”</div></div></div>
+          <div class="stap"><div class="spoor"><span class="bol nu"></span><span class="lijn"></span></div>
+            <div class="stapinh"><div class="stapnaam wacht">Ligt bij Jacqueline</div>
+              <div class="stapnoot">sinds 09:14 · nog niet nagelezen</div></div></div>
+          <div class="stap"><div class="spoor"><span class="bol"></span></div>
+            <div class="stapinh"><div class="stapnaam" style="color:var(--faint)">Bij de leden</div>
+              <div class="stapnoot">412 leden volgen deze positie</div></div></div>
+        </div>
+        <div class="knoprij"><button class="knop">Concept openen</button>
+          <button class="knop tweede">Nalezer wijzigen</button></div>
+        <div class="waarsch"><span>⚠</span><span>Zolang dit concept niet verstuurd is, kun je de stand niet opnieuw veranderen.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ B ============ -->
+<div class="variant">
+  <p class="vtitel">B · Wij en zij — twee standen naast elkaar, met het concept ertussen</p>
+  <div class="paneel">
+    <div class="paneelkop">Stand naar de leden</div>
+    <div class="body">
+      <div class="links">
+        <span class="dtitel">Positie Barometer</span>
+        <div class="vnu">Comfortabel</div>
+        <div class="dstaat">vastgelegd vandaag 09:12</div>
+        <div class="gauge"><svg viewBox="0 0 320 212" id="meter2"></svg>
+          <div class="legenda">
+            <div class="lreg"><span class="vlak" style="background:var(--s1)"></span>Onder druk</div>
+            <div class="lreg"><span class="vlak" style="background:var(--s2)"></span>Krap</div>
+            <div class="lreg"><span class="vlak" style="background:var(--s3)"></span>Aandacht</div>
+            <div class="lreg nu"><span class="vlak" style="background:var(--s4)"></span>Comfortabel</div>
+            <div class="lreg"><span class="vlak" style="background:var(--s5)"></span>Veilig</div>
+          </div></div>
+        <div class="strook" id="strookB"></div>
+        <div class="strooklabel">De vakjes tonen wat de léden die dag wisten.</div>
+      </div>
+      <div class="rechts">
+        <div class="tweekol">
+          <div class="kolkaart"><div class="wie">Wij weten</div><div class="wat">Comfortabel</div>
+            <span class="pil" style="background:var(--s4)">sinds 09:12</span></div>
+          <div class="pijl">›</div>
+          <div class="kolkaart"><div class="wie">Leden kennen</div><div class="wat">Veilig</div>
+            <span class="pil" style="background:var(--s5)">sinds 2 okt</span></div>
+        </div>
+        <div class="tussen">
+          <div class="tussenkop">Daartussen ligt één concept</div>
+          <div class="tussenrij"><span>“De barometer gaat naar Comfortabel”</span></div>
+          <div class="tussenrij"><span>ligt bij Jacqueline</span><span>sinds 09:14</span></div>
+          <div class="knoprij"><button class="knop">Concept openen</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C ============ -->
+<div class="variant">
+  <p class="vtitel">C · De brief — het concept zelf staat er, klein</p>
+  <div class="paneel">
+    <div class="paneelkop">Stand naar de leden</div>
+    <div class="body">
+      <div class="links">
+        <span class="dtitel">Positie Barometer</span>
+        <div class="vnu">Comfortabel</div>
+        <div class="dstaat">de leden kennen deze stand nog niet</div>
+        <div class="gauge"><svg viewBox="0 0 320 212" id="meter3"></svg>
+          <div class="legenda">
+            <div class="lreg"><span class="vlak" style="background:var(--s1)"></span>Onder druk</div>
+            <div class="lreg"><span class="vlak" style="background:var(--s2)"></span>Krap</div>
+            <div class="lreg"><span class="vlak" style="background:var(--s3)"></span>Aandacht</div>
+            <div class="lreg nu"><span class="vlak" style="background:var(--s4)"></span>Comfortabel</div>
+            <div class="lreg"><span class="vlak" style="background:var(--s5)"></span>Veilig</div>
+          </div></div>
+        <div class="strook" id="strookC"></div>
+        <div class="strooklabel">De vakjes tonen wat de léden die dag wisten.</div>
+      </div>
+      <div class="rechts">
+        <span class="dtitel">Klaar om te versturen</span>
+        <div class="brief" style="margin-top:10px">
+          <div class="briefkop"><span>Ligt bij Jacqueline</span><span>09:14</span></div>
+          <div class="briefbody">
+            <div class="brieftitel">De barometer gaat naar Comfortabel</div>
+            <div class="brieftekst">De barometer staat vanaf vandaag op Comfortabel (was Veilig). Waarom: de ask liep op naar 24,0 …</div>
+            <div class="meta"><span>412 leden</span><span>OESX 30OKT26 5450 PUT</span></div>
+          </div>
+        </div>
+        <div class="slot"><span>🔒</span><span>De stand staat vast tot dit bericht weg is. <b>Eén bericht per verandering.</b></span></div>
+        <div class="knoprij"><button class="knop">Concept openen</button>
+          <button class="knop tweede">Herinner Jacqueline</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ D ============ -->
+<div class="variant">
+  <p class="vtitel">D · De baan — compact, onder de meter, zonder extra kolom</p>
+  <div class="paneel">
+    <div class="paneelkop">Stand naar de leden</div>
+    <div class="body" style="grid-template-columns:minmax(0,1fr)">
+      <div class="links" style="border-right:none">
+        <span class="dtitel">Positie Barometer</span>
+        <div class="vnu">Comfortabel</div>
+        <div class="baan">
+          <span class="bstap klaar"><span class="bbol"></span><b>Vastgelegd</b> 09:12</span>
+          <span class="bstreep"></span>
+          <span class="bstap klaar"><span class="bbol"></span><b>Concept</b></span>
+          <span class="bstreep"></span>
+          <span class="bstap nu"><span class="bbol"></span><b>Ligt bij Jacqueline</b> — nog niet weg</span>
+          <span class="bstreep"></span>
+          <span class="bstap"><span class="bbol"></span><b>Bij de leden</b></span>
+          <button class="knop" style="margin-left:14px">Concept openen</button>
+        </div>
+        <div class="gauge" style="margin-top:12px"><svg viewBox="0 0 320 212" id="meter4"></svg>
+          <div class="legenda">
+            <div class="lreg"><span class="vlak" style="background:var(--s1)"></span>Onder druk</div>
+            <div class="lreg"><span class="vlak" style="background:var(--s2)"></span>Krap</div>
+            <div class="lreg"><span class="vlak" style="background:var(--s3)"></span>Aandacht</div>
+            <div class="lreg nu"><span class="vlak" style="background:var(--s4)"></span>Comfortabel</div>
+            <div class="lreg"><span class="vlak" style="background:var(--s5)"></span>Veilig</div>
+          </div></div>
+        <div class="strook" id="strookD"></div>
+        <div class="strooklabel">De vakjes tonen wat de léden die dag wisten · open vakje = wij wisten al meer</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const KL=["#D7261E","#F26A21","#FBC02D","#8DC63F","#0A9D4E"];
+function meter(el,toon){
+  const CX=160,CY=158,RO=132,RI=74,L=2.2;
+  const pt=(h,r)=>[CX+r*Math.cos(h*Math.PI/180),CY-r*Math.sin(h*Math.PI/180)];
+  const sec=(a0,a1,ro,ri)=>{const[x1,y1]=pt(a0,ro),[x2,y2]=pt(a1,ro),[x3,y3]=pt(a1,ri),[x4,y4]=pt(a0,ri);
+    return `M${x1} ${y1}A${ro} ${ro} 0 0 1 ${x2} ${y2}L${x3} ${y3}A${ri} ${ri} 0 0 0 ${x4} ${y4}Z`;};
+  let s="";
+  for(let i=0;i<5;i++){const st=i+1,a0=180-i*36-L,a1=a0-36+2*L;
+    s+=`<path d="${sec(a0,a1,RO,RI)}" fill="${KL[i]}" opacity="${st===toon?1:0.3}"></path>`;}
+  const h=180-(toon-0.5)*36,[nx,ny]=pt(h,RO-14),[bx,by]=pt(h+90,9),[cx,cy]=pt(h-90,9);
+  s+=`<path d="M${bx} ${by}L${nx} ${ny}L${cx} ${cy}Z" fill="#0F0E0D"></path>`;
+  s+=`<circle cx="${CX}" cy="${CY}" r="11" fill="#0F0E0D"></circle><circle cx="${CX}" cy="${CY}" r="4.5" fill="#fff"></circle>`;
+  el.innerHTML=s;
+}
+["meter","meter2","meter3","meter4"].forEach(id=>meter(document.getElementById(id),4));
+// strook: 14 dagen; leden kennen Veilig, laatste 2 dagen wisten wij al Comfortabel
+function strook(el){
+  let h="";
+  for(let i=0;i<14;i++){
+    const gemeld = i<12 ? "#0A9D4E" : null;
+    h += gemeld ? `<span class="vk" style="background:${gemeld}"></span>`
+                : `<span class="vk open"></span>`;
+  }
+  el.innerHTML=h;
+}
+["strookA","strookB","strookC","strookD"].forEach(id=>strook(document.getElementById(id)));
+</script>
+</div></body></html>

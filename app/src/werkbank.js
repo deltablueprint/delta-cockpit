@@ -502,7 +502,7 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
       // Allemaal dezelfde rustige kleur. De stand van een tranche staat in haar
       // eigen balk; hier gaat het over tijd, en drie felle kleuren naast elkaar
       // zeiden iets over gezondheid wat deze strook helemaal niet toont.
-      const kleur = "#8C98A0";
+      const kleur = "#ECEAE5";
       const naam = p.contract || `Tranche ${p.tranche}`;
       return `<div class="tijdrij looprij"><div class="tijdspoor loopspoor">
         <span class="loopnu" style="left:${as.vandaagP}%"></span>

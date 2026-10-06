@@ -557,7 +557,7 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
 .loopbalk {
   position: absolute; top: 2px; height: 18px; border-radius: 9px;
   display: flex; align-items: center; overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
+  border: 1px solid #D5D1C9;
 }
 .looppil {
   margin-left: auto; margin-right: 3px; padding: 1px 8px; border-radius: 8px;
@@ -565,9 +565,8 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
   text-shadow: 0 1px 1px rgba(0, 0, 0, .2);
 }
 .loopnaam {
-  padding: 0 9px; font-size: 10.5px; font-weight: 600; color: #fff;
+  padding: 0 9px; font-size: 10.5px; font-weight: 600; color: var(--ink2);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, .25);
 }
 .loopnu { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--blue); opacity: .5; }
 
