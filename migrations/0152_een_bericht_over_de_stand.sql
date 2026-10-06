@@ -11,6 +11,7 @@ update berichtsjabloon
 
 Instap venster: {{feiten.venster_naar}}
 Barometer: {{feiten.naar}}
+{{feiten.tranche}}
 
 Waarom: {{feiten.reden}}'
  where naam = 'barometer';

@@ -14,6 +14,7 @@
 import { zetExitplanKlaar } from "./positie.js";
 import { log } from "./stroom.js";
 import { meldGepubliceerd } from "./barometer.js";
+import { zetOntvangers, aantalOntvangers } from "./ontvangers.js";
 
 const LOPEND = ["uitvoering ophalen", "uitvoering vastgelegd", "publiceren naar leden", "bewaken"];
 
@@ -341,10 +342,19 @@ export async function verstuurPublicatie(env, ik, publicatieId) {
     ).bind(ik && ik.id ? ik.id : null, p.gebeurtenis).run();
   }
 
+  // Wie het kreeg, vastgelegd op het bericht zelf. Daarvoor stond hier het
+  // getal 412 in de code: een aantal dat niemand kon navragen.
+  await zetOntvangers(env, publicatieId, { bezorgd: true });
+  const naar = await aantalOntvangers(env, publicatieId);
+
   await log(env, ik, {
     bron: "mens", soort: "bericht_verstuurd",
-    titel: p.soort === "opening" ? "Bericht verstuurd: nieuwe positie" : "Bericht verstuurd: positie gesloten",
-    detail: [p.contract, "412 leden"].filter(Boolean).join(" \u00b7 "),
+    titel: p.soort === "opening" ? "Bericht verstuurd: nieuwe positie"
+         : p.soort === "sluiting" ? "Bericht verstuurd: positie gesloten"
+         : p.soort === "doorrol" ? "Bericht verstuurd: doorrol"
+         : p.soort === "barometer" ? "Bericht verstuurd: stand naar de leden"
+         : `Bericht verstuurd: ${p.titel || p.soort}`,
+    detail: [p.contract, `${naar} ${naar === 1 ? "lid" : "leden"}`].filter(Boolean).join(" \u00b7 "),
     cyclus: p.cyclus || null, positie: p.positie, publicatie: publicatieId,
     feiten: { soort: p.soort, contract: p.contract },
   });

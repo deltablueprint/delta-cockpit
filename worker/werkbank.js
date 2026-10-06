@@ -327,7 +327,16 @@ export async function publiceer(env, ik, { cyclus, stand = null, venster = null,
     return { fout: "De barometer zegt pas iets zodra het venster op 'In positie' staat.", status: 409 };
   }
 
-  const vast = await stelVast(env, ik, { cyclus, stand: naarStand, venster: naarVenster, reden });
+  // Welke tranche deze stand draagt. Een barometerstand komt niet uit de lucht:
+  // het is de zwakste positie die hem naar beneden duwt, en dat is ook de
+  // positie waarvan de volgers dit bericht horen te krijgen.
+  const meet = await metingen(env, cyclus);
+  const dragend = meet.zwakste ? meet.zwakste.id : null;
+
+  const vast = await stelVast(env, ik, {
+    cyclus, stand: naarStand, venster: naarVenster, reden,
+    positie: stand !== null ? dragend : null,
+  });
   if (vast.fout) return vast;
 
   // Vastleggen is nog niet melden. Eén handeling levert één concept op over wat
@@ -337,6 +346,8 @@ export async function publiceer(env, ik, { cyclus, stand = null, venster = null,
   // geschreven moet worden.
   const bericht = await conceptVoorStand(env, ik, {
     cyclus, barometerstand: vast.barometerstand,
+    positie: stand !== null ? dragend : null,
+    contract: stand !== null && meet.zwakste ? meet.zwakste.contract : null,
     van: nu.wij ? nu.wij.stand.label : null,
     naar: (nu.schaal.find((x) => String(x.waarde) === String(naarStand)) || {}).label || String(naarStand),
     venster_van: nu.wij ? nu.wij.venster.label : null,

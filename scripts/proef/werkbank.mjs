@@ -13,6 +13,7 @@ import { werkbank, publiceer, nietMelden, kaarten, conceptVoorKaart } from "../.
 import { metingen, standVan, plekVan, ijkpunten, drempels, VAKKEN } from "../../worker/meting.js";
 import { stelVast, huidig } from "../../worker/barometer.js";
 import { conceptUitKaart } from "../../worker/bericht.js";
+import { zetOntvangers } from "../../worker/ontvangers.js";
 import { verstuurPublicatie } from "../../worker/spiegel.js";
 import { log } from "../../worker/stroom.js";
 
@@ -163,6 +164,44 @@ await db.prepare("update barometerdrempel set grens_waarde = 100 where stand = 3
   eis("pas na het versturen weten de leden het", bij.leden && bij.leden.venster.waarde === "open");
   eis("en dan staat de werkbank niet meer te wachten", bij.gelijk === true);
   eis("het was daarvoor echt anders", !voor.leden || voor.leden.venster.waarde !== "open");
+}
+
+// ------------------------------------------- naar wie een bericht gaat
+//
+// Een lid dat in de app zegt dat hij een positie volgt, krijgt de berichten over
+// díé positie. Niet iedereen alles: dat is wat 'eenduidig' hier betekent.
+{
+  await db.prepare("insert into lid (naam, email) values ('An', 'an@proef.be')").run();
+  await db.prepare("insert into lid (naam, email) values ('Bram', 'bram@proef.be')").run();
+  const an = (await db.prepare("select id from lid where email = 'an@proef.be'").first()).id;
+  const bram = (await db.prepare("select id from lid where email = 'bram@proef.be'").first()).id;
+  await db.prepare("insert into positievolger (positie, lid) values (?, ?)").bind(POSITIE, an).run();
+
+  const uit = await publiceer(env, ik, { cyclus: CYCLUS, venster: "opent_binnenkort", reden: "Het venster komt eraan." });
+  const naar = await db.prepare(
+    `select l.naam, o.reden, o.bezorgd_op from publicatie_ontvanger o
+       join lid l on l.id = o.lid where o.publicatie = ?`
+  ).bind(uit.publicatie).all().then((r) => r.results);
+
+  eis("op het concept staat naar wie het zou gaan", naar.length === 1 && naar[0].naam === "An");
+  eis("en waarom dit lid", /volgt/.test(naar[0].reden || ""));
+  eis("maar nog niet bezorgd", naar[0].bezorgd_op === null);
+  eis("wie niets volgt krijgt niets", !naar.some((o) => o.naam === "Bram"));
+
+  await verstuurPublicatie(env, ik, uit.publicatie);
+  const na = await db.prepare(
+    "select bezorgd_op from publicatie_ontvanger where publicatie = ?"
+  ).bind(uit.publicatie).first();
+  eis("na het versturen staat er een tijdstip bij", !!na.bezorgd_op);
+
+  // Wie zich daarna aanmeldt hoort niet alsnog op een bericht te staan dat hij
+  // nooit gekregen heeft.
+  await db.prepare("insert into positievolger (positie, lid) values (?, ?)").bind(POSITIE, bram).run();
+  await zetOntvangers(env, uit.publicatie);
+  const nog = await db.prepare(
+    "select count(*) as n from publicatie_ontvanger where publicatie = ?"
+  ).bind(uit.publicatie).first();
+  eis("een verstuurd bericht krijgt er geen ontvangers meer bij", Number(nog.n) === 1);
 }
 
 // ------------------------------------------------------------- de meting

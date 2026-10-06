@@ -94,7 +94,7 @@ export async function stelVoor(env, { cyclus, naar, venster = null, reden = null
 }
 
 // Een mens stelt vast. Dit is het enige dat een stand echt zet.
-export async function stelVast(env, ik, { cyclus, stand, venster, reden, gebeurtenis = null }) {
+export async function stelVast(env, ik, { cyclus, stand, venster, reden, gebeurtenis = null, positie = null }) {
   const n = Number(stand);
   if (!Number.isInteger(n) || n < 1 || n > 5) {
     return { fout: "De stand loopt van 1 tot 5.", status: 400 };
@@ -117,11 +117,11 @@ export async function stelVast(env, ik, { cyclus, stand, venster, reden, gebeurt
   }
 
   const gemaakt = await env.DB.prepare(
-    `insert into barometerstand (cyclus, stand, venster, reden, herkomst, gebeurtenis, vastgesteld_door)
-     values (?, ?, ?, ?, ?, ?, ?)`
+    `insert into barometerstand (cyclus, stand, venster, reden, herkomst, gebeurtenis, positie, vastgesteld_door)
+     values (?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     cyclus, n, venster, String(reden).trim().slice(0, 1000),
-    gebeurtenis ? "voorstel" : "mens", gebeurtenis, ik && ik.id ? ik.id : null
+    gebeurtenis ? "voorstel" : "mens", gebeurtenis, positie, ik && ik.id ? ik.id : null
   ).run();
 
   const id = gemaakt.meta ? gemaakt.meta.last_row_id : null;

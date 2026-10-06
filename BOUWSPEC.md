@@ -1678,6 +1678,20 @@ Het scherm waarop je begint, herbouwd uit `docs/mockup-werkbank.html`. Vier vakk
 
 Nu is de ketting rond: **vastleggen → concept → versturen → bij de leden.** Eén handeling levert één concept op over wat er veranderde — venster, barometer of allebei, in één bericht over dat ene moment — met jouw reden erin, en het scherm gaat er meteen naartoe. Het versturen van dát bericht zet `gepubliceerd_op`; er is geen tweede weg. Mislukt het opstellen, dan blijft de vastlegging staan en zegt het scherm waarom: wat wij vinden ligt vast, ook als het bericht nog geschreven moet worden.
 
+**Wie volgt, krijgt het (0153, 6 okt 2026).** In de app zegt een lid: deze positie volg ik. Vanaf dat moment krijgt hij de berichten over díé positie, en alleen die. Drie tabellen dragen dat:
+
+| Tabel | Wat erin staat |
+|---|---|
+| `lid` | wie er meeleest. Niet dezelfde tabel als `gebruiker` — dat zijn wij, de mensen die in de cockpit werken. Een lid komt nooit in de cockpit. |
+| `positievolger` | een lid dat een positie volgt. Stoppen wist de rij niet maar zet `gestopt_op`: dat iemand een positie een week volgde en toen afhaakte, is zelf een feit. |
+| `publicatie_ontvanger` | naar wie dit bericht ging, en waarom. |
+
+**Een barometerstand hangt aan één tranche.** De stand komt niet uit de lucht: het is de **zwakste** positie die hem naar beneden duwt. Die staat nu op de vastlegging (`barometerstand.positie`) en op het bericht, de tekst noemt hem, en het zijn haar volgers die het bericht krijgen. Draagt een bericht geen tranche, dan gaat het over de cyclus en krijgen de leden het die er ergens in meekijken.
+
+**De ontvangers staan twee keer vast.** Bij het opstellen als voorbeeld — je hoort te zien wie het leest vóórdat je verstuurt — en bij het versturen opnieuw, dan bevroren met een tijdstip. Meldt iemand zich daarna aan, dan staat hij niet alsnog op een bericht dat hij nooit gekregen heeft. Het getal `412 leden` stond in de code en is weg: wie het kreeg staat op het bericht en is na te rekenen.
+
+**Op het bericht staat één gerelateerde lijst** — de leden naar wie het gaat — en de positie waar het over gaat staat op het formulier. De cyclus is de ouder geworden: elk bericht heeft er een, ook een bericht zonder positie.
+
 **Onder elk bericht staat dezelfde voet**, uit `instelling.bericht_voettekst`: *kennis en de eigen posities van de oprichters, geen individueel beleggingsadvies*. Hij wordt ingebakken bij het opstellen, niet bij het versturen — verandert de tekst later, dan verandert een verstuurd bericht niet mee.
 
 **1. Stand naar de leden.** Het venster boven, de barometer eronder, en **één knop Publiceren voor allebei**. Kies je er twee, dan gaat er één bericht uit over allebei — een lid dat twee berichten krijgt over hetzelfde moment leest het tweede niet meer. De barometer **slaapt** tot het venster op *In positie* staat: daarvoor zitten wij er niet in en vragen we de leden niets, daarna is de cyclus uit. Hij is dan grijs en onklikbaar.

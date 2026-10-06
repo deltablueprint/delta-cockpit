@@ -293,6 +293,10 @@ const inHetMenu = new Set((await q("select doeltabel from db_module where actief
 const ALLEEN_VIA_EEN_ANDER = new Set([
   "chartlezing", "inzending", "voorwaarde", "meting", "event", "positie_event",
   "cyclus_event", "exitplan", "publicatie", "gebruiker_voorkeur", "favoriet", "bezoek",
+  // Wie een positie volgt open je vanaf die positie; wie een bericht kreeg
+  // vanaf dat bericht. Een lijst van alle volgers over alle posities heen zegt
+  // niets — het gaat altijd over één positie of één bericht.
+  "positievolger", "publicatie_ontvanger",
 ]);
 for (const t of await q("select naam from db_table where actief = 1")) {
   if (inHetMenu.has(String(t.naam)) || ALLEEN_VIA_EEN_ANDER.has(String(t.naam))) continue;

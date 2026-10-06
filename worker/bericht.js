@@ -9,6 +9,7 @@
 // waarmee wij onze leden aanspreken horen in beheer te staan.
 
 import { log } from "./stroom.js";
+import { zetOntvangers } from "./ontvangers.js";
 
 // De tekst van een bericht staat als sjabloon in beheer: "Positie gesloten:
 // {{positie.naam}}". Wat er niet ingevuld kan worden valt weg in plaats van als
@@ -155,6 +156,9 @@ export async function conceptUitKaart(env, ik, kaartId, sjabloonnaam = null) {
 
   const id = gemaakt.meta ? gemaakt.meta.last_row_id : null;
 
+  // Naar wie dit zou gaan, nu alvast op het bericht.
+  if (id) await zetOntvangers(env, id);
+
   await log(env, ik, {
     bron: "mens", soort: "concept_opgesteld", cyclus: g.cyclus,
     titel: `Concept klaargezet: ${sjabloon.label}`,
@@ -280,7 +284,7 @@ export async function stuurTerug(env, ik, publicatieId, reden) {
 // Eén bericht over allebei. Kiest iemand het venster én de stand, dan gaat er
 // één bericht uit over dat ene moment: een lid dat twee berichten krijgt over
 // hetzelfde moment leest het tweede niet meer.
-export async function conceptVoorStand(env, ik, { cyclus, barometerstand, van, naar, venster_van, venster_naar, reden }) {
+export async function conceptVoorStand(env, ik, { cyclus, barometerstand, positie = null, contract = null, van, naar, venster_van, venster_naar, reden }) {
   const sjabloon = await env.DB.prepare(
     "select * from berichtsjabloon where naam = 'barometer' and archief = 0"
   ).first();
@@ -300,6 +304,10 @@ export async function conceptVoorStand(env, ik, { cyclus, barometerstand, van, n
       van: van || "—", naar: naar || "—",
       venster_van: venster_van || "—", venster_naar: venster_naar || "—",
       wat: stukken.join(" en ") || "de stand",
+      // Eén tranche draagt de stand: de zwakste. Zonder die zin leest een lid
+      // 'de barometer gaat naar onder druk' zonder te weten waarover het gaat —
+      // en hij volgt misschien maar één van de drie.
+      tranche: contract ? `Deze stand komt van ${contract}.` : "",
       reden: String(reden || "").trim(),
     },
   };
@@ -308,10 +316,10 @@ export async function conceptVoorStand(env, ik, { cyclus, barometerstand, van, n
   const nalezer = gevraagd && ik && gevraagd === ik.id ? null : gevraagd;
 
   const gemaakt = await env.DB.prepare(
-    `insert into publicatie (cyclus, soort, status, titel, kanaal, tekst, nalezer, aangemaakt_door)
-     values (?, 'barometer', ?, ?, ?, ?, ?, ?)`
+    `insert into publicatie (cyclus, positie, soort, status, titel, kanaal, tekst, nalezer, aangemaakt_door)
+     values (?, ?, 'barometer', ?, ?, ?, ?, ?, ?)`
   ).bind(
-    cyclus, nalezer ? "nalezen" : "concept",
+    cyclus, positie, nalezer ? "nalezen" : "concept",
     vulIn(sjabloon.titel, gegevens) || sjabloon.label,
     sjabloon.kanaal,
     metVoet(vulIn(sjabloon.tekst, gegevens) || "", await voettekst(env)),
@@ -327,6 +335,10 @@ export async function conceptVoorStand(env, ik, { cyclus, barometerstand, van, n
     await env.DB.prepare("update barometerstand set publicatie = ? where id = ?")
       .bind(id, barometerstand).run();
   }
+
+  // Naar wie dit zou gaan, nu alvast op het bericht: je hoort te zien wie het
+  // leest voordat je het verstuurt.
+  if (id) await zetOntvangers(env, id);
 
   await log(env, ik, {
     bron: "mens", soort: "concept_opgesteld", cyclus, publicatie: id,
