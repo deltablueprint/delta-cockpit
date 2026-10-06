@@ -67,3 +67,37 @@ console.log(`prijzen van de broker: ${fouten === 0 ? "klopt" : fouten + " fout(e
 if (fouten) process.exit(1);
 
 console.log("na 2 minuten stilte — live:", s.live, "| stil:", s.stil_seconden, "s");
+
+// ------------------------------------------------- twee rekeningen, één cockpit
+//
+// De Flex-query hangt aan een login, en die login ziet vaak het live account én
+// het paper account. Komt er een rapport over een andere rekening binnen dan
+// waar de brug op zit, dan beschrijven de twee bronnen verschillende
+// portefeuilles — en alles wat je daarna leest is een mengsel. Dat moet
+// weigeren, niet aanvullen.
+{
+  const { neemRapportAan, rekeningenIn } = await import("../../worker/lynx.js");
+  const vreemdXml = `<?xml version="1.0"?><FlexQueryResponse queryName="Delta" type="AF">
+    <FlexStatements count="1"><FlexStatement accountId="U9999999" fromDate="2026-10-01" toDate="2026-10-06">
+      <OpenPositions><OpenPosition accountId="U9999999" conid="700000003" assetCategory="OPT"
+        symbol="ESTX50" position="-1" multiplier="10" strike="5825" expiry="20261030" putCall="P"/></OpenPositions>
+    </FlexStatement></FlexStatements></FlexQueryResponse>`;
+
+  let f = 0;
+  const e = (wat, goed) => { if (!goed) { f++; console.log(`FOUT  ${wat}`); } };
+
+  e("de rekeningen zijn uit het rapport te lezen", rekeningenIn(vreemdXml).includes("U9999999"));
+
+  await env.DB.prepare("update brokerverbinding set rekening = 'DUR234269' where id = 1").run();
+  const uit = await neemRapportAan(env, vreemdXml, "proef");
+  e("een rapport van een andere rekening wordt geweigerd", !!uit.fout && uit.status === 409);
+  e("en het zegt om welke twee rekeningen het gaat",
+    String(uit.fout).includes("U9999999") && String(uit.fout).includes("DUR234269"));
+
+  const eigen = vreemdXml.replaceAll("U9999999", "DUR234269");
+  const ok = await neemRapportAan(env, eigen, "proef");
+  e("een rapport van de eigen rekening gaat er gewoon in", !ok.fout);
+
+  console.log(`twee rekeningen: ${f === 0 ? "klopt" : f + " fout(en)"}`);
+  if (f) process.exit(1);
+}

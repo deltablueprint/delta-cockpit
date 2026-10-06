@@ -271,11 +271,34 @@ export async function laatsteRapport(env) {
 
 // Het rapport aannemen. Alleen met de afgesproken sleutel, en alleen lezen uit
 // de inhoud: er is geen weg terug naar de broker.
+// Welke rekeningen in dit rapport staan. Een Flex-query hangt aan één login, en
+// die login kan meerdere rekeningen zien — live én paper. Als het rapport over
+// een andere rekening gaat dan waar de brug op zit, dan beschrijven de twee
+// bronnen verschillende portefeuilles, en alles wat je daarna leest is een
+// mengsel. Dat is erger dan geen vangnet.
+export function rekeningenIn(xml) {
+  const uit = new Set();
+  for (const m of String(xml).matchAll(/accountId="([^"]+)"/g)) {
+    const r = String(m[1]).trim();
+    if (r) uit.add(r);
+  }
+  return [...uit];
+}
+
 export async function neemRapportAan(env, xml, bron = "script") {
   if (!xml || !xml.includes("<FlexQueryResponse")) {
     return { fout: "Dat is geen Flex-rapport.", status: 400 };
   }
   if (xml.length > 2000000) return { fout: "Het rapport is te groot.", status: 413 };
+
+  // De brug zegt op welke rekening wij zitten. Hoort dit rapport bij een andere,
+  // dan bewaren we het wel — het is te onderzoeken — maar spiegelen we het niet.
+  const verbinding = await env.DB.prepare(
+    "select rekening from brokerverbinding where id = 1"
+  ).first().catch(() => null);
+  const onze = verbinding && verbinding.rekening ? String(verbinding.rekening).trim() : null;
+  const inRapport = rekeningenIn(xml);
+  const vreemd = onze && inRapport.length && !inRapport.includes(onze);
 
   let regels = 0;
   try {
@@ -287,6 +310,15 @@ export async function neemRapportAan(env, xml, bron = "script") {
     // Eén rapport is genoeg; de vorige hoeven we niet te bewaren.
     env.DB.prepare("delete from lynx_rapport where id not in (select id from lynx_rapport order by id desc limit 3)"),
   ]);
+
+  if (vreemd) {
+    return {
+      fout: `Dit rapport gaat over ${inRapport.join(", ")}, de brug zit op ${onze}. Het is bewaard, maar niet verwerkt.`,
+      status: 409,
+      rekening_rapport: inRapport,
+      rekening_brug: onze,
+    };
+  }
 
   // Een nieuw rapport is een nieuwe stand: wat erin veranderde, hoort meteen
   // in de lijsten te staan. Anders zie je een vlag pas nadat je toevallig het
