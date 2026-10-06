@@ -247,13 +247,20 @@ async function zetConceptKlaar(env, ik, positie, soort, gebeurtenis = null) {
   ).bind(positie.id, soort).first();
   if (al) return al.id;
 
+  // Een titel heeft het concept wel: zonder titel staat er in de lijst een
+  // streepje waar de link hoort te zitten, en kun je het bericht niet openen.
+  // De tékst blijft leeg, en dat is met opzet — zie hierboven.
+  const titel = soort === "sluiting"
+    ? `Positie gesloten: ${positie.contract || "tranche"}`
+    : `Nieuwe positie: ${positie.contract || "tranche"}`;
+
   const gemaakt = await env.DB.prepare(
     `insert into publicatie
-       (positie, cyclus, gebeurtenis, soort, status, contract, strike, expiratiedatum, aantal,
+       (positie, cyclus, gebeurtenis, soort, status, titel, contract, strike, expiratiedatum, aantal,
         premie_pt, resultaat_pt, aangemaakt_door)
-     values (?, ?, ?, ?, 'concept', ?, ?, ?, ?, ?, ?, ?)`
+     values (?, ?, ?, ?, 'concept', ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
-    positie.id, positie.cyclus || null, gebeurtenis, soort,
+    positie.id, positie.cyclus || null, gebeurtenis, soort, titel,
     positie.contract || null, positie.strike, positie.expiratiedatum,
     positie.aantal, positie.ontvangen_premie_pt,
     soort === "sluiting" ? positie.resultaat_pt : null,
