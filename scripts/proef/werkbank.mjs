@@ -136,6 +136,35 @@ d = await drempels(env);
 eis("break-even blijft de premie, wat er ook in de tabel staat", d.grenzen[3].waarde === 100);
 await db.prepare("update barometerdrempel set grens_waarde = 100 where stand = 3").run();
 
+// ------------------------------------------- van vastleggen tot bij de leden
+//
+// Dit is de ketting die er lang niet was: de knop legde de stand vast en verder
+// gebeurde er niets, terwijl het scherm wel zei dat de leden het wisten.
+{
+  const voor = await huidig(env, CYCLUS);
+  const uit = await publiceer(env, ik, { cyclus: CYCLUS, venster: "open", reden: "Het venster gaat open." });
+  eis("publiceren legt vast en maakt meteen een concept", !uit.fout && !!uit.publicatie);
+
+  const p = await db.prepare("select * from publicatie where id = ?").bind(uit.publicatie).first();
+  eis("het concept is nog niet verstuurd", p.status === "concept" || p.status === "nalezen");
+  eis("het gaat over de stand", p.soort === "barometer" && p.cyclus === CYCLUS);
+  eis("de reden staat erin, want dat is wat de leden lezen", p.tekst.includes("Het venster gaat open"));
+  eis("en de vaste voet eronder", p.tekst.includes("geen individueel beleggingsadvies"));
+  eis("het bericht houdt zijn alinea's", p.tekst.split("\n\n").length >= 3);
+
+  const na = await huidig(env, CYCLUS);
+  eis("de leden weten het nog niet", !na.leden || na.leden.venster.waarde !== "open");
+  eis("de vastlegging wijst het bericht aan",
+      (await db.prepare("select publicatie from barometerstand where id = ?").bind(uit.barometerstand).first())
+        .publicatie === uit.publicatie);
+
+  await verstuurPublicatie(env, ik, uit.publicatie);
+  const bij = await huidig(env, CYCLUS);
+  eis("pas na het versturen weten de leden het", bij.leden && bij.leden.venster.waarde === "open");
+  eis("en dan staat de werkbank niet meer te wachten", bij.gelijk === true);
+  eis("het was daarvoor echt anders", !voor.leden || voor.leden.venster.waarde !== "open");
+}
+
 // ------------------------------------------------------------- de meting
 //
 // De positie uit db.mjs: premie 38,5, stoploss 60 (de standaard), ask 21.

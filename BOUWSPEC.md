@@ -1674,6 +1674,12 @@ Het scherm waarop je begint, herbouwd uit `docs/mockup-werkbank.html`. Vier vakk
 
 **Het instap venster is een balk die volloopt (5 okt 2026).** Zes even zware vakjes lieten juist niet zien wat het is: een verloop. Nu staat de stand groot in woorden, met daaronder zes segmenten en hun naam. Drie kleuren, één verhaal: **grijs** is nog niet geweest, **lichtblauw** is gepasseerd, **donkerblauw** is waar we staan — en dat is wat de leden weten. Groen blijft wat je net koos en nog niet gepubliceerd is; na publiceren wordt dat groen vanzelf donkerblauw.
 
+**Publiceren maakt een bericht (0152, 6 okt 2026).** De knop legde de stand vast en stopte daar: er kwam een rij in `barometerstand` en verder niets, terwijl het scherm wel zei dat de leden het wisten. `gepubliceerd_op` bleef eeuwig leeg, de kop zei eeuwig *Wacht op de leden*, en de reden die je intypte kwam in geen enkel bericht. Dat was het ene punt waarop dit scherm iets beweerde dat niet waar was.
+
+Nu is de ketting rond: **vastleggen → concept → versturen → bij de leden.** Eén handeling levert één concept op over wat er veranderde — venster, barometer of allebei, in één bericht over dat ene moment — met jouw reden erin, en het scherm gaat er meteen naartoe. Het versturen van dát bericht zet `gepubliceerd_op`; er is geen tweede weg. Mislukt het opstellen, dan blijft de vastlegging staan en zegt het scherm waarom: wat wij vinden ligt vast, ook als het bericht nog geschreven moet worden.
+
+**Onder elk bericht staat dezelfde voet**, uit `instelling.bericht_voettekst`: *kennis en de eigen posities van de oprichters, geen individueel beleggingsadvies*. Hij wordt ingebakken bij het opstellen, niet bij het versturen — verandert de tekst later, dan verandert een verstuurd bericht niet mee.
+
 **1. Stand naar de leden.** Het venster boven, de barometer eronder, en **één knop Publiceren voor allebei**. Kies je er twee, dan gaat er één bericht uit over allebei — een lid dat twee berichten krijgt over hetzelfde moment leest het tweede niet meer. De barometer **slaapt** tot het venster op *In positie* staat: daarvoor zitten wij er niet in en vragen we de leden niets, daarna is de cyclus uit. Hij is dan grijs en onklikbaar.
 
 **2. De barometer leest de balk** (0132). De vijf standen zijn de vijf zones van de gezondheidsbalk uit §10.1, en de stand die het systeem voorstelt is de zone waarin de markering van de **zwakste tranche** staat. Er is dus geen apart rekenwerk: iedereen ziet op het scherm waarom.
@@ -1705,6 +1711,10 @@ De balk loopt **van verlies links naar winst rechts** — de ask daalt naar rech
 **3. De posities.** Per positie dezelfde balk, met een merkteken op de ask en het resultaat erboven. De vakjes hebben de breedte van hun eigen bereik — even brede vakjes zouden het merkteken in een ander vakje zetten dan het label ernaast. Uitklappen geeft zes cijfers: premie, ask (de laatprijs; ontbreekt die, dan de marktprijs, en dat staat erbij), open resultaat, break-even, stoploss met wat er nog te gaan is, en de dagen met hoe oud de prijs is. Plus een balkje met hoeveel van de premie binnen is.
 
 **4. Publicaties.** Twee kolommen in één kader: links de kaarten, rechts wat verstuurd is.
+
+**Een doorrol zet beide tranches door.** Het bericht hangt aan de sluiting, maar het gaat ook over de opening: na het versturen gaan ze allebei naar *bewaken*. De tranche die meeging staat als `doorrol_in` op de gebeurtenis. Zonder dat bleef de nieuwe tranche op *publiceren naar leden* staan terwijl het bericht al weg was, en vroeg het scherm een tweede keer om iets dat gedaan was.
+
+**De kolom 'verstuurd naar de leden' toont alleen wat naar de leden ging.** Een interne publicatie stond er ook in — precies de stilte-fout waar dit scherm voor bestaat: je denkt dat ze het weten, en ze weten het niet.
 
 **Een kaart komt alleen uit een positie** — open, gesloten, doorgerold — **en wordt afgeleid, niet weggeschreven.** Er is geen vlag en geen motor: een kaart staat open zolang er geen bericht over verstuurd is en niemand gezegd heeft dat het niet gemeld wordt. Daardoor kán hij niet blijven staan nadat het werk gedaan is; hij verdwijnt doordat het bericht weg is. Dat was de fout die de vorige werkbank maakte.
 

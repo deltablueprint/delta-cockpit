@@ -608,6 +608,15 @@ export async function werkbankscherm(inhoud, kruimel) {
     });
     if (uit && uit.fout) { melding = uit.fout; return teken(); }
     kiesStand = null; kiesVenster = null; melding = null;
+
+    // Vastleggen is niet melden. Het concept staat klaar met jouw reden erin;
+    // de leden weten het pas als dat bericht weg is, dus gaan we er meteen
+    // naartoe in plaats van hier te blijven staan met een vinkje.
+    if (uit && uit.publicatie) {
+      location.hash = `/bericht/${uit.publicatie}`;
+      return;
+    }
+    if (uit && uit.bericht_fout) melding = `Vastgelegd, maar het bericht lukte niet: ${uit.bericht_fout}`;
     return haal();
   }
 

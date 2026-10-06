@@ -15,7 +15,7 @@
 import { huidig as barometerstand, stelVast, VENSTERS } from "./barometer.js";
 import { metingen, drempels } from "./meting.js";
 import { stroom } from "./stroom.js";
-import { conceptUitKaart } from "./bericht.js";
+import { conceptUitKaart, conceptVoorStand } from "./bericht.js";
 import { leesMoment } from "./tijd.js";
 
 // De vensterstand waarin de barometer iets te zeggen heeft. Daarvoor zitten wij
@@ -181,9 +181,13 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
     metingen(env, id, { nu }),
     kaarten(env, id, { nu }),
     env.DB.prepare(
+      // Alleen wat naar de leden ging. Een interne publicatie onder het kopje
+      // 'verstuurd naar de leden' is precies de stilte-fout waar dit scherm
+      // voor bestaat: je denkt dat ze het weten, en ze weten het niet.
       `select id, titel, soort, tekst, verstuurd_op
          from publicatie
         where cyclus = ? and archief = 0 and status = 'verstuurd'
+          and coalesce(kanaal, 'leden') <> 'intern'
         order by verstuurd_op desc, id desc limit 20`
     ).bind(id).all().then((r) => r.results).catch(() => []),
     stroom(env, id, 8).catch(() => []),
@@ -323,7 +327,24 @@ export async function publiceer(env, ik, { cyclus, stand = null, venster = null,
     return { fout: "De barometer zegt pas iets zodra het venster op 'In positie' staat.", status: 409 };
   }
 
-  return stelVast(env, ik, { cyclus, stand: naarStand, venster: naarVenster, reden });
+  const vast = await stelVast(env, ik, { cyclus, stand: naarStand, venster: naarVenster, reden });
+  if (vast.fout) return vast;
+
+  // Vastleggen is nog niet melden. Eén handeling levert één concept op over wat
+  // er veranderde — venster, barometer of allebei — en pas het versturen
+  // daarvan zet de stand bij de leden. Mislukt het opstellen, dan blijft de
+  // vastlegging staan: wat wij vinden is vastgelegd, ook als het bericht nog
+  // geschreven moet worden.
+  const bericht = await conceptVoorStand(env, ik, {
+    cyclus, barometerstand: vast.barometerstand,
+    van: nu.wij ? nu.wij.stand.label : null,
+    naar: (nu.schaal.find((x) => String(x.waarde) === String(naarStand)) || {}).label || String(naarStand),
+    venster_van: nu.wij ? nu.wij.venster.label : null,
+    venster_naar: (nu.vensters.find((x) => x.waarde === naarVenster) || {}).label || naarVenster,
+    reden,
+  });
+
+  return { ...vast, publicatie: bericht.publicatie || null, bericht_fout: bericht.fout || null };
 }
 
 // Van kaart naar concept. Dit gaat met opzet via de werkbank en niet
@@ -356,12 +377,20 @@ export async function conceptVoorKaart(env, ik, kaartId, cyclusId = null) {
     // gebeurtenissen — het is juist het paar dat de doorrol is — dus leggen we
     // ze vast op de gebeurtenis waar het bericht aan hangt. Dat is geen nieuw
     // feit: het is wat er gebeurd is, nu ook opgeschreven.
-    const feiten = kaart.feiten.reduce((o, [l, w]) => ({ ...o, [l.toLowerCase()]: w }), {});
     const g0 = await env.DB.prepare("select feiten from gebeurtenis where id = ?").bind(kaart.id).first();
     let oud = {};
     try { oud = g0 && g0.feiten ? JSON.parse(g0.feiten) : {}; } catch { oud = {}; }
     await env.DB.prepare("update gebeurtenis set feiten = ? where id = ?")
-      .bind(JSON.stringify({ ...oud, van: feiten.uit, naar: feiten.in, netto: feiten.netto }), kaart.id)
+      .bind(JSON.stringify({
+        ...oud,
+        van: `${kaart.rol.uit.contract} · ${kaart.rol.uit.getal}`,
+        naar: `${kaart.rol.in.contract} · ${kaart.rol.in.getal}`,
+        netto: kaart.rol.netto,
+        // Welke tranche er meeging. Het bericht hangt aan de sluiting, maar het
+        // gaat ook over de opening — en die moet na het versturen naar 'bewaken'
+        // in plaats van te blijven wachten op een bericht dat al weg is.
+        doorrol_in: kaart.tweede_positie || null,
+      }), kaart.id)
       .run();
   }
 

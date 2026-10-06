@@ -306,13 +306,22 @@ export async function verstuurPublicatie(env, ik, publicatieId) {
 
   // Een opening die verstuurd is, brengt de positie naar 'bewaken'. Bij een
   // sluiting staat ze al dicht en valt er niets meer te verschuiven.
-  if (p.soort === "opening") {
-    await env.DB.prepare(
-      `update positie set gepubliceerd = 1, gepubliceerd_op = datetime('now'),
-                          status = case when status = 'publiceren naar leden' then 'bewaken' else status end,
-                          revisie = revisie + 1
-        where id = ?`
-    ).bind(p.positie).run();
+  //
+  // Een doorrol is ook een opening: er is een nieuwe tranche in de markt gezet
+  // en de leden weten het nu. Stond dat er niet, dan bleef die tranche op
+  // 'publiceren naar leden' staan terwijl het bericht al weg was — en dan vraagt
+  // het scherm een tweede keer om iets dat gedaan is.
+  if (p.soort === "opening" || p.soort === "doorrol") {
+    const raakt = [p.positie, p.soort === "doorrol" ? await tweedeKant(env, p) : null]
+      .filter((x) => x !== null && x !== undefined);
+    for (const id of raakt) {
+      await env.DB.prepare(
+        `update positie set gepubliceerd = 1, gepubliceerd_op = datetime('now'),
+                            status = case when status = 'publiceren naar leden' then 'bewaken' else status end,
+                            revisie = revisie + 1
+          where id = ?`
+      ).bind(id).run();
+    }
   }
   // Een barometerbericht is het moment waarop de leden de nieuwe stand weten.
   // Daarom staat er geen knop 'markeer als gemeld': er is er maar één manier.
@@ -340,6 +349,21 @@ export async function verstuurPublicatie(env, ik, publicatieId) {
     feiten: { soort: p.soort, contract: p.contract },
   });
   return { publicatie: publicatieId, positie: p.positie, status: "verstuurd" };
+}
+
+// De tranche die bij een doorrol meeging. Het bericht hangt aan de gebeurtenis
+// van de sluiting; de opening die erbij hoorde draagt een stempel dat zegt dat
+// ze is meegegaan (zie worker/werkbank.js).
+async function tweedeKant(env, p) {
+  if (!p.gebeurtenis) return null;
+  const g = await env.DB.prepare(
+    "select feiten from gebeurtenis where id = ?"
+  ).bind(p.gebeurtenis).first().catch(() => null);
+  if (!g || !g.feiten) return null;
+  try {
+    const f = JSON.parse(g.feiten);
+    return f && f.doorrol_in ? Number(f.doorrol_in) : null;
+  } catch { return null; }
 }
 
 // Wat er klaarstaat om geschreven te worden.

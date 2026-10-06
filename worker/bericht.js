@@ -16,6 +16,23 @@ import { log } from "./stroom.js";
 // nog; een bericht met accolades leest als een storing.
 const PLAATSHOUDER = /\{\{\s*([a-z0-9_]+)\.([a-z0-9_]+)\s*\}\}/gi;
 
+// De vaste voet onder elk bericht aan de leden. Hij wordt ingebakken op het
+// moment dat het concept gemaakt wordt, niet bij het versturen: wat eruit ging,
+// ging eruit — ook als de tekst later verandert.
+export async function voettekst(env) {
+  try {
+    const r = await env.DB.prepare(
+      "select waarde from instelling where sleutel = 'bericht_voettekst' and archief = 0"
+    ).first();
+    return r && String(r.waarde).trim() ? String(r.waarde).trim() : null;
+  } catch { return null; }
+}
+
+export function metVoet(tekst, voet) {
+  if (!voet) return tekst;
+  return `${tekst || ""}\n\n—\n${voet}`;
+}
+
 export function vulIn(sjabloon, gegevens) {
   if (!sjabloon) return null;
   const uit = String(sjabloon).replace(PLAATSHOUDER, (heel, groep, naam) => {
@@ -24,7 +41,13 @@ export function vulIn(sjabloon, gegevens) {
     const w = bron[naam];
     return w === null || w === undefined ? "" : String(w);
   });
-  return uit.replace(/\s{2,}/g, " ").trim() || null;
+  // Alleen spaties opruimen, geen regels. Een sjabloon met alinea's werd hier
+  // tot één doorlopende regel geplet — en dan gaat er een bericht de deur uit
+  // waarin de titel, de cijfers en de reden aan elkaar vast zitten.
+  return uit.replace(/[ \t]{2,}/g, " ")
+            .replace(/[ \t]+$/gm, "")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim() || null;
 }
 
 
@@ -34,6 +57,13 @@ async function gegevensVoor(env, g) {
   try {
     uit.feiten = g.feiten ? JSON.parse(g.feiten) : {};
   } catch { /* dan blijft het leeg */ }
+
+  // 'wat' is de zin die in de titel komt: wát er verandert. Komt het bericht uit
+  // een kaart, dan staat die zin er niet bij maar valt hij af te leiden — en een
+  // titel met een gat erin leest als een storing.
+  if (uit.feiten && !uit.feiten.wat && uit.feiten.naar !== undefined && uit.feiten.naar !== null) {
+    uit.feiten.wat = `de barometer naar ${uit.feiten.naar}`;
+  }
 
   if (g.positie) {
     uit.positie = await env.DB.prepare("select * from positie where id = ?").bind(g.positie).first() || {};
@@ -118,7 +148,7 @@ export async function conceptUitKaart(env, ik, kaartId, sjabloonnaam = null) {
     positie.aantal || null, positie.ontvangen_premie_pt ?? null, positie.resultaat_pt ?? null,
     // Niet terugvallen op het ruwe sjabloon: daar staan de accolades nog in, en
     // dan gaat er een bericht met {{positie.naam}} erin de deur uit.
-    vulIn(sjabloon.tekst, gegevens) || "",
+    metVoet(vulIn(sjabloon.tekst, gegevens) || "", await voettekst(env)),
     nalezer,
     ik && ik.id ? ik.id : null
   ).run();
@@ -237,4 +267,73 @@ export async function stuurTerug(env, ik, publicatieId, reden) {
   });
 
   return { ok: true, status_bericht: "concept" };
+}
+
+// --------------------------------------------- van stand naar bericht
+//
+// Een stand die vastligt is nog geen stand die de leden kennen. Tot vandaag
+// stopte de knop *Publiceren* bij het vastleggen: er kwam een rij in
+// `barometerstand` en verder niets, terwijl het scherm wel zei dat de leden het
+// wisten. Dit is de ontbrekende schakel — vastleggen maakt meteen één concept,
+// en pas het versturen daarvan zet `gepubliceerd_op` (zie worker/spiegel.js).
+//
+// Eén bericht over allebei. Kiest iemand het venster én de stand, dan gaat er
+// één bericht uit over dat ene moment: een lid dat twee berichten krijgt over
+// hetzelfde moment leest het tweede niet meer.
+export async function conceptVoorStand(env, ik, { cyclus, barometerstand, van, naar, venster_van, venster_naar, reden }) {
+  const sjabloon = await env.DB.prepare(
+    "select * from berichtsjabloon where naam = 'barometer' and archief = 0"
+  ).first();
+  if (!sjabloon) return { fout: "Er is geen sjabloon voor een standbericht.", status: 409 };
+
+  const c = await env.DB.prepare("select id, label from cyclus where id = ?").bind(cyclus).first();
+
+  // Wat er veranderde, in de woorden die op het scherm staan. Verandert er maar
+  // één van de twee, dan gaat het bericht ook maar over die ene.
+  const stukken = [];
+  if (venster_naar && venster_naar !== venster_van) stukken.push(`het venster naar ${venster_naar}`);
+  if (naar && naar !== van) stukken.push(`de barometer naar ${naar}`);
+
+  const gegevens = {
+    cyclus: c ? { ...c, naam: c.label } : {},
+    feiten: {
+      van: van || "—", naar: naar || "—",
+      venster_van: venster_van || "—", venster_naar: venster_naar || "—",
+      wat: stukken.join(" en ") || "de stand",
+      reden: String(reden || "").trim(),
+    },
+  };
+
+  const gevraagd = sjabloon.vaste_nalezer || null;
+  const nalezer = gevraagd && ik && gevraagd === ik.id ? null : gevraagd;
+
+  const gemaakt = await env.DB.prepare(
+    `insert into publicatie (cyclus, soort, status, titel, kanaal, tekst, nalezer, aangemaakt_door)
+     values (?, 'barometer', ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    cyclus, nalezer ? "nalezen" : "concept",
+    vulIn(sjabloon.titel, gegevens) || sjabloon.label,
+    sjabloon.kanaal,
+    metVoet(vulIn(sjabloon.tekst, gegevens) || "", await voettekst(env)),
+    nalezer, ik && ik.id ? ik.id : null
+  ).run();
+
+  const id = gemaakt.meta ? gemaakt.meta.last_row_id : null;
+
+  // Welke vastlegging dit bericht beschrijft. Zonder die koppeling zou het
+  // versturen de laatste stand melden in plaats van de stand waar het bericht
+  // over gaat — en dat gaat mis zodra er twee kort na elkaar vastliggen.
+  if (id && barometerstand) {
+    await env.DB.prepare("update barometerstand set publicatie = ? where id = ?")
+      .bind(id, barometerstand).run();
+  }
+
+  await log(env, ik, {
+    bron: "mens", soort: "concept_opgesteld", cyclus, publicatie: id,
+    titel: `Concept: ${vulIn(sjabloon.titel, gegevens) || sjabloon.label}`,
+    detail: gegevens.feiten.reden.slice(0, 400),
+    feiten: { sjabloon: sjabloon.naam, barometerstand },
+  });
+
+  return { publicatie: id, status: nalezer ? "nalezen" : "concept" };
 }
