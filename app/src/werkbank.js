@@ -840,14 +840,19 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     const seg = e.target.closest("[data-stand]");
     if (seg && data.barometer.wakker) {
       const n = Number(seg.dataset.stand);
-      kiesStand = kiesStand === n ? null : n;
+      const staat = data.barometer.wij ? Number(data.barometer.wij.stand.waarde) : null;
+      kiesStand = kiesStand === n || n === staat ? null : n;
       melding = null;
       return teken();
     }
     const vh = e.target.closest("[data-venster]");
     if (vh) {
       const w = vh.dataset.venster;
-      kiesVenster = kiesVenster === w ? null : w;
+      // Dezelfde stand nog eens vastleggen is geen verandering — de werkbank
+      // weigert hem, en 'In positie → In positie' is ook geen bericht waard.
+      // Klikken op wat er al staat betekent dus: toch maar niet.
+      const staat = data.barometer.wij ? data.barometer.wij.venster.waarde : data.venster.nu;
+      kiesVenster = kiesVenster === w || w === staat ? null : w;
       melding = null;
       return teken();
     }
@@ -895,9 +900,18 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     const vak = inhoud.querySelector("#pubreden");
     const reden = vak ? vak.value.trim() : "";
     if (!reden) return;
-    const uit = await publiceerStand({
-      cyclus: cyclusId, stand: kiesStand, venster: kiesVenster, reden,
-    });
+    // Zonder deze vangst gebeurde er bij een weigering niets: de fout kwam uit
+    // de api omhoog, niemand ving hem op, en het scherm bleef staan alsof je
+    // niet geklikt had.
+    let uit;
+    try {
+      uit = await publiceerStand({
+        cyclus: cyclusId, stand: kiesStand, venster: kiesVenster, reden,
+      });
+    } catch (fout) {
+      melding = fout && fout.message ? fout.message : "Het publiceren lukte niet.";
+      return teken();
+    }
     if (uit && uit.fout) { melding = uit.fout; return teken(); }
     kiesStand = null; kiesVenster = null; melding = null;
 
