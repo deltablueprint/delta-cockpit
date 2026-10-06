@@ -417,5 +417,21 @@ for (const bestand of lees("app/src").filter((f) => f.endsWith(".js"))) {
   eis(`${bestand}: gebruikt geen knop-klein meer`, !/knop[^"']*\bklein\b/.test(t));
 }
 
+// ------------------------------- de gerelateerde lijst ververst zichzelf
+//
+// Zonder dit moest je het scherm herladen om te zien dat de brug een tranche
+// gemeld had. Met dit mag het nooit gebeuren dat de lijst hertekent terwijl je
+// in de toevoegregel staat te typen, of blijft draaien als het scherm weg is.
+{
+  const l = readFileSync("app/src/lijst.js", "utf8");
+  eis("de lijst kijkt zelf opnieuw", /setInterval\(/.test(l) && /10000\)/.test(l));
+  eis("alleen een ingebedde lijst doet dat", /if \(ingebed\) versKlokje\(/.test(l));
+  eis("hertekenen alleen als de rijen anders zijn", /vingerafdruk\(verse\) === afdruk/.test(l));
+  eis("niet terwijl je in deze lijst staat", /inhoud\.contains\(document\.activeElement\)/.test(l));
+  eis("niet op een tabblad op de achtergrond", /document\.hidden/.test(l));
+  eis("de klok stopt zodra het vak weg is", /inhoud\.isConnected/.test(l) && /clearInterval\(klok\)/.test(l));
+  eis("de rijen worden niet twee keer opgehaald", /stilleData = \{ vak: inhoud, data: verse \}/.test(l));
+}
+
 console.log(fouten === 0 ? "alles klopt." : `${fouten} fout(en).`);
 process.exit(fouten === 0 ? 0 : 1);

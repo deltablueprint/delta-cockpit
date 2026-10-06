@@ -162,3 +162,28 @@ eis("twee keer versturen wordt geweigerd", Boolean(nogeens.fout));
 
 console.log(fouten ? `\n${fouten} toets(en) mislukt.` : "\nalles klopt.");
 process.exit(fouten ? 1 : 0);
+
+// ------------------------------------- de eerste stand komt vanzelf klaar
+//
+// Zodra de eerste tranche van een cyclus in de markt staat, hoort de barometer
+// niet op 'nog niets' te blijven staan tot iemand een getal verzint. Het systeem
+// meet waar die tranche staat en legt dat vast, aan dezelfde gebeurtenis als het
+// openingsbericht — zodat dat ene bericht allebei vertelt.
+{
+  let f = 0;
+  const e = (wat, goed) => { if (!goed) { f++; console.log(`FOUT  ${wat}`); } };
+
+  const b = await env.DB.prepare(
+    `select stand, venster, herkomst, positie, gebeurtenis from barometerstand
+      where cyclus = 1 and archief = 0 order by id`
+  ).all();
+  const eerste = b.results.find((r) => r.venster === "posities_innemen");
+  e("de eerste tranche brengt het venster op 'posities innemen'", !!eerste);
+  e("met een gemeten stand, geen verzonnen getal", eerste && Number(eerste.stand) >= 1 && Number(eerste.stand) <= 5);
+  e("en hij hangt aan de positie", eerste && Number(eerste.positie) > 0);
+  e("en aan dezelfde gebeurtenis als het bericht", eerste && Number(eerste.gebeurtenis) > 0);
+  e("er komt er maar één", b.results.filter((r) => r.venster === "posities_innemen").length === 1);
+
+  console.log(`de eerste stand: ${f === 0 ? "klopt" : f + " fout(en)"}`);
+  if (f) process.exit(1);
+}

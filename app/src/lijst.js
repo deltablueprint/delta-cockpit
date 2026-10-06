@@ -179,20 +179,70 @@ function urlVoor(tabelnaam, t) {
 }
 
 // ------------------------------------------------------------------- tekenen
-export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
+// ------------------------------------------------------------ zelf verversen
+// Een gerelateerde lijst onder een record is een venster op wat er elders
+// gebeurt: de brug meldt een tranche, iemand anders vult een exitregel aan.
+// Dat hoort te verschijnen zonder dat je het scherm herlaadt. Daarom kijkt de
+// lijst elke tien seconden opnieuw, en hertekent ze alleen als de rijen écht
+// anders zijn — anders knippert ze onder je handen weg terwijl je leest.
+const KLOKJE = new WeakMap();      // per vak: de lopende klok
+let stilleData = null;             // rijen die al binnen zijn, voor een stille verversing
+
+// Wat de lijst nu toont, in één reeks tekens. Verandert die niet, dan is er
+// niets te hertekenen: één vergelijking in plaats van een scherm vol werk.
+function vingerafdruk(data) {
+  return JSON.stringify([data.totaal, (data.rijen || []).map((r) => Object.values(r))]);
+}
+
+function paramsVoor(tabelnaam, toestand) {
   const params = new URLSearchParams();
   if (toestand.q) params.set("q", toestand.q);
   if (toestand.sorteer) { params.set("sorteer", toestand.sorteer); params.set("richting", toestand.richting); }
   if (toestand.offset) params.set("offset", String(toestand.offset));
   params.set("limiet", String(PAGINA));
-  for (const [k, v] of Object.entries(toestand.filters)) if (v) params.set(`f.${k}`, v);
+  for (const [k, v] of Object.entries(toestand.filters || {})) if (v) params.set(`f.${k}`, v);
   for (const [k, v] of Object.entries(toestand.idfilters || {})) if (v) params.set(`fid.${k}`, v);
   // Een lijstscherm uit het menu staat standaard op wat actief is, met de kolom
   // erbij die dat zegt. Klik je dat filter weg, dan zie je ook het archief. Een
   // gerelateerde lijst onder een record kent die keuze niet: daar hoort wat er
   // nú hangt.
   if (!toestand.ingebed) params.set("archief", toestand.archief === "alles" ? "alles" : "actief");
+  return params;
+}
 
+function versKlokje(inhoud, tabelnaam, meta, toestand, afdruk) {
+  clearInterval(KLOKJE.get(inhoud));
+  const klok = setInterval(async () => {
+    // Het scherm is weg: dan is er niets meer om bij te werken.
+    if (!inhoud.isConnected) { clearInterval(klok); KLOKJE.delete(inhoud); return; }
+    // Staat het tabblad op de achtergrond, of staat je cursor in deze lijst —
+    // in de toevoegregel, in een cel die je aan het bewerken bent — dan wacht
+    // de verversing. Wegklikken waar iemand in typt is het ergste wat een
+    // zelfverversend scherm kan doen.
+    if (document.hidden) return;
+    if (inhoud.contains(document.activeElement)) return;
+    let verse;
+    try { verse = await haalLijst(tabelnaam, paramsVoor(tabelnaam, toestand)); } catch { return; }
+    if (vingerafdruk(verse) === afdruk) return;
+    if (!inhoud.isConnected || inhoud.contains(document.activeElement)) return;
+    clearInterval(klok);
+    KLOKJE.delete(inhoud);
+    // De rijen zijn al binnen; ze nog een keer ophalen zou de lijst even grijs
+    // maken voor niets.
+    stilleData = { vak: inhoud, data: verse };
+    lijstscherm(inhoud, { textContent: "" }, tabelnaam, meta, toestand);
+    // Een nieuwe regel kan de stand van het proces verzetten; de checklist
+    // erboven hoort dat mee te krijgen.
+    if (toestand.ingebed && typeof toestand.ingebed.naWijziging === "function") toestand.ingebed.naWijziging();
+  }, 10000);
+  KLOKJE.set(inhoud, klok);
+}
+
+export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
+  const params = paramsVoor(tabelnaam, toestand);
+  // Komen de rijen van de stille verversing, dan staan ze er al.
+  const stil = stilleData && stilleData.vak === inhoud ? stilleData : null;
+  stilleData = null;
   // Alleen een lijst die rechtstreeks in dit vak staat telt als 'dezelfde
   // lijst'. Stond er een recordscherm met een gerelateerde lijst erin, dan
   // werd díé even grijs gemaakt voordat het scherm verwisselde — dat zag je
@@ -215,15 +265,19 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
   // even later verdwijnt, lees je allemaal als een flikkering. Het vak houdt
   // zijn hoogte vast en vult zich in één keer.
   const bestaand = inhoud.querySelector(":scope > .lijst");
-  if (bestaand) bestaand.classList.add("bezig");
-  else { inhoud.innerHTML = ""; inhoud.classList.add("wachtlijst"); }
+  if (!stil) {
+    if (bestaand) bestaand.classList.add("bezig");
+    else { inhoud.innerHTML = ""; inhoud.classList.add("wachtlijst"); }
+  }
 
-  let data;
-  try {
-    data = await haalLijst(tabelnaam, params);
-  } catch (fout) {
-    inhoud.innerHTML = `<div class="fout">${ontsnap(fout.message)}</div>`;
-    return;
+  let data = stil ? stil.data : null;
+  if (!data) {
+    try {
+      data = await haalLijst(tabelnaam, params);
+    } catch (fout) {
+      inhoud.innerHTML = `<div class="fout">${ontsnap(fout.message)}</div>`;
+      return;
+    }
   }
 
   inhoud.classList.remove("wachtlijst");
@@ -520,6 +574,12 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
     const teller = document.querySelector(`.tab[data-tabel="${tabelnaam}"] .tabtelling`);
     if (teller) teller.textContent = tot;
   }
+
+  // Vanaf hier kijkt deze lijst zelf of er iets bijgekomen is. Alleen onder een
+  // record: een lijstscherm uit het menu heeft een werkbalk waarin je zit te
+  // zoeken en te bladeren, en dat hoort niemand onder je handen te verzetten.
+  if (ingebed) versKlokje(inhoud, tabelnaam, meta, toestand, vingerafdruk(data));
+  else { clearInterval(KLOKJE.get(inhoud)); KLOKJE.delete(inhoud); }
 
   // ------------------------------------------------------------- gedrag
   const ga = (nieuw) => {

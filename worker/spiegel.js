@@ -59,6 +59,39 @@ function uitkomstVan(positie, terugkoop, vandaag) {
   return null;
 }
 
+
+// De eerste stand van een cyclus, zodra er een tranche in de markt staat.
+//
+// Dit is geen oordeel maar een constatering: het systeem meet waar de tranche
+// staat en legt dat vast. Daarna is elke verandering weer mensenwerk — de
+// barometer blijft iets wat wij zeggen, niet iets wat de markt roept.
+//
+// Hij doet niets als er voor deze cyclus al een stand ligt vanaf het moment dat
+// we erin zaten: dan is er al verteld, en een tweede 'eerste stand' zou dat
+// verhaal overschrijven.
+async function eersteStand(env, ik, cyclusId, positieId, gebeurtenis) {
+  const al = await env.DB.prepare(
+    `select count(*) as n from barometerstand
+      where cyclus = ? and archief = 0 and venster in ('posities_innemen', 'in_positie')`
+  ).bind(cyclusId).first();
+  if (al && Number(al.n) > 0) return;
+
+  const { metingen } = await import("./meting.js");
+  const meet = await metingen(env, cyclusId).catch(() => null);
+  const stand = meet && meet.voorstel !== null && meet.voorstel !== undefined ? Number(meet.voorstel) : null;
+  if (!stand) return;   // niets te meten: dan verzinnen we ook niets
+
+  const { stelVast } = await import("./barometer.js");
+  await stelVast(env, ik, {
+    cyclus: cyclusId,
+    stand,
+    venster: "posities_innemen",
+    reden: "De eerste tranche staat in de markt. Deze stand is gemeten op de prijs van dit moment.",
+    gebeurtenis,
+    positie: positieId,
+  }).catch(() => null);
+}
+
 export async function spiegel(env, ik, posities = [], uitvoeringen = [], vandaag = null) {
   const dag = vandaag || new Date().toISOString().slice(0, 10);
   const nu = `${dag} ${new Date().toISOString().slice(11, 19)}`;
@@ -143,6 +176,12 @@ export async function spiegel(env, ik, posities = [], uitvoeringen = [], vandaag
       // concept klaar te staan, en de positie wacht tot jij het geschreven en
       // verstuurd hebt.
       await zetConceptKlaar(env, ik, verse, "opening", aanleiding).catch(() => null);
+      // De eerste tranche van een cyclus brengt het venster op 'posities
+      // innemen' en zet meteen de gemeten barometerstand klaar — aan dezelfde
+      // gebeurtenis als het openingsbericht. Zo hoeft niemand een eerste stand
+      // te verzinnen, en vertelt dat ene bericht allebei: wij zitten erin, en
+      // dit is hoe de tranche ervoor staat.
+      if (cyclus) await eersteStand(env, ik, cyclus, id, aanleiding).catch(() => null);
     }
     geopend++;
   }
