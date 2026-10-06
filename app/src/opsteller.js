@@ -35,8 +35,18 @@ const FEITEN = [
   ["resultaat_pt", "Resultaat"],
 ];
 
-export async function opstellerscherm(inhoud, kruimel, id) {
-  kruimel.innerHTML = `<span>Werken</span> <span class="pijlje">&rsaquo;</span> <span>Bericht</span>`;
+// Een doorrol gaat over twee posities. Het bericht hangt aan de sluiting, dus
+// de losse feiten hierboven beschrijven de oude positie — wie het bericht leest
+// zag daardoor nergens welke positie er geopend werd. Staan beide kanten op het
+// bericht, dan tonen we die twee en laten we de losse velden van de ene kant
+// weg.
+const DOORROL = [
+  ["gesloten_positie", "Gesloten"],
+  ["geopende_positie", "Geopend"],
+];
+
+export async function opstellerscherm(inhoud, kruimel, id, opties = {}) {
+  kruimel.innerHTML = `<span>Communicatie</span> <span class="pijlje">&rsaquo;</span> <span>Bericht</span>`;
   inhoud.innerHTML = `<div class="opsteller">Bezig…</div>`;
 
   let ik = null;
@@ -59,11 +69,18 @@ export async function opstellerscherm(inhoud, kruimel, id) {
     const bijEenAnder = p.status === "nalezen";
 
     document.title = `${p.titel || "Bericht"} · Delta Wave Cockpit`;
-    kruimel.innerHTML = `<span>Werken</span> <span class="pijlje">&rsaquo;</span>
-      <a href="#/berichten">Berichten</a> <span class="pijlje">&rsaquo;</span>
+    // De weg die je nam: uit Dispatch, of uit de lijst Berichten. Het oude
+    // scherm /berichten staat niet meer in de navigator, dus wees de kruimel
+    // daar ook niet meer naartoe.
+    const uitDispatch = (opties && opties.van) === "werkbank";
+    kruimel.innerHTML = `<span>Communicatie</span> <span class="pijlje">&rsaquo;</span>
+      ${uitDispatch
+        ? `<a href="#/werkbank">Dispatch</a>`
+        : `<a href="#/t/publicatie">Berichten</a>`} <span class="pijlje">&rsaquo;</span>
       <span>${ontsnap(p.titel || "Bericht")}</span>`;
 
-    const feiten = FEITEN
+    const tweezijdig = Boolean(p.gesloten_positie || p.geopende_positie);
+    const feiten = (tweezijdig ? DOORROL.concat([["resultaat_pt", "Resultaat"]]) : FEITEN)
       .filter(([k]) => p[k] !== null && p[k] !== undefined && p[k] !== "")
       .map(([k, label]) => `<div class="opfeit">
           <span class="opfeitlabel">${label}</span>
@@ -76,7 +93,7 @@ export async function opstellerscherm(inhoud, kruimel, id) {
             <span class="opstand s-${stand.kleur}">${ontsnap(stand.label)}</span>
             ${p.nalezer ? `<span class="opnalezer">${ontsnap(naam(gebruikers, p.nalezer))}</span>` : ""}
           </div>
-          <span class="opkanaal">${ontsnap(p.kanaal === "intern" ? "Intern" : "Naar de leden")}</span>
+          <span class="opkanaal">Naar de leden</span>
         </header>
 
         ${feiten ? `<div class="opfeiten">${feiten}</div>` : ""}
@@ -131,21 +148,19 @@ function acties(p, gebruikers, ik) {
       </div>`;
   }
 
-  // concept of klaar
+  // Concept of klaar: alles op één regel. Kies je een nalezer, dan verandert de
+  // knop mee — hij zegt dan wat er gebeurt als je erop drukt, en er is geen
+  // tweede knop nodig die hetzelfde doet.
   return `
     <div class="opacties">
-      <div class="opnalezenvak">
-        <label for="oplezer">Eerst laten nalezen door</label>
+      <label class="opnalezenvak" for="oplezer">Eerst laten nalezen door
         <select id="oplezer">
           <option value="">niemand</option>
           ${anderen.map((g) => `<option value="${ontsnap(g.id)}">${ontsnap(g.naam)}</option>`).join("")}
         </select>
-        <button type="button" class="knop tweede" id="opvraag" disabled>Vragen</button>
-      </div>
-      <div class="opknoppen">
-        <button type="button" class="knop tweede" id="opbewaar">Bewaren</button>
-        <button type="button" class="knop" id="opversturen">Versturen naar de leden</button>
-      </div>
+      </label>
+      <button type="button" class="knop tweede" id="opbewaar">Bewaren</button>
+      <button type="button" class="knop" id="opversturen">Versturen naar de leden</button>
     </div>`;
 }
 
@@ -204,9 +219,19 @@ function bind(p, opnieuw) {
   const versturen = document.getElementById("opversturen");
   if (versturen) {
     versturen.addEventListener("click", () => {
+      const naarLezer = document.getElementById("oplezer");
       if (!String(tekst.value || "").trim()) {
         meld("Schrijf eerst wat jullie gedaan hebben en waarom. Zonder dat zijn het alleen cijfers.");
         tekst.focus();
+        return;
+      }
+      // Eén knop, twee bestemmingen: de nalezer als er een gekozen is, anders
+      // de leden. Wat het wordt staat op de knop.
+      if (naarLezer && naarLezer.value) {
+        doe(async () => {
+          await bewaarEerst();
+          await vraagNalezen(p.id, naarLezer.value);
+        });
         return;
       }
       doe(async () => {
@@ -216,22 +241,16 @@ function bind(p, opnieuw) {
     });
   }
 
-  // Nalezen vragen kan pas als er iemand gekozen is. Een knop die alvast
-  // aanklikbaar is en dan zegt 'kies eerst iemand' is een knop die liegt.
+  // Kies je een nalezer, dan gaat het bericht daar eerst heen. Dan hoort de knop
+  // dat te zeggen — en niet 'versturen naar de leden', want dat gebeurt er niet.
   const lezer = document.getElementById("oplezer");
-  const vraag = document.getElementById("opvraag");
   function kijkNalezer() {
-    if (vraag && lezer) vraag.disabled = !lezer.value;
+    if (!versturen || !lezer) return;
+    versturen.textContent = lezer.value ? "Concept laten nalezen" : "Versturen naar de leden";
   }
   if (lezer) {
     lezer.addEventListener("change", kijkNalezer);
     kijkNalezer();
-  }
-  if (vraag) {
-    vraag.addEventListener("click", () => doe(async () => {
-      await bewaarEerst();
-      await vraagNalezen(p.id, lezer.value);
-    }));
   }
 
   const vrij = document.getElementById("opvrij");

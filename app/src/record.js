@@ -65,9 +65,19 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
 
   document.title = `${titel} · Delta Wave Cockpit`;
 
-  // ---- breadcrumb: de hele ouderketen, zoals het bouwplan voorschrijft ----
+  // ---- breadcrumb: de weg die je zelf genomen hebt ----
+  //
+  // Een record heeft twee wegen ernaartoe: via zijn ouder, of via de volledige
+  // lijst in het menu. De kruimelbalk hoort te tonen welke jij nam — kom je uit
+  // Berichten, dan is 'Cycli › DEMO · dispatch › Berichten' een weg die je
+  // nooit gelopen hebt, en klik je terug naar een scherm waar je niet vandaan
+  // kwam. De lijst geeft dat mee als ?van=<tabel>.
   const kruimels = [];
-  if (data.ouder) {
+  const viaLijst = opties && opties.van === tabelnaam;
+  if (viaLijst) {
+    kruimels.push(`<a href="#/t/${tabelnaam}">${ontsnap(data.tabel.label_mv)}</a>`);
+    kruimels.push(`<span>${ontsnap(titel)}</span>`);
+  } else if (data.ouder) {
     kruimels.push(`<a href="#/t/${data.ouder.tabel}">${ontsnap(data.ouder.label_mv)}</a>`);
     // De kruimel naar het ouderrecord draagt mee uit welke gerelateerde lijst
     // je kwam. Klik je terug, dan staat dat tabblad open in plaats van het
@@ -82,10 +92,12 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
   // je net uit kwam. Die is geen bestemming op zichzelf — je staat er al — dus
   // hij is wel te lezen en niet aan te klikken. Het hele bestand opvragen doe
   // je via het menu.
-  kruimels.push(data.ouder
-    ? `<span>${ontsnap(data.tabel.label_mv)}</span>`
-    : `<a href="#/t/${tabelnaam}">${ontsnap(data.tabel.label_mv)}</a>`);
-  kruimels.push(`<span>${ontsnap(titel)}</span>`);
+  if (!viaLijst) {
+    kruimels.push(data.ouder
+      ? `<span>${ontsnap(data.tabel.label_mv)}</span>`
+      : `<a href="#/t/${tabelnaam}">${ontsnap(data.tabel.label_mv)}</a>`);
+    kruimels.push(`<span>${ontsnap(titel)}</span>`);
+  }
   kruimel.innerHTML = kruimels.join(` <span class="pijlje">&rsaquo;</span> `);
 
   // Op een nieuw record staat de stand nog niet in de waarden; die komt dan

@@ -396,6 +396,11 @@ export async function conceptVoorKaart(env, ik, kaartId, cyclusId = null) {
         ...oud,
         van: `${kaart.rol.uit.contract} · ${kaart.rol.uit.getal}`,
         naar: `${kaart.rol.in.contract} · ${kaart.rol.in.getal}`,
+        // En de twee contracten los, voor de titel: die wordt te lang als de
+        // getallen mee moeten, maar zonder contract weet een lid niet waarover
+        // het bericht gaat.
+        van_contract: kaart.rol.uit.contract,
+        naar_contract: kaart.rol.in.contract,
         netto: kaart.rol.netto,
         // Welke tranche er meeging. Het bericht hangt aan de sluiting, maar het
         // gaat ook over de opening — en die moet na het versturen naar 'bewaken'

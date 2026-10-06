@@ -85,7 +85,9 @@ function teken() {
   if (berichtRoute) {
     huidigeLijst.tabelnaam = null;
     huidigeLijst.url = null;
-    opstellerscherm(inhoud, kruimel, Number(berichtRoute[1]));
+    opstellerscherm(inhoud, kruimel, Number(berichtRoute[1]), {
+      van: new URLSearchParams(zoekdeel).get("van"),
+    });
     return;
   }
 
@@ -154,6 +156,10 @@ function teken() {
     const ouderParam = p.get("ouder");
     recordscherm(inhoud, kruimel, recordRoute[1], recordRoute[2] === "nieuw" ? "nieuw" : Number(recordRoute[2]), meta, {
       tab: p.get("tab"),
+      // Waar je vandaan kwam. Open je een record uit de volledige lijst, dan
+      // hoort de kruimelbalk die weg te tonen en niet de ouderketen: je kwam
+      // niet via de cyclus binnen, dus terug hoort terug te zijn.
+      van: p.get("van"),
       ouder: ouderParam && ouderParam.includes(":")
         ? { tabel: ouderParam.split(":")[0], id: ouderParam.split(":")[1] }
         : null,

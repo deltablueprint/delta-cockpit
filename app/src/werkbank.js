@@ -553,7 +553,7 @@ export async function werkbankscherm(inhoud, kruimel) {
         </div>` : `
         <div class="kaartknoppen">
           <button class="knop tweede" data-nietmelden="${k.id}">Niet melden</button>
-          <a class="knop" href="${k.concept ? `#/bericht/${k.concept}` : "#"}" data-concept="${k.id}">${
+          <a class="knop" href="${k.concept ? `#/bericht/${k.concept}?van=werkbank` : "#"}" data-concept="${k.id}">${
             k.concept ? "Concept openen" : "Bericht opstellen"}</a>
         </div>`}
     </div>`).join("");
@@ -578,6 +578,8 @@ export async function werkbankscherm(inhoud, kruimel) {
   }
 
   // ------------------------------------------------------------- bediening
+  let bezigMetKnop = false;
+
   async function opKlik(e) {
     const posKnop = e.target.closest("[data-pos]");
     if (posKnop) {
@@ -624,9 +626,17 @@ export async function werkbankscherm(inhoud, kruimel) {
     const concept = e.target.closest("[data-concept]");
     if (concept && !concept.getAttribute("href").startsWith("#/bericht/")) {
       e.preventDefault();
-      const uit = await conceptUitKaart(Number(concept.dataset.concept));
-      if (uit && uit.publicatie) location.hash = `#/bericht/${uit.publicatie}`;
-      else melding = (uit && uit.fout) || "Dat lukte niet.";
+      // Twee keer klikken terwijl de eerste nog onderweg is, maakte twee
+      // berichten: beide vragen kijken of er al een concept ligt voordat een
+      // van de twee er een heeft gemaakt.
+      if (bezigMetKnop) return;
+      bezigMetKnop = true;
+      concept.classList.add("bezig");
+      try {
+        const uit = await conceptUitKaart(Number(concept.dataset.concept));
+        if (uit && uit.publicatie) { location.hash = `#/bericht/${uit.publicatie}?van=werkbank`; return; }
+        melding = (uit && uit.fout) || "Dat lukte niet.";
+      } finally { bezigMetKnop = false; }
       return teken();
     }
   }
@@ -645,18 +655,23 @@ export async function werkbankscherm(inhoud, kruimel) {
     // de leden weten het pas als dat bericht weg is, dus gaan we er meteen
     // naartoe in plaats van hier te blijven staan met een vinkje.
     if (uit && uit.publicatie) {
-      location.hash = `/bericht/${uit.publicatie}`;
+      location.hash = `/bericht/${uit.publicatie}?van=werkbank`;
       return;
     }
     if (uit && uit.bericht_fout) melding = `Vastgelegd, maar het bericht lukte niet: ${uit.bericht_fout}`;
     return haal();
   }
 
-  inhoud.addEventListener("click", opKlik);
+  // Het element waarin dit scherm tekent leeft langer dan dit scherm: ga je weg
+  // en kom je terug, dan hangt de luisteraar van de vorige keer er nog aan. Eén
+  // klik werd dan twee of drie handelingen — en dat leverde drie concepten op
+  // voor één doorrol. De luisteraar van een oud bezoek doet dus niets meer.
+  inhoud.addEventListener("click", (e) => { if (leeftNog()) opKlik(e); });
 
   // De knop gaat aan zodra er een reden staat. Niet opnieuw tekenen bij elke
   // toetsaanslag: dan springt de cursor uit het vak en ben je je tekst kwijt.
   inhoud.addEventListener("input", (e) => {
+    if (!leeftNog()) return;
     const vak = e.target.closest("#pubreden, #nietreden");
     if (!vak) return;
     const knop = inhoud.querySelector(vak.id === "pubreden" ? "[data-publiceer]" : "[data-nietmeldendoor]");

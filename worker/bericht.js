@@ -119,6 +119,16 @@ export async function conceptUitKaart(env, ik, kaartId, sjabloonnaam = null) {
   const gegevens = await gegevensVoor(env, g);
   const positie = gegevens.positie || {};
 
+  // Een doorrol hangt aan de sluiting, dus staan hieronder het contract en de
+  // strike van de óude positie — en nergens stond welke positie er dan geopend
+  // was. De werkbank heeft beide kanten op de gebeurtenis vastgelegd; die
+  // nemen we hier over, zodat op het bericht leesbaar is wat sluit en wat opent.
+  // Alleen bij een doorrol: 'van' en 'naar' betekenen in een barometerbericht
+  // iets heel anders (de standen), en die horen hier niet als positie te staan.
+  const kf = naam === "doorrol" ? (gegevens.feiten || {}) : {};
+  const gesloten = kf.van || null;
+  const geopend = kf.naar || null;
+
   // De vaste nalezer uit het sjabloon. Is er een,
   // dan begint het bericht bij 'nalezen' en niet bij 'concept': dan is meteen
   // zichtbaar dat het nog ergens langs moet.
@@ -132,8 +142,9 @@ export async function conceptUitKaart(env, ik, kaartId, sjabloonnaam = null) {
     `insert into publicatie
        (positie, cyclus, gebeurtenis, soort, status, titel, kanaal,
         contract, strike, expiratiedatum, aantal, premie_pt, resultaat_pt,
+        gesloten_positie, geopende_positie,
         tekst, nalezer, aangemaakt_door)
-     values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+     values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     g.positie || null, g.cyclus || null, kaartId,
     sjabloon.soort, nalezer ? "nalezen" : "concept",
@@ -147,6 +158,7 @@ export async function conceptUitKaart(env, ik, kaartId, sjabloonnaam = null) {
     // niet, dus hier stond altijd null — en in het bericht stond "Premie:
     // punten".
     positie.aantal || null, positie.ontvangen_premie_pt ?? null, positie.resultaat_pt ?? null,
+    gesloten, geopend,
     // Niet terugvallen op het ruwe sjabloon: daar staan de accolades nog in, en
     // dan gaat er een bericht met {{positie.naam}} erin de deur uit.
     metVoet(vulIn(sjabloon.tekst, gegevens) || "", await voettekst(env)),

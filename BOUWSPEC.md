@@ -1692,6 +1692,14 @@ Nu is de ketting rond: **vastleggen → concept → versturen → bij de leden.*
 
 **Op het bericht staat één gerelateerde lijst** — de leden naar wie het gaat — en de positie waar het over gaat staat op het formulier. De cyclus is de ouder geworden: elk bericht heeft er een, ook een bericht zonder positie.
 
+**Altijd naar de leden (0155, 6 okt 2026).** Een bericht had een kanaal — *leden* of *intern* — maar intern bestaat niet meer als bestemming: wat wij opstellen gaat naar de leden. De keuze staat niet meer op het formulier. De kolom blijft staan: oude rijen blijven leesbaar en de brug filtert er nog op. En *Uit de kaart* heet nu **Aanleiding**, op het bericht en op de barometerstand: dat is wat er staat, waar dit bericht uit voortkomt.
+
+**Een doorrol noemt beide posities (0155).** Een doorrolbericht hangt aan de sluiting, dus stonden het contract en de strike van de óude positie erop en nergens welke positie er geopend werd. Nu dragen `publicatie.gesloten_positie` en `geopende_positie` beide kanten, vastgelegd zoals ze waren toen het bericht werd klaargezet, en het sjabloon noemt ze in de titel en in de tekst. Het opstellerscherm toont bij zo'n bericht die twee regels in plaats van de losse velden van één kant.
+
+**De kruimel volgt de weg die je nam.** Kom je uit Dispatch op een bericht, dan staat er *Communicatie › Dispatch › <titel>*; kom je uit de lijst Berichten, dan staat Berichten er. De weg zit in de link (`?van=…`), niet in het record: twee mensen die hetzelfde bericht via een andere ingang openen horen hun eigen weg terug te zien.
+
+**Eén klik is één concept.** De klikafhandeling van Dispatch hing aan het blijvende `inhoud`-element en werd er bij elk bezoek opnieuw aan geknoopt; drie keer Dispatch openen betekende drie luisteraars, en één klik op *Concept nalezen* maakte dan drie berichten — alle drie zagen ze gelijktijdig dat er nog geen concept lag. De luisteraars kijken nu of het scherm nog leeft, en de knop zet zichzelf op bezig.
+
 **Onder elk bericht staat dezelfde voet**, uit `instelling.bericht_voettekst`: *kennis en de eigen posities van de oprichters, geen individueel beleggingsadvies*. Hij wordt ingebakken bij het opstellen, niet bij het versturen — verandert de tekst later, dan verandert een verstuurd bericht niet mee.
 
 **1. Stand naar de leden.** Het venster boven, de barometer eronder, en **één knop Publiceren voor allebei**. Kies je er twee, dan gaat er één bericht uit over allebei — een lid dat twee berichten krijgt over hetzelfde moment leest het tweede niet meer. De barometer **slaapt** tot het venster op *In positie* staat: daarvoor zitten wij er niet in en vragen we de leden niets, daarna is de cyclus uit. Hij is dan grijs en onklikbaar.

@@ -478,7 +478,10 @@ export async function lijstscherm(inhoud, kruimel, tabelnaam, meta, toestand) {
             const tip = platteTekst(k, r[k.kolom], meta, data.verwijzingen || {});
             return `<td data-kolom="${k.kolom}" class="${rechtsUit(k) ? "rechts " : ""}${toestand.sorteer === k.kolom ? "gesorteerd" : ""}"${tip ? ` title="${ontsnap(tip)}"` : ""}>${
               k.kolom === linkkolom
-                ? `<a href="#/t/${tabelnaam}/${r.id}" class="recordlink">${waarde(k, r[k.kolom], meta, r, data.verwijzingen || {})}</a>`
+                // Uit de volledige lijst draagt de link mee waar je vandaan komt, zodat
+              // de kruimelbalk op het record jouw weg toont en niet de ouderketen.
+              ? `<a href="#/t/${tabelnaam}/${r.id}${ingebed ? "" : `?van=${tabelnaam}`}" class="recordlink">${
+                  waarde(k, r[k.kolom], meta, r, data.verwijzingen || {})}</a>`
                 : waarde(k, r[k.kolom], meta, r, data.verwijzingen || {})
             }</td>`;
           }).join("")}
