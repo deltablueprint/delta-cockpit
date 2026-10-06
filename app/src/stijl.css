@@ -682,10 +682,22 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
 .gvoet { display: block; margin-top: 3px; font-size: 11px; color: var(--faint); }
 
 /* --- de balk van een tranche op haar eigen record --- */
-.posmeter { margin: 0 0 2px; padding: 14px 20px 6px; background: #fff; border-bottom: 1px solid var(--b1); }
-.posmeterrij { display: flex; align-items: center; gap: 14px; }
-.posmeternaam { font-size: 13px; font-weight: 700; color: var(--ink); flex: 0 0 auto; }
-.posmeter .schaalrij { margin-top: 5px; }
+/* De balk op het record van een tranche is dezelfde als in Dispatch, en staat
+   dus ook in hetzelfde raster: naam links, balk over de volle resterende
+   breedte, de schaal eronder op precies dezelfde grenzen. In een gewone flexrij
+   kromp de balk tot niets — de vakjes rekenen in procenten van hun ouder, en die
+   ouder was zo breed als zijn inhoud: nul. Je zag dan alleen de getallen van de
+   schaal achter elkaar. */
+/* Ruimte boven de balk voor het prijslabel bij de markering; zonder dat wordt
+   het door de rand van het vak afgesneden. */
+.posmeter { margin: 0 0 2px; padding: 26px 20px 10px; background: #fff; border-bottom: 1px solid var(--b1); }
+.posmeterrij { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 16px; align-items: center; }
+.posmeternaam { font-size: 13px; font-weight: 700; color: var(--ink); min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.posmeter .schaalrij { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 16px;
+  padding: 2px 0 0; margin-top: 5px; }
+.posmeter .schaal { grid-column: 2; display: flex; gap: 3px; font-size: 10px; color: var(--faint); }
+.posmeter .schaal span { text-align: right; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .posmeter .dvak { border: 0; background: none; padding: 10px 0 0; }
 
 /* --- barometer instellingen: de vijf standen onder elkaar --- */
