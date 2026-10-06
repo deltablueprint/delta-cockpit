@@ -62,6 +62,7 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
   let kiesVenster = null;    // welke vensterstand je aanklikte
   let open = new Set();      // welke posities uitgeklapt staan
   let melding = null;
+  let meldingBericht = null;   // hoort er een link naar een concept bij de melding?
   let nietMeldenVoor = null;   // de kaart waarvan je aan het opschrijven bent waarom hij niet weg gaat
   let data = vorige;
 
@@ -338,11 +339,13 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
           <div class="pubrij">
             <button class="knop" data-publiceer disabled>Publiceren</button>
             <button class="knop tweede" data-afbreken>Annuleren</button>
-            ${melding ? `<span class="wbmelding">${ontsnap(melding)}</span>` : ""}
+            ${melding ? `<span class="wbmelding">${ontsnap(melding)}${
+              meldingBericht ? ` <a href="#/bericht/${meldingBericht}?van=werkbank">Concept openen</a>` : ""}</span>` : ""}
           </div>
         </div>
       </div>` : melding ? `<div class="publiceerbalk"><div class="pubrij">
-        <span class="wbmelding">${ontsnap(melding)}</span></div></div>` : ""}
+        <span class="wbmelding">${ontsnap(melding)}${
+          meldingBericht ? ` <a href="#/bericht/${meldingBericht}?van=werkbank">Concept openen</a>` : ""}</span></div></div>` : ""}
     </section>`;
   }
 
@@ -917,6 +920,16 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     </section>`;
   }
 
+  // Klikken op een stand die al vastligt doet niets. Wat er dan wél aan de hand
+  // is: die stand staat al in een concept dat nog de deur uit moet. Dus zeggen
+  // we dat, met de weg erheen.
+  function alVast() {
+    const o = data.onderweg;
+    if (o && o.publicatie) return ["Die nieuwe stand staat klaar in dit concept.", o.publicatie];
+    if (o) return ["Die stand ligt al vast, maar er is nog geen bericht van gemaakt.", null];
+    return ["Die stand ligt al vast en is gemeld.", null];
+  }
+
   // ------------------------------------------------------------- bediening
   let bezigMetKnop = false;
 
@@ -951,7 +964,7 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
       const staat = data.barometer.wij ? Number(data.barometer.wij.stand.waarde) : null;
       // Klikken op de stand die al vastligt doet niets — maar dan hoor je wel
       // waarom, anders voelt de meter kapot.
-      melding = n === staat && kiesStand !== n ? "Die stand ligt al vast." : null;
+      [melding, meldingBericht] = n === staat && kiesStand !== n ? alVast() : [null, null];
       kiesStand = kiesStand === n || n === staat ? null : n;
       return teken();
     }
@@ -962,18 +975,18 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
       // weigert hem, en 'In positie → In positie' is ook geen bericht waard.
       // Klikken op wat er al staat betekent dus: toch maar niet.
       const staat = data.barometer.wij ? data.barometer.wij.venster.waarde : data.venster.nu;
-      melding = w === staat && kiesVenster !== w ? "Die stand ligt al vast." : null;
+      [melding, meldingBericht] = w === staat && kiesVenster !== w ? alVast() : [null, null];
       kiesVenster = kiesVenster === w || w === staat ? null : w;
       return teken();
     }
     if (e.target.closest("[data-afbreken]")) {
-      kiesStand = null; kiesVenster = null; melding = null;
+      kiesStand = null; kiesVenster = null; melding = null; meldingBericht = null;
       return teken();
     }
     if (e.target.closest("[data-publiceer]")) return publiceer();
 
     const niet = e.target.closest("[data-nietmelden]");
-    if (niet) { nietMeldenVoor = Number(niet.dataset.nietmelden); melding = null; return teken(); }
+    if (niet) { nietMeldenVoor = Number(niet.dataset.nietmelden); melding = null; meldingBericht = null; return teken(); }
 
     if (e.target.closest("[data-nietmeldenaf]")) { nietMeldenVoor = null; return teken(); }
 
@@ -1023,7 +1036,7 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
       return teken();
     }
     if (uit && uit.fout) { melding = uit.fout; return teken(); }
-    kiesStand = null; kiesVenster = null; melding = null;
+    kiesStand = null; kiesVenster = null; melding = null; meldingBericht = null;
 
     // Vastleggen is niet melden. Het concept staat klaar met jouw reden erin;
     // de leden weten het pas als dat bericht weg is, dus gaan we er meteen

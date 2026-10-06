@@ -1849,6 +1849,7 @@ body.sleept .lijsttabel { pointer-events: none; }
 .wbnoot { margin: 10px 0 0; font-size: 11.5px; color: var(--mut); }
 .wbnoot.wblet { color: var(--amb); font-weight: 600; }
 .wbmelding { font-size: 12.5px; color: var(--red); }
+.wbmelding a { color: var(--blue); font-weight: 600; }
 
 /* Het systeem stelt iets voor. Een stippellijn, want het is een voorstel en
    geen stand: wat het systeem meet is niet wat wij vaststellen. */
