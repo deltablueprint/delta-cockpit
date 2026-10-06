@@ -16,7 +16,12 @@ import { log } from "./stroom.js";
 import { meldGepubliceerd } from "./barometer.js";
 import { zetOntvangers, aantalOntvangers } from "./ontvangers.js";
 
-const LOPEND = ["uitvoering ophalen", "uitvoering vastgelegd", "publiceren naar leden", "bewaken"];
+// Elke stand waarin een tranche nog loopt. De twee oude namen staan erbij voor
+// wat er vóór 0157 in de database gezet is; nieuw komt er niets meer bij.
+const LOPEND = [
+  "ingenomen", "exitplan", "publiceren naar leden", "bewaken",
+  "uitvoering ophalen", "uitvoering vastgelegd", "exitplan en order",
+];
 
 const getal = (w) => (Number.isFinite(Number(w)) ? Number(w) : null);
 const rond = (n) => (Number.isFinite(Number(n)) ? Math.round(Number(n) * 10) / 10 : null);
@@ -102,7 +107,10 @@ export async function spiegel(env, ik, posities = [], uitvoeringen = [], vandaag
        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'broker', ?, ?, ?)`
     ).bind(
       cyclus, besluit, (Number(hoogste && hoogste.n) || 0) + 1,
-      premie === null ? "uitvoering ophalen" : "publiceren naar leden",
+      // Zonder prijs is de tranche binnen maar niet te publiceren; met prijs
+      // wacht ze op haar exitplan. Het bericht aan de leden komt daarna — je
+      // publiceert geen instap die je nog niet kunt verdedigen (0157).
+      premie === null ? "ingenomen" : "exitplan",
       p.contract || null, getal(p.strike), p.expiratiedatum || null,
       Math.abs(Number(p.aantal) || 0) || null, premie, String(p.conid),
       moment, cyclus && !besluit ? 1 : 0, ik && ik.id ? ik.id : null
@@ -296,6 +304,23 @@ export async function verstuurPublicatie(env, ik, publicatieId) {
       fout: "Schrijf eerst wat jullie gedaan hebben en waarom. Zonder dat zijn het alleen cijfers.",
       status: 422, veld: "tekst",
     };
+  }
+
+  // Een instap die je nog niet kunt verdedigen gaat niet naar de leden (0157).
+  // Zonder stoploss en zonder eventregel weet je zelf niet waar je eruit stapt;
+  // dat is geen bericht maar een belofte die je niet kunt waarmaken. Alleen bij
+  // een opening: een sluiting of een barometerstand heeft hier niets mee te
+  // maken.
+  if (p.soort === "opening" && p.positie) {
+    const t = await env.DB.prepare(
+      "select status, contract from positie where id = ? and archief = 0"
+    ).bind(p.positie).first();
+    if (t && t.status === "exitplan") {
+      return {
+        fout: `Het exitplan van ${t.contract || "deze tranche"} staat nog niet: zet eerst de stoploss en de eventregel.`,
+        status: 409,
+      };
+    }
   }
 
   // De voorwaarde hoort in de UPDATE, niet alleen in de lezing hierboven. Twee

@@ -465,6 +465,9 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
    niet zo breed als het scherm — een datum van tien tekens in een vak van
    duizend pixels leest als een fout in de opmaak. */
 .veldwaarde input, .veldwaarde select { max-width: var(--veldbreedte); }
+/* De ouder als vaste regel op het formulier: lezen en doorklikken, niet wijzigen. */
+.ouderveld { font-size: 13px; color: var(--blue); font-weight: 600; text-decoration: none; }
+.ouderveld:hover { text-decoration: underline; }
 .veldwaarde textarea { max-width: var(--veldbreedte-lang); }
 .veldwaarde .persoonveld { max-width: var(--veldbreedte); width: 100%; }
 /* Een getal met een teken erachter: het vak houdt dezelfde breedte, het teken

@@ -132,6 +132,9 @@ export async function record(env, tabelnaam, id, ik) {
       ouder = {
         tabel: ot.naam, label_mv: ot.label_mv, id: rij[ouderveld.kolom],
         kolom: ouderveld.kolom,
+        // Het label van het veld zelf ('Cyclus'), zodat het record kan tonen
+        // waar het bij hoort zonder dat dat veld op het formulier staat.
+        label: ouderveld.label || ot.label,
         titel: r ? r.titel : `${ot.label} ${rij[ouderveld.kolom]}`,
       };
     }

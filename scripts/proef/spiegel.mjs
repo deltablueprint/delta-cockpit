@@ -43,7 +43,9 @@ eis("de positie wordt aangemaakt", uit.geopend === 1);
 let [p1] = await pos("where conid = '5001'");
 console.log(`       ${p1.contract} · tranche ${p1.tranche} · ${p1.ontvangen_premie_pt} pt · ${p1.status}`);
 eis("met de echte premie uit de uitvoering", Number(p1.ontvangen_premie_pt) === 38.5);
-eis("en klaar om te publiceren", p1.status === "publiceren naar leden");
+// Met prijs en al, maar nog zonder exitplan: dan staat ze in 'exitplan' en
+// gaat er niets naar de leden (0157).
+eis("en wacht op haar exitplan", p1.status === "exitplan");
 eis("in de enige lopende cyclus", Number(p1.cyclus) === 1);
 eis("met het go-besluit dat eraan voorafging", Number(p1.beoordelingsmoment) === 5);
 eis("zonder vlag, want er was een besluit", Number(p1.zonder_besluit) === 0);
@@ -77,7 +79,7 @@ eis("de uitkomst is 'vervroegd teruggekocht' — niet 'doorgerold'", p1.uitkomst
 const [p2] = await pos("where conid = '5002'");
 console.log(`       nieuw: ${p2.contract} · tranche ${p2.tranche} · ${p2.ontvangen_premie_pt} pt · ${p2.status}`);
 eis("de nieuwe draagt de echte fill-prijs", Number(p2.ontvangen_premie_pt) === 41);
-eis("en staat klaar om te publiceren", p2.status === "publiceren naar leden");
+eis("en wacht op haar exitplan", p2.status === "exitplan");
 eis("het is tranche 2 van dezelfde cyclus", Number(p2.tranche) === 2 && Number(p2.cyclus) === 1);
 const anker = await env.DB.prepare("select niveau from exitregel where positie = ? and soort = 'winstanker'").bind(p2.id).first();
 eis("het exitplan rekent tegen háár premie: 30 % van 41 = 12,3", Number(anker.niveau) === 12.3);
@@ -123,8 +125,32 @@ eis("versturen zonder tekst wordt geweigerd", Boolean(zonderTekst.fout));
 
 await env.DB.prepare("update publicatie set tekst = ? where id = ?")
   .bind("We schreven de decemberput op 5400 omdat de volatiliteit opliep.", opening.id).run();
+
+// Het exitplan staat vóór het bericht (0157). Zolang de stoploss of de
+// eventregel ontbreekt, gaat er niets naar de leden: je zou een instap
+// aankondigen waarvan je zelf niet weet waar je eruit stapt.
+const zonderPlan = await verstuurPublicatie(env, ik, opening.id);
+eis("zonder exitplan wordt een opening geweigerd", Boolean(zonderPlan.fout));
+eis("en het zegt wat er ontbreekt", String(zonderPlan.fout).includes("exitplan"));
+
+// Het plan invullen langs de gewone weg: dan schuift de tranche vanzelf door
+// naar 'publiceren naar leden'.
+const { wijzig } = await import("../../worker/schrijf.js");
+
+const sl = await env.DB.prepare(
+  "select id, revisie from exitregel where positie = ? and soort = 'stoploss'"
+).bind(opening.positie).first();
+await wijzig(env, ik, "exitregel", sl.id, { velden: { niveau: 104 }, revisie: sl.revisie });
+const ev = await env.DB.prepare(
+  "select id, revisie from exitregel where positie = ? and soort = 'eventregel'"
+).bind(opening.positie).first();
+await wijzig(env, ik, "exitregel", ev.id, { velden: { omschrijving: "Sluiten voor de ECB." }, revisie: ev.revisie });
+
+const naPlan = await env.DB.prepare("select status from positie where id = ?").bind(opening.positie).first();
+eis("een compleet exitplan schuift de tranche door naar publiceren", naPlan.status === "publiceren naar leden");
+
 const verstuurd = await verstuurPublicatie(env, ik, opening.id);
-eis("met tekst lukt het wel", verstuurd.status === "verstuurd");
+eis("met tekst en een exitplan lukt het wel", verstuurd.status === "verstuurd");
 
 const na = await env.DB.prepare("select status, gepubliceerd from positie where id = ?").bind(opening.positie).first();
 console.log(`       positie na versturen: ${na.status} · gepubliceerd ${na.gepubliceerd}`);

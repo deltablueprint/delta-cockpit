@@ -96,4 +96,11 @@ update processtap
 update proces set omschrijving = 'Eén tranche: van ingenomen tot vastgelegde uitkomst.'
  where toepassing = 'positie';
 
+-- 3. En de cyclus hoort in de lijst. Een tranche zonder zichtbare cyclus dwingt
+--    je het record te openen om te zien waar ze bij hoort — en bij een positie
+--    die onverdeeld binnenkomt is dat juist het eerste wat je wil zien.
+update db_view
+   set kolommen = '["contract","cyclus","status","strike","expiratiedatum","aantal","ontvangen_premie_pt","teruggekocht_pt","resultaat_pt","uitkomst"]'
+ where tabel = 'positie' and naam = 'standaard';
+
 insert into schema_versie (versie, omschrijving) values (157, 'het proces van een tranche zoals het nu loopt');

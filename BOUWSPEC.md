@@ -1708,6 +1708,21 @@ Nu is de ketting rond: **vastleggen → concept → versturen → bij de leden.*
 
 **De strook vakjes toont wat de léden wisten.** Hij tekende wat wíj die dag vastlegden, terwijl de regel ernaast zei wat de leden kenden — twee betekenissen in één beeld. Nu is het één: gevulde vakjes zijn de stand die de leden die dag kenden, en een dag waarop wij al meer wisten staat open met onze kleur als rand. De hover noemt beide.
 
+**Het proces van een tranche, zoals het nu loopt (0157, 6 okt 2026).** Het oude proces stond op de volgorde van vóór de brug: order plaatsen → uitvoering ophalen → koppelen → publiceren. Met de brug bestáát de tranche zodra de broker hem meldt, mét prijs. Vier stations:
+
+| station | stappen | wie |
+|---|---|---|
+| **Ingenomen** | Tranche binnen van de broker · Bij een cyclus gezet | systeem |
+| **Exitplan** | Stoploss en winstanker vastgelegd · Afwijking geduid (alleen bij een afwijking) | mens |
+| **Gemeld aan de leden** | Bericht naar de leden | mens |
+| **Bewaken → Gesloten** | Uitkomst vastgelegd | systeem + mens |
+
+*Order geplaatst bij Lynx* en *Uitvoering gekoppeld* zijn weg: het eerste is niet te controleren en niet nodig (het systeem plaatst nooit een order), het tweede was het koppelwerk van het Flex-tijdperk.
+
+En er staat één regel bij: **het exitplan gaat vóór het bericht aan de leden.** Een opening die verstuurd wordt terwijl de stoploss of de eventregel ontbreekt, wordt geweigerd met de reden erbij. Zodra beide er staan schuift de tranche vanzelf door naar *publiceren naar leden* — daar hoeft niemand een knop voor te zoeken. Daarom staat de eventregel nu **leeg** klaar in plaats van met de vraag als tekst: een regel die zichzelf invult, telt als een afspraak die niemand gemaakt heeft.
+
+**De ouder staat op het formulier.** Het veld dat naar de ouder wijst blijft buiten het formulier — dát is wat er een gerelateerde lijst van maakt bij de ouder en wat de kruimel zijn weg geeft — maar bovenaan het record staat nu wel waar het bij hoort, met hetzelfde i-knopje als elke andere verwijzing. Op een positie lees je dus de cyclus, en klik je er in één keer naartoe; in de lijst staat die cyclus als kolom.
+
 **Eén contract, twee namen (6 okt 2026).** Eurex noemt de optie op de Euro Stoxx 50 **OESX**, IBKR stuurt hem door als **ESTX50**: zelfde optie, zelfde contractnummer, andere letters. De vertaling gebeurt aan de deur — in de brug en in de Flex-lezer — zodat de hele cockpit één naam spreekt, de onze. Een naam die we niet kennen blijft staan; verzinnen is erger dan overnemen.
 
 **De premie in punten (6 okt 2026).** IBKR rekent de gemiddelde kostprijs van een optie per contract: bij multiplier 10 staat er 133,50 waar wij 13,35 punten bedoelen. De cockpit rekent overal in punten — de balk, de barometer, het bericht aan de leden — dus wordt er één keer gedeeld, bij de bron. Zonder dat zou er een tranche met een premie van 133,50 in een bericht aan de leden staan, en dat neem je niet terug.

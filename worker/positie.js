@@ -60,7 +60,7 @@ export async function uitBesluit(env, ik, moment) {
                           strike, expiratiedatum, inzet_pct,
                           besluit_strike, besluit_expiratiedatum, besluit_inzet_pct,
                           aangemaakt_door)
-     values (?, ?, ?, 'exitplan en order', ?, ?, ?, ?, ?, ?, ?) returning id`
+     values (?, ?, ?, 'exitplan', ?, ?, ?, ?, ?, ?, ?) returning id`
   ).bind(
     moment.cyclus, moment.id, volgende ? volgende.n : 1,
     moment.strike, moment.expiratiedatum, moment.inzet_pct,
@@ -210,8 +210,14 @@ export function exitplanVoor(rij) {
       niveau: Number.isFinite(strike) && heeftPremie ? Math.round((strike - premie) * 10) / 10 : null,
     },
     {
+      // Met opzet leeg. Dit is de enige regel van het exitplan die geen
+      // rekensom is maar een afspraak tussen mensen: welke events sluiten deze
+      // tranche voortijdig. Stond hier de vraag zelf als tekst, dan telde de
+      // regel als ingevuld — en dan gaat een tranche naar de leden terwijl
+      // niemand die afspraak gemaakt heeft (0157). De vraag staat op het
+      // scherm, niet in het veld.
       volgorde: 40, soort: "eventregel", eenheid: null,
-      omschrijving: "Welke events sluiten deze tranche voortijdig",
+      omschrijving: "",
       niveau: null,
     },
   ];
@@ -345,7 +351,7 @@ export async function neemBesluitOver(env, momentId, stand) {
     // Zolang er niets is uitgevoerd, is de tranche nog het besluit. Daarna
     // staat er een werkelijkheid in die velden die een voornemen niet mag
     // overschrijven.
-    if (!stand || stand === "exitplan en order") {
+    if (!stand || stand === "exitplan" || stand === "exitplan en order") {
       uit.strike = m.strike;
       uit.expiratiedatum = m.expiratiedatum;
       uit.inzet_pct = m.inzet_pct;

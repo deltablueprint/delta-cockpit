@@ -83,6 +83,28 @@ function auditregel(env, ik, tabel, record, soort, extra = {}) {
 }
 
 // ---------------------------------------------------------------- wijzigen
+// Staat het exitplan van deze tranche compleet, dan is de volgende stap het
+// bericht aan de leden. Doet niets als de tranche al verder staat.
+async function exitplanAf(env, positieId) {
+  const p = await env.DB.prepare(
+    "select id, status from positie where id = ? and archief = 0"
+  ).bind(positieId).first();
+  if (!p || p.status !== "exitplan") return;
+  const sl = await env.DB.prepare(
+    `select count(*) as n from exitregel
+      where positie = ? and archief = 0 and soort = 'stoploss' and niveau is not null`
+  ).bind(positieId).first();
+  const ev = await env.DB.prepare(
+    `select count(*) as n from exitregel
+      where positie = ? and archief = 0 and soort = 'eventregel'
+        and trim(coalesce(omschrijving, '')) <> ''`
+  ).bind(positieId).first();
+  if (!(sl && sl.n > 0 && ev && ev.n > 0)) return;
+  await env.DB.prepare(
+    "update positie set status = 'publiceren naar leden', revisie = revisie + 1 where id = ?"
+  ).bind(positieId).run();
+}
+
 export async function wijzig(env, ik, tabelnaam, id, body) {
   const tabel = await tabelVan(env, tabelnaam);
   if (!tabel) return { fout: `Onbekende tabel: ${tabelnaam}`, status: 404 };
@@ -300,6 +322,16 @@ export async function wijzig(env, ik, tabelnaam, id, body) {
           set gemeten_door = coalesce(gemeten_door, ?), gemeten_op = coalesce(gemeten_op, datetime('now'))
         where id = ?`
     ).bind(ik && ik.id ? ik.id : null, id).run();
+  }
+
+  // Het exitplan staat vóór het bericht aan de leden (0157). Zodra de stoploss
+  // en de eventregel er staan, schuift de tranche vanzelf door naar 'publiceren
+  // naar leden' — daar hoeft niemand een knop voor te zoeken. Andersom gebeurt
+  // er niets: een exitplan dat later leeggemaakt wordt haalt een tranche niet
+  // terug uit een stand waarin al een bericht klaarligt.
+  if (tabelnaam === "exitregel") {
+    const r = await env.DB.prepare("select positie from exitregel where id = ?").bind(id).first();
+    if (r && r.positie) await exitplanAf(env, r.positie);
   }
 
   // Een cyclus op *go / no-go* zetten ís het openen van een beoordelingsmoment.

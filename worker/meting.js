@@ -229,7 +229,7 @@ export async function metingen(env, cyclusId, { nu = null, positie = null } = {}
   // Welke posities in de markt staan. Niet 'alles wat niet gesloten is': een
   // tranche die nog op uitvoering wacht draagt de strike van het bésluit, en er
   // staat geen contract tegenover.
-  const IN_DE_MARKT = new Set(["bewaken", "publiceren naar leden", "uitvoering vastgelegd"]);
+  const IN_DE_MARKT = new Set(["bewaken", "publiceren naar leden", "exitplan", "uitvoering vastgelegd"]);
 
   const uit = posities.map((p) => {
     const open = IN_DE_MARKT.has(String(p.status || "")) && !p.uitkomst && Number(p.aantal) > 0;
@@ -370,7 +370,7 @@ export async function legVerloopVast(env, { nu = null } = {}) {
   const open = (await env.DB.prepare(
     `select distinct p.cyclus from positie p
       where p.archief = 0 and p.uitkomst is null and p.aantal > 0
-        and p.status in ('bewaken', 'publiceren naar leden', 'uitvoering vastgelegd')
+        and p.status in ('bewaken', 'publiceren naar leden', 'exitplan', 'uitvoering vastgelegd')
         and p.cyclus is not null`
   ).all()).results;
 

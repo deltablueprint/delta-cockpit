@@ -221,6 +221,26 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
         : ""
     }${v.live ? `<span class="hartje-vak" title="loopt live mee">${HARTSLAG}</span>` : ""}</div>`;
 
+  // De ouder hoort ook op het formulier te staan.
+  //
+  // Het veld dat naar de ouder wijst staat met opzet niet op het formulier: dát
+  // is precies wat er een gerelateerde lijst van maakt bij de ouder, en wat de
+  // kruimel zijn weg geeft. Maar op het record zelf wil je gewoon zien waar het
+  // bij hoort — en er met één klik naartoe kunnen. Dus tonen we hem hier als een
+  // vaste regel bovenaan, met hetzelfde i-knopje als elke andere verwijzing.
+  const ouderHtml = !data.ouder || isNieuw ? "" : `
+    <label class="veldlabel" data-veld="${ontsnap(data.ouder.kolom)}">${ontsnap(data.ouder.label || data.ouder.label_mv || "Hoort bij")}</label>
+    <div class="veldwaarde" data-veld="${ontsnap(data.ouder.kolom)}">
+      <a class="ouderveld" href="#/t/${ontsnap(data.ouder.tabel)}/${ontsnap(String(data.ouder.id))}">${
+        ontsnap(data.ouder.titel)}</a>
+      <button type="button" class="refknop" data-ref-tabel="${ontsnap(data.ouder.tabel)}"
+        data-ref-id="${ontsnap(String(data.ouder.id))}"
+        title="Bekijken zonder dit scherm te verlaten"
+        aria-label="Bekijken zonder dit scherm te verlaten">${ICOON.info}</button>
+    </div>`;
+
+  let ouderGeplaatst = false;
+
   const sectieHtml = secties.map((sectie) => {
     const eigen = velden.filter((v) => (v.sectie || "algemeen") === sectie.naam);
     if (!eigen.length) return "";
@@ -260,7 +280,11 @@ export async function recordscherm(inhoud, kruimel, tabelnaam, id, meta, opties 
       <div class="formsectie${sectie.accent ? " nadruk" : ""}" data-sectie="${ontsnap(sectie.naam)}">
         ${alleSecties.length > 1 ? `<div class="formsectiekop">${ontsnap(sectie.label)}</div>` : ""}
         <div class="formkolommen">
-          <div class="formkolom">${links.map(veldHtml).join("")}</div>
+          <div class="formkolom">${(() => {
+            if (ouderGeplaatst || !ouderHtml) return "";
+            ouderGeplaatst = true;
+            return ouderHtml;
+          })()}${links.map(veldHtml).join("")}</div>
           <div class="formkolom">${rechts.map(veldHtml).join("")}</div>
         </div>
         ${breed.length ? `<div class="formbreed">${breed.map(veldHtml).join("")}</div>` : ""}

@@ -54,6 +54,14 @@ eis("nog niemand hoeft iets te doen", Number(opening.vraagt_antwoord) === 0);
 const concept = await env.DB.prepare("select id from publicatie where soort = 'opening'").first();
 await env.DB.prepare("update publicatie set tekst = 'Wij hebben een positie ingenomen.' where id = ?")
   .bind(concept.id).run();
+// Een opening gaat pas de deur uit als het exitplan staat (0157). Hier gaat het
+// over de stroom, niet over die regel, dus zetten we het plan compleet.
+await env.DB.prepare(
+  "update exitregel set omschrijving = 'Sluiten voor de ECB.' where soort = 'eventregel'"
+).run();
+await env.DB.prepare(
+  "update positie set status = 'publiceren naar leden' where status = 'exitplan'"
+).run();
 await verstuurPublicatie(env, ik, concept.id);
 rijen = await stroom(env, 1);
 const verstuurd = rijen.find((r) => r.soort === "bericht_verstuurd");

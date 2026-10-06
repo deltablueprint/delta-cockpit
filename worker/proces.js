@@ -130,6 +130,27 @@ const REGELS = {
   },
 
   // ---- positie ----
+  //
+  // Een tranche begint niet bij ons maar bij de broker: de brug meldt het
+  // contract, het aantal en de prijs waartegen geschreven is. Deze stap is dus
+  // geen handeling maar een constatering — en juist daarom staat hij er: zonder
+  // premie is de tranche niet te publiceren, en dan hoor je te zien waarom.
+  async tranche_binnen(env, rij) {
+    const premie = gevuld(rij.ontvangen_premie_pt);
+    return {
+      gedaan: gevuld(rij.contract) && gevuld(rij.aantal) && premie,
+      stand: premie ? `${rij.ontvangen_premie_pt} pt` : "prijs nog onbekend",
+    };
+  },
+
+  // Bij welke cyclus de tranche hoort. Loopt er één, dan zet de spiegel hem er
+  // vanzelf bij; lopen er meerdere, dan is het een keuze van een mens. Een
+  // tranche die bewust buiten de cycli staat, hoeft deze stap niet.
+  async bij_een_cyclus(env, rij) {
+    if (Number(rij.buiten_cycli) === 1) return { gedaan: true, nvt: true, stand: "buiten de cycli" };
+    return { gedaan: gevuld(rij.cyclus), stand: gevuld(rij.cyclus) ? "" : "nog niet toegewezen" };
+  },
+
   async exitplan_compleet(env, rij) {
     const regels = await tel(env,
       `select count(*) as n from exitregel
