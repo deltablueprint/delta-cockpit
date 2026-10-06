@@ -315,7 +315,7 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
           <span class="pubtekst">${stuk.length ? `Vastleggen en het bericht opstellen: ${stuk.join(" en ")}.` : "Klik een stand aan om hem te veranderen."}</span>
           ${melding ? `<span class="wbmelding">${ontsnap(melding)}</span>` : ""}
           ${stuk.length ? `<button class="knop tweede" data-afbreken>Laat maar</button>` : ""}
-          <button class="knop" data-publiceer disabled>Concept nalezen</button>
+          <button class="knop" data-publiceer disabled>Publiceren</button>
         </div>
       </div>`}
     </section>`;
