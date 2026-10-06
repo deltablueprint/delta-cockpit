@@ -1923,7 +1923,7 @@ body.sleept .lijsttabel { pointer-events: none; }
    wat de leden kennen — dat is ook waar de wijzer staat. */
 .lreg.tip { border-color: var(--red); border-style: dashed; }
 .lreg.tip .nm { color: var(--red); }
-.lreg.gekozen { border-color: var(--blue); border-style: dashed; background: var(--bluebg); }
+.lreg.gekozen { border-color: var(--blue); border-style: dashed; background: #fff; }
 .lreg.gekozen .nm { color: var(--blue); font-weight: 700; }
 
 /* De reden staat op het scherm en niet in een systeemvenster. Een prompt() is
