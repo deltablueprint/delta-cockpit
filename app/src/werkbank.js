@@ -94,13 +94,6 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     }
   }
 
-  // De eerste tekening: de strip van de vorige keer blijft staan, daaronder
-  // 'Bezig…'. Kom je vers binnen, dan is er nog geen strip.
-  inhoud.innerHTML = data && data.cyclus
-    ? `<div class="werkbank">${cyclusbalk()}<p class="wbleeg">Bezig…</p></div>`
-    : `<div class="werkbank">Bezig…</div>`;
-  naStrook();
-
   async function haal() {
     try {
       const uit = await haalWerkbank(cyclusId);
@@ -899,6 +892,18 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     const knop = inhoud.querySelector(vak.id === "pubreden" ? "[data-publiceer]" : "[data-nietmeldendoor]");
     if (knop) knop.disabled = !vak.value.trim();
   });
+
+  // De eerste tekening: de strip van de vorige keer blijft staan, daaronder
+  // 'Bezig…'. Kom je vers binnen, dan is er nog geen strip.
+  //
+  // Dit staat hier onderaan en niet bovenin: cyclusbalk() leunt op constanten
+  // die verderop in deze functie staan, en een const bestaat pas als de regel
+  // gedraaid is. Bovenin wierp hij 'Cannot access MAANDEN before
+  // initialization', en dan bleef het scherm staan waar het stond.
+  inhoud.innerHTML = data && data.cyclus
+    ? `<div class="werkbank">${cyclusbalk()}<p class="wbleeg">Bezig…</p></div>`
+    : `<div class="werkbank">Bezig…</div>`;
+  naStrook();
 
   await haal();
 

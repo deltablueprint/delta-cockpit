@@ -659,10 +659,10 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
 }
 .cbpijl:hover { border-color: var(--dim); }
 
+/* Eén kolom over de volle breedte. De tweede kolom van 320 px was voor de
+   geschiedenis die er niet meer staat, en hield de panelen smaller dan de balk
+   erboven. */
 .wbkolommen { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gutter); align-items: start; }
-@media (min-width: 1100px) {
-  .wbkolommen { grid-template-columns: minmax(0, 1fr) 320px; }
-}
 .wbhoofd { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
 .wbzij { min-width: 0; }
 .gkop { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
