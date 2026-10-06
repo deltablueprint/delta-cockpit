@@ -178,8 +178,8 @@ select id, 2, 'opent_binnenkort', 'Demo: het venster gaat open.', 'mens', dateti
 insert into barometerstand (cyclus, stand, venster, reden, herkomst, vastgesteld_op, vastgesteld_door, gepubliceerd_op)
 select id, 5, 'in_positie', 'Demo: wij zitten erin.', 'mens', datetime('now', '-12 days'), 'simon', datetime('now', '-12 days')
   from cyclus where label = 'DEMO · dispatch';
-insert into barometerstand (cyclus, stand, venster, reden, herkomst, vastgesteld_op, vastgesteld_door)
-select id, 4, 'in_positie', 'Demo: de 5600 liep op.', 'voorstel', datetime('now', '-26 hours'), 'jacqueline'
+insert into barometerstand (cyclus, stand, venster, reden, herkomst, vastgesteld_op, vastgesteld_door, gepubliceerd_op)
+select id, 4, 'in_positie', 'Demo: de 5600 liep op.', 'mens', datetime('now', '-26 hours'), 'jacqueline', datetime('now', '-26 hours')
   from cyclus where label = 'DEMO · dispatch';
 
 -- ---------- de berichten die bij die standen horen ----------
@@ -215,22 +215,25 @@ insert into publicatie_ontvanger (publicatie, lid, reden, bezorgd_op)
          l.id, 'demo', datetime('now', '-12 days')
     from lid l where l.email like '%@delta-historie.test';
 
--- het concept dat nog bij een nalezer ligt
-insert into publicatie (cyclus, soort, status, titel, kanaal, tekst, nalezer,
-                        aangemaakt_door, aangemaakt_op)
-select id, 'barometer', 'nalezen', 'De barometer gaat naar Comfortabel', 'leden',
+-- en het bericht bij de stand van gisteren: ook verstuurd, zodat de ketting
+-- rond staat en het systeem weer een voorstel mag doen. Een concept dat ergens
+-- blijft liggen maak je zo gemaakt: kies een stand en publiceer met een nalezer.
+insert into publicatie (cyclus, soort, status, titel, kanaal, tekst, nalezer, nagelezen_op,
+                        verstuurd_op, verstuurd_door, aangemaakt_door, aangemaakt_op)
+select id, 'barometer', 'verstuurd', 'De barometer gaat naar Comfortabel', 'leden',
        'De barometer staat vanaf vandaag op Comfortabel (was Veilig). Waarom: de 5600 liep op tot vlak onder de waarschuwing.',
-       'jacqueline', 'simon', datetime('now', '-25 hours')
+       'jacqueline', datetime('now', '-25 hours'),
+       datetime('now', '-25 hours'), 'simon', 'simon', datetime('now', '-25 hours')
   from cyclus where label = 'DEMO · dispatch';
 update barometerstand
    set publicatie = (select max(id) from publicatie where cyclus in
          (select id from cyclus where label = 'DEMO · dispatch'))
  where cyclus in (select id from cyclus where label = 'DEMO · dispatch')
    and stand = 4 and gepubliceerd_op is null;
-insert into publicatie_ontvanger (publicatie, lid, reden)
+insert into publicatie_ontvanger (publicatie, lid, reden, bezorgd_op)
   select (select max(id) from publicatie where cyclus in
             (select id from cyclus where label = 'DEMO · dispatch')),
-         l.id, 'demo'
+         l.id, 'demo', datetime('now', '-25 hours')
     from lid l where l.email like '%@delta-historie.test';
 
 -- ---------- een paar events in de looptijd ----------
