@@ -1700,6 +1700,10 @@ Nu is de ketting rond: **vastleggen → concept → versturen → bij de leden.*
 
 **Eén klik is één concept.** De klikafhandeling van Dispatch hing aan het blijvende `inhoud`-element en werd er bij elk bezoek opnieuw aan geknoopt; drie keer Dispatch openen betekende drie luisteraars, en één klik op *Concept nalezen* maakte dan drie berichten — alle drie zagen ze gelijktijdig dat er nog geen concept lag. De luisteraars kijken nu of het scherm nog leeft, en de knop zet zichzelf op bezig.
 
+**De looptijd draagt de lopende tranches.** Onder de tijdas staat elke open tranche als een balk, van de dag dat ze geplaatst werd tot haar expiratie, in de kleur van haar stand, met een dunne lijn op vandaag. De vraag bij een event is altijd dezelfde — raakt dit een positie die we nog hebben? — en die lees je nu af in plaats van hem uit te rekenen.
+
+**In de geschiedenis staat geen voetregel meer.** Wie de stand vastlegde en of hij gemeld is, staat op de vastlegging zelf; onder elke regel herhalen maakte de kolom druk zonder dat iemand ernaar keek.
+
 **Onder elk bericht staat dezelfde voet**, uit `instelling.bericht_voettekst`: *kennis en de eigen posities van de oprichters, geen individueel beleggingsadvies*. Hij wordt ingebakken bij het opstellen, niet bij het versturen — verandert de tekst later, dan verandert een verstuurd bericht niet mee.
 
 **1. Stand naar de leden.** Het venster boven, de barometer eronder, en **één knop Publiceren voor allebei**. Kies je er twee, dan gaat er één bericht uit over allebei — een lid dat twee berichten krijgt over hetzelfde moment leest het tweede niet meer. De barometer **slaapt** tot het venster op *In positie* staat: daarvoor zitten wij er niet in en vragen we de leden niets, daarna is de cyclus uit. Hij is dan grijs en onklikbaar.

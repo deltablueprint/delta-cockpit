@@ -549,6 +549,23 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
 .werkbank .tijdblok.breed .tijdrij { grid-template-columns: minmax(0, 1fr); gap: 0; }
 .werkbank .tijdblok.breed .tijdnaam { display: none; }
 
+/* De tranches die nu open staan, als balken onder de as: van de dag dat ze
+   geplaatst werden tot hun expiratie, in de kleur van hun stand. De naam staat
+   in de balk — links een kolom met namen zou de as weer smal maken. */
+.looprij { margin-top: 4px; }
+.loopspoor { height: 22px; }
+.loopbalk {
+  position: absolute; top: 2px; height: 18px; border-radius: 9px;
+  display: flex; align-items: center; overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
+}
+.loopnaam {
+  padding: 0 9px; font-size: 10.5px; font-weight: 600; color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .25);
+}
+.loopnu { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--blue); opacity: .5; }
+
 /* De strook handelsdagen onder het venster en onder de barometer. Een spleet
    tussen de weken: zo tel je weken zonder dat er een label bij hoeft. */
 /* Het vak krimpt mee met de strook, zodat de datum rechts onder het laatste

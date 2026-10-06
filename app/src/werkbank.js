@@ -144,8 +144,6 @@ export async function werkbankscherm(inhoud, kruimel) {
         <span class="gtijd">${ontsnap(String(r.vastgesteld_op || "").slice(0, 16))}</span>
         <span class="gwat">${stuk.join("")}</span>
         ${r.reden ? `<span class="greden">${ontsnap(r.reden)}</span>` : ""}
-        <span class="gvoet">${r.wie ? ontsnap(r.wie) : "—"}${
-          r.gepubliceerd_op ? " · gemeld aan de leden" : " · niet gemeld"}</span>
       </li>`;
     }).join("");
 
@@ -437,10 +435,31 @@ export async function werkbankscherm(inhoud, kruimel) {
       extra: data.posities.map((p) => p.expiratiedatum).filter(Boolean),
     });
 
+    // En onder de as de tranches die nu open staan, elk als een balk van de dag
+    // dat hij geplaatst werd tot zijn expiratie. Zo zie je in één oogopslag welk
+    // event binnen welke looptijd valt — dat is precies de vraag die je bij een
+    // event stelt: raakt dit een positie die we nog hebben?
+    const lopend = (data.posities || []).filter((p) => p.open);
+    const balken = lopend.map((p) => {
+      const a = as.plek(p.geopend_op);
+      const b = as.plek(p.expiratiedatum);
+      if (a === null || b === null) return "";
+      const links = Math.min(a, b);
+      const breed = Math.max(2, Math.abs(b - a));
+      const kleur = p.voorbij_de_grens ? DIEPROOD : p.stand ? KLEUR[p.stand - 1] : "#B9B5AD";
+      const naam = p.contract || `Tranche ${p.tranche}`;
+      return `<div class="tijdrij looprij"><div class="tijdspoor loopspoor">
+        <span class="loopnu" style="left:${as.vandaagP}%"></span>
+        <span class="loopbalk" style="left:${links}%;width:${breed}%;background:${kleur}"
+          title="${ontsnap(naam)} — ${ontsnap(kortedatum(p.geopend_op))} tot ${ontsnap(kortedatum(p.expiratiedatum))}">
+          <span class="loopnaam">${ontsnap(naam)}</span></span>
+      </div></div>`;
+    }).join("");
+
     return `<section class="paneel">
       <div class="paneelkop">Looptijd<span class="meta">${
         (data.events || []).length} ${(data.events || []).length === 1 ? "event" : "events"}</span></div>
-      <div class="tijdblok breed">${as.asHtml}</div>
+      <div class="tijdblok breed">${as.asHtml}${balken}</div>
     </section>`;
   }
 
