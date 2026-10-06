@@ -1940,8 +1940,11 @@ body.sleept .lijsttabel { pointer-events: none; }
 .pubwissel { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .publabel { font-size: 9.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
   color: var(--faint); width: 108px; flex: 0 0 auto; }
-.pubchip { padding: 3px 10px; border-radius: 9px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-.pubchip.leeg { background: var(--b1); color: var(--mut); font-weight: 600; }
+/* Altijd witte letters, ook op geel: één regel leest rustiger dan per kleur
+   wisselen. Een dun schaduwtje houdt ze leesbaar op de lichtste kleuren. */
+.pubchip { padding: 3px 10px; border-radius: 9px; font-size: 12px; font-weight: 700; white-space: nowrap;
+  color: #fff; text-shadow: 0 1px 1px rgba(0, 0, 0, .35); }
+.pubchip.leeg { background: var(--b1); color: var(--mut); font-weight: 600; text-shadow: none; }
 .pubpijl { color: var(--dim); font-size: 14px; }
 .pubrij { display: flex; align-items: center; gap: 10px; }
 .publiceerbalk.open .pubrij { margin-top: 10px; }

@@ -31,16 +31,6 @@ import { tijdas, plaatsTijdkaarten, plaatsStrooktips } from "./tijdas.js";
 // een oordeel — groen is goed — terwijl het gewoon het eind van het verloop is.
 const VENSTERKLEUR = ["#DCE7EE", "#C3D9E5", "#A3C3D6", "#7FA8C2", "#4A83A6", "#0E4E70"];
 
-// Witte letters op een lichte chip lees je niet. Dit kijkt hoe donker de kleur
-// is en kiest wit of zwart; geel en lichtblauw krijgen dus donkere letters.
-function donkerGenoeg(hex) {
-  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim());
-  if (!m) return false;
-  const n = parseInt(m[1], 16);
-  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
-  return lum < 0.62;
-}
-
 // Elk bezoek krijgt een nummer. Klik je weg terwijl de peiling loopt, dan tekent
 // het antwoord dat daarna binnenkomt niet meer over het scherm waar je inmiddels
 // bent. Dat is een keer misgegaan en kostte iemand zijn halve formulier.
@@ -276,20 +266,24 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     // Wat er verandert, in beeld: van welke stand naar welke, in de kleuren van
     // de balk en de meter zelf. Een zin met twee vette woorden erin liet je nog
     // steeds zelf uitzoeken wat er nu precies anders wordt.
-    const chip = (tekst, kleur) => `<span class="pubchip" style="background:${kleur};color:${
-      donkerGenoeg(kleur) ? "#fff" : "var(--ink)"}">${ontsnap(tekst)}</span>`;
+    const chip = (tekst, kleur) => `<span class="pubchip" style="background:${kleur}">${ontsnap(tekst)}</span>`;
     const vensterkleur = (w) => VENSTERKLEUR[(v.verloop || []).indexOf(w)] || "var(--b1)";
     const standkleur = (n) => KLEUR[Number(n) - 1] || "var(--dim)";
 
     const wissels = [];
+    // Waar het vandaan komt is wat de léden kennen, niet wat wij ooit vastlegden:
+    // het bericht dat hieruit volgt verandert hún stand. Stond er een oude
+    // vastlegging die nooit gemeld is, dan wees de pijl van een stand naar
+    // diezelfde stand terwijl de leden iets anders kenden.
     if (kiesVenster !== null) {
+      const vanafW = v.gepubliceerd || v.nu;
       wissels.push(`<div class="pubwissel"><span class="publabel">Instap venster</span>
-        ${chip(labelVenster(v.nu), vensterkleur(v.nu))}
+        ${chip(labelVenster(vanafW), vensterkleur(vanafW))}
         <span class="pubpijl">→</span>
         ${chip(labelVenster(kiesVenster), vensterkleur(kiesVenster))}</div>`);
     }
     if (kiesStand !== null) {
-      const vanaf = b.wij ? Number(b.wij.stand.waarde) : (b.leden ? Number(b.leden.stand.waarde) : null);
+      const vanaf = b.leden ? Number(b.leden.stand.waarde) : (b.wij ? Number(b.wij.stand.waarde) : null);
       wissels.push(`<div class="pubwissel"><span class="publabel">Positie Barometer</span>
         ${vanaf ? chip(labelStand(vanaf), standkleur(vanaf)) : `<span class="pubchip leeg">nog niets</span>`}
         <span class="pubpijl">→</span>
