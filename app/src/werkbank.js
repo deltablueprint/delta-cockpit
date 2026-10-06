@@ -117,6 +117,26 @@ export async function werkbankscherm(inhoud, kruimel) {
     plaatsTijdkaarten(inhoud);
   }
 
+  // ------------------------------------------------------------------- kop
+  function kop() {
+    const w = data.wacht;
+    const wacht = w.kaarten > 0 || w.stand_anders || w.voorstel;
+    const wat = [
+      w.kaarten ? `${w.kaarten} ${w.kaarten === 1 ? "verandering" : "veranderingen"}` : null,
+      w.stand_anders ? "een stand die zij niet kennen" : null,
+      w.voorstel ? "een voorstel" : null,
+    ].filter(Boolean).join(" · ");
+
+    // Er loopt er één. Een keuzelijst met één regel erin is geen keuze maar een
+    // vraag die je elke keer opnieuw moet beantwoorden; de naam volstaat.
+    return `<div class="wbtop">
+      <span class="wbcyclus">Lopende cyclus: <b>${ontsnap(data.cyclus.label)}</b></span>
+      <span class="wbachter ${wacht ? "wacht" : "bij"}"><span class="stip"></span><span>${
+        wacht ? `Wacht op de leden: ${ontsnap(wat)}` : "De leden zijn bij"}</span></span>
+    </div>`;
+  }
+
+  // --------------------------------------------- het venster en de barometer
   function standvak() {
     const b = data.barometer;
     const v = data.venster;
