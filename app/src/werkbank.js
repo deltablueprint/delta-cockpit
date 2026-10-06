@@ -694,8 +694,7 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     return `<div class="posdagen">
       <div class="strook">${weken.map((w) => `<span class="week">${
         w.dagen.map(vakje).join("")}</span>`).join("")}</div>
-      <div class="strookdata"><span>${ontsnap(kortedatum(rijen[0].dag))}</span><span>${
-        ontsnap(kortedatum(rijen[rijen.length - 1].dag))}</span></div>
+      <div class="strookdata"><span>${ontsnap(kortedatum(rijen[0].dag))}</span></div>
     </div>`;
   }
 

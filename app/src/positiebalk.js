@@ -67,17 +67,31 @@ export function balkHtml(p, vakken = []) {
   return `<span class="spoorbalk">${vakjes}${merker}</span>`;
 }
 
-// De schaal eronder: dezelfde plekken als de vakken, met de ask-niveaus erbij.
+// De schaal eronder: de ask-niveaus op de grenzen waar ze bij horen.
+//
+// Elk getal hoort op de lijn tussen twee vakken te staan, niet ergens in een
+// vak: 60 is de stoploss, en dat is precies de overgang van 'voorbij de grens'
+// naar 'onder druk'. Ze stonden een vak te ver naar rechts — rechts uitgelijnd
+// binnen hun eigen cel — en dan lees je 60 bij de verkeerde kleur.
+//
+// Daarom staan ze nu absoluut, elk gecentreerd op zijn eigen grens.
 export function schaalHtml(vakken = [], ijk = null) {
-  const grens = ijk ? [null, ijk.stoploss, ijk.waarschuwing, ijk.breakeven, ijk.helft, ijk.winstanker] : [];
-  const schaal = vakken.map((v, i) => {
-    const breed = v.tot - v.van;
-    // Het smalle stuk voorbij de stoploss draagt geen label: te smal voor een
-    // woord, en de dieprode kleur zegt het al.
-    const label = !ijk ? v.naam : i === 0 ? "" : `${getal(grens[i])}`;
-    return `<span style="flex:0 0 calc(${breed.toFixed(2)}% - 3px)">${ontsnap(label)}</span>`;
+  if (!vakken.length) return "";
+  const grens = ijk
+    ? [null, ijk.stoploss, ijk.waarschuwing, ijk.breakeven, ijk.helft, ijk.winstanker]
+    : [];
+
+  const merken = vakken.map((v, i) => {
+    // Het eerste vak heeft links geen grens: daarboven is er geen prijs meer,
+    // alleen 'hier hoor je niet meer te zitten'.
+    if (i === 0) return "";
+    const tekst = ijk ? getal(grens[i]) : v.naam;
+    if (!tekst) return "";
+    const rand = v.van < 4 ? " links" : v.van > 96 ? " rechts" : "";
+    return `<span class="schaalmerk${rand}" style="left:${v.van.toFixed(2)}%">${ontsnap(tekst)}</span>`;
   }).join("");
-  return `<div class="schaalrij"><span class="schaal">${schaal}</span></div>`;
+
+  return `<div class="schaalrij"><span class="schaal">${merken}</span></div>`;
 }
 
 export function standBadge(p, naam) {

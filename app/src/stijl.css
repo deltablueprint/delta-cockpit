@@ -467,6 +467,9 @@ td.gesorteerd { background: rgba(19, 98, 137, .035); }
 .veldwaarde input, .veldwaarde select { max-width: var(--veldbreedte); }
 /* De ouder als vaste regel op het formulier: lezen en doorklikken, niet wijzigen. */
 .ouderveld { font-size: 13px; color: var(--blue); font-weight: 600; text-decoration: none; }
+/* Op het opstellerscherm: over welke positie dit bericht gaat. */
+.oppositie { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.oppositie .opfeitlabel { margin: 0; }
 .ouderveld:hover { text-decoration: underline; }
 .veldwaarde textarea { max-width: var(--veldbreedte-lang); }
 .veldwaarde .persoonveld { max-width: var(--veldbreedte); width: 100%; }
@@ -699,8 +702,8 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .posmeter .schaalrij { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 16px;
   padding: 2px 0 0; margin-top: 5px; }
-.posmeter .schaal { grid-column: 2; display: flex; gap: 3px; font-size: 10px; color: var(--faint); }
-.posmeter .schaal span { text-align: right; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.posmeter .schaal { grid-column: 2; position: relative; display: block; height: 14px;
+  font-size: 10px; color: var(--faint); }
 .posmeter .dvak { border: 0; background: none; padding: 10px 0 0; }
 
 /* --- barometer instellingen: de vijf standen onder elkaar --- */
@@ -2069,14 +2072,18 @@ body.sleept .lijsttabel { pointer-events: none; }
 .spoorbalk .z.aan:hover { opacity: 1 !important; }
 .merker { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--ink);
   border-radius: 2px; box-shadow: 0 0 0 2px #fff; }
+/* Elk getal staat op zijn eigen grens, gecentreerd op de lijn ertussen. */
+.schaalmerk { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap;
+  font-variant-numeric: tabular-nums; }
+.schaalmerk.links { transform: none; }
+.schaalmerk.rechts { transform: translateX(-100%); }
 .merkerlab { position: absolute; top: -19px; transform: translateX(-50%); font-size: 10.5px;
   font-weight: 700; white-space: nowrap; color: var(--ink); }
 /* De schaal onder de balken, op dezelfde grenzen als de vakjes. In punten, want
    dat is wat op het scherm van de broker staat. */
 .werkbank .schaalrij { display: grid; grid-template-columns: 210px 1fr; gap: 16px; padding: 2px var(--gutter) 12px; }
-.werkbank .schaal { grid-column: 2; display: flex; gap: 3px; font-size: 10px; color: var(--faint); }
-.werkbank .schaal span { text-align: right; }
-.werkbank .schaal span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.werkbank .schaal { grid-column: 2; position: relative; display: block; height: 14px;
+  font-size: 10px; color: var(--faint); }
 
 .zwakste { padding: 11px var(--gutter); border-top: 1px solid var(--b2); font-size: 12.5px;
   color: var(--ink3); background: var(--soft); }

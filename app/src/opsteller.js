@@ -16,6 +16,9 @@ import {
   meta as haalMeta, ik as haalIk,
 } from "./api.js";
 import { ontsnap } from "./veld.js";
+import { kijkvenster } from "./kijkvenster.js";
+
+const INFO = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r="1" fill="currentColor" stroke="none"/></svg>`;
 
 const STAND = {
   concept:   { label: "In concept",            kleur: "grijs" },
@@ -96,6 +99,15 @@ export async function opstellerscherm(inhoud, kruimel, id, opties = {}) {
           <span class="opkanaal">Naar de leden</span>
         </header>
 
+        ${p.positie ? `<div class="oppositie">
+          <span class="opfeitlabel">Over welke positie</span>
+          <a class="ouderveld" href="#/t/positie/${p.positie}">${
+            ontsnap(p.gesloten_positie || p.contract || `Positie ${p.positie}`)}</a>
+          <button type="button" class="refknop" data-ref-tabel="positie" data-ref-id="${p.positie}"
+            title="Bekijken zonder dit scherm te verlaten"
+            aria-label="Bekijken zonder dit scherm te verlaten">${INFO}</button>
+        </div>` : ""}
+
         ${feiten ? `<div class="opfeiten">${feiten}</div>` : ""}
 
         <label class="opveld">
@@ -111,6 +123,15 @@ export async function opstellerscherm(inhoud, kruimel, id, opties = {}) {
         ${dicht ? verstuurdRegel(p, gebruikers) : acties(p, gebruikers, ik)}
         <p class="opmelding" hidden></p>
       </div>`;
+
+    // De positie waar dit bericht over gaat, met het i-knopje: even kijken zonder
+    // dit scherm te verlaten — en de link ernaast als je er wél naartoe wil.
+    for (const knop of inhoud.querySelectorAll(".refknop[data-ref-tabel]")) {
+      knop.addEventListener("click", (e) => {
+        e.preventDefault();
+        kijkvenster(knop, knop.dataset.refTabel, knop.dataset.refId, m);
+      });
+    }
 
     if (!dicht) bind(p, teken);
   }
