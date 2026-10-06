@@ -234,10 +234,13 @@ function bind(p, opnieuw) {
         });
         return;
       }
+      // Verstuurd is klaar: het bericht is weg, er valt hier niets meer te doen.
+      // Dan hoor je terug te staan waar het werk is — in Dispatch — en niet op
+      // een scherm met een grijs tekstvak dat je zelf moet verlaten.
       doe(async () => {
         await bewaarEerst();
         await verstuurBericht(p.id);
-      });
+      }, async () => { location.hash = "/werkbank"; });
     });
   }
 
