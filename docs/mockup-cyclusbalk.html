@@ -1,0 +1,118 @@
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Cyclusbalk — 3 varianten</title>
+<style>
+:root{--cream:#F7F6F3;--b1:#E8E6E1;--b2:#F0EEEA;--soft:#FAF9F6;--ink:#0F0E0D;--ink2:#3A3835;
+--mut:#6E6C68;--dim:#8A8884;--faint:#A5A29C;--blue:#136289;--bluebg:#E6EEF3;--grn:#1F5E45;--red:#9A3227;}
+*{box-sizing:border-box}body{margin:0;background:var(--cream);font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial;color:var(--ink)}
+.wrap{padding:22px;max-width:1300px}
+h1{font-size:15px;margin:0 0 18px}
+.vtitel{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);margin:0 0 8px}
+.uitleg{font-size:11.5px;color:var(--mut);margin:7px 0 26px}
+.balk{background:#fff;border:1px solid var(--b1);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:14px;overflow:hidden}
+.pijl{flex:0 0 auto;width:24px;height:24px;border:1px solid var(--b1);background:#fff;border-radius:50%;color:var(--ink2);font-size:15px;line-height:1;cursor:pointer}
+.strook{flex:1 1 auto;min-width:0;display:flex;gap:8px;overflow:hidden}
+
+/* ---- 1: kaartjes, actieve met blauwe rand + vlaggetje ---- */
+.t{flex:0 0 184px;border:1px solid var(--b1);border-radius:9px;background:#fff;padding:8px 11px;text-decoration:none;display:block}
+.t .st{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.t .nm{font-size:13px;font-weight:700;color:var(--ink);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t .pr{font-size:10.5px;color:var(--mut);white-space:nowrap}
+.t .rs{font-size:10.5px;color:var(--mut);white-space:nowrap}
+.t .rs b{font-weight:700}
+.winst{color:var(--grn)}.verlies{color:var(--red)}
+.t.actief{border-color:var(--blue);box-shadow:inset 3px 0 0 var(--blue);background:var(--bluebg)}
+.t.actief .st{color:var(--blue)}
+.t.hier{border-color:var(--dim)}
+
+/* ---- 2: één rij, actieve staat los vóór een scheiding ---- */
+.t2{flex:0 0 180px;border:1px solid transparent;border-radius:9px;background:var(--soft);padding:8px 11px;text-decoration:none;display:block}
+.t2 .st{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.t2 .nm{font-size:13px;font-weight:600;color:var(--ink2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t2 .pr,.t2 .rs{font-size:10.5px;color:var(--mut);white-space:nowrap}
+.t2.actief{background:#fff;border-color:var(--blue);box-shadow:0 1px 3px rgba(19,98,137,.18)}
+.t2.actief .nm{color:var(--blue);font-weight:700}
+.t2.actief .st{color:var(--blue)}
+.scheiding{flex:0 0 auto;width:1px;align-self:stretch;background:var(--b1);margin:0 4px}
+
+/* ---- 3: tijdbalk, stip + lijn ---- */
+.spoor{flex:1 1 auto;min-width:0;position:relative;padding-top:13px;display:flex;gap:10px;overflow:hidden}
+.spoor::before{content:"";position:absolute;top:6px;left:0;right:0;height:1px;background:var(--b1)}
+.t3{flex:0 0 176px;position:relative;border:1px solid var(--b1);border-radius:9px;background:#fff;padding:8px 11px;text-decoration:none;display:block}
+.t3::before{content:"";position:absolute;top:-13px;left:14px;width:9px;height:9px;border-radius:50%;background:#D8D5CF;border:2px solid var(--cream)}
+.t3 .st{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.t3 .nm{font-size:13px;font-weight:600;color:var(--ink);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t3 .pr,.t3 .rs{font-size:10.5px;color:var(--mut);white-space:nowrap}
+.t3.actief{border-color:var(--blue);background:var(--bluebg)}
+.t3.actief::before{background:var(--blue);width:11px;height:11px;top:-14px}
+.t3.actief .st{color:var(--blue)}
+.t3.actief .nm{color:var(--blue);font-weight:700}
+</style></head><body><div class="wrap">
+<h1>De cyclusbalk — drie varianten</h1>
+
+<div class="variant">
+  <p class="vtitel">1 · Kaartjes · de actieve draagt een blauwe streep en blauw vlak</p>
+  <div class="balk">
+    <div class="strook">
+      <a class="t actief"><span class="st">Actief · in positie</span><span class="nm">Dispatch oktober</span>
+        <span class="pr">30 sep – 30 okt</span><span class="rs">3 tranches · <b>loopt</b></span></a>
+      <a class="t hier"><span class="st">Afgerond</span><span class="nm">September 2026</span>
+        <span class="pr">24 aug – 18 sep</span><span class="rs">3 tranches · <b class="winst">+69,0</b></span></a>
+      <a class="t"><span class="st">Afgerond</span><span class="nm">Augustus 2026</span>
+        <span class="pr">20 jul – 21 aug</span><span class="rs">3 tranches · <b class="verlies">−21,5</b></span></a>
+      <a class="t"><span class="st">Afgerond</span><span class="nm">Juli 2026</span>
+        <span class="pr">22 jun – 17 jul</span><span class="rs">2 tranches · <b class="winst">+51,0</b></span></a>
+      <a class="t"><span class="st">Afgerond</span><span class="nm">Juni 2026</span>
+        <span class="pr">18 mei – 19 jun</span><span class="rs">3 tranches · <b class="winst">+77,0</b></span></a>
+      <a class="t"><span class="st">Afgerond</span><span class="nm">Mei 2026</span>
+        <span class="pr">20 apr – 15 mei</span><span class="rs">3 tranches · <b class="winst">+68,0</b></span></a>
+    </div>
+    <button class="pijl">&rsaquo;</button>
+  </div>
+  <p class="uitleg">Zelfde tekst, zelfde maat. De actieve kaart heeft een blauwe zijstreep, een blauw vlak en een blauw statuswoord; de afgelopen staan wit. De kaart die je nú bekijkt krijgt een donkerder randje (hier: September).</p>
+</div>
+
+<div class="variant">
+  <p class="vtitel">2 · Rustige rij · de actieve steekt eruit door wit en schaduw, met een scheiding erna</p>
+  <div class="balk">
+    <div class="strook">
+      <a class="t2 actief"><span class="st">Actief · in positie</span><span class="nm">Dispatch oktober</span>
+        <span class="pr">30 sep – 30 okt</span><span class="rs">3 tranches · <b>loopt</b></span></a>
+      <span class="scheiding"></span>
+      <a class="t2"><span class="st">Afgerond</span><span class="nm">September 2026</span>
+        <span class="pr">24 aug – 18 sep</span><span class="rs">3 tranches · <b class="winst">+69,0</b></span></a>
+      <a class="t2"><span class="st">Afgerond</span><span class="nm">Augustus 2026</span>
+        <span class="pr">20 jul – 21 aug</span><span class="rs">3 tranches · <b class="verlies">−21,5</b></span></a>
+      <a class="t2"><span class="st">Afgerond</span><span class="nm">Juli 2026</span>
+        <span class="pr">22 jun – 17 jul</span><span class="rs">2 tranches · <b class="winst">+51,0</b></span></a>
+      <a class="t2"><span class="st">Afgerond</span><span class="nm">Juni 2026</span>
+        <span class="pr">18 mei – 19 jun</span><span class="rs">3 tranches · <b class="winst">+77,0</b></span></a>
+      <a class="t2"><span class="st">Afgerond</span><span class="nm">Mei 2026</span>
+        <span class="pr">20 apr – 15 mei</span><span class="rs">3 tranches · <b class="winst">+68,0</b></span></a>
+    </div>
+    <button class="pijl">&rsaquo;</button>
+  </div>
+  <p class="uitleg">De afgelopen cycli staan zacht beige en zonder rand — ze zijn er, maar ze vragen niets. De actieve is wit met een blauwe rand en een lichte schaduw, en staat apart door een dunne scheidingslijn.</p>
+</div>
+
+<div class="variant">
+  <p class="vtitel">3 · Tijdbalk · een lijn door de kaarten, met een stip per cyclus</p>
+  <div class="balk">
+    <div class="spoor">
+      <a class="t3 actief"><span class="st">Actief · in positie</span><span class="nm">Dispatch oktober</span>
+        <span class="pr">30 sep – 30 okt</span><span class="rs">3 tranches · <b>loopt</b></span></a>
+      <a class="t3"><span class="st">Afgerond</span><span class="nm">September 2026</span>
+        <span class="pr">24 aug – 18 sep</span><span class="rs">3 tranches · <b class="winst">+69,0</b></span></a>
+      <a class="t3"><span class="st">Afgerond</span><span class="nm">Augustus 2026</span>
+        <span class="pr">20 jul – 21 aug</span><span class="rs">3 tranches · <b class="verlies">−21,5</b></span></a>
+      <a class="t3"><span class="st">Afgerond</span><span class="nm">Juli 2026</span>
+        <span class="pr">22 jun – 17 jul</span><span class="rs">2 tranches · <b class="winst">+51,0</b></span></a>
+      <a class="t3"><span class="st">Afgerond</span><span class="nm">Juni 2026</span>
+        <span class="pr">18 mei – 19 jun</span><span class="rs">3 tranches · <b class="winst">+77,0</b></span></a>
+      <a class="t3"><span class="st">Afgerond</span><span class="nm">Mei 2026</span>
+        <span class="pr">20 apr – 15 mei</span><span class="rs">3 tranches · <b class="winst">+68,0</b></span></a>
+    </div>
+    <button class="pijl">&rsaquo;</button>
+  </div>
+  <p class="uitleg">De lijn erboven zegt dat dit tijd is: links wat nu loopt, naar rechts terug in de tijd. De actieve stip is blauw en groter. Zelfde kaarten, maar je leest de rij als een verleden in plaats van als een menu.</p>
+</div>
+
+</div></body></html>
