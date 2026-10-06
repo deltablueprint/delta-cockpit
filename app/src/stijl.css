@@ -1840,7 +1840,7 @@ body.sleept .lijsttabel { pointer-events: none; }
    wordt dat groen vanzelf donkerblauw. Dat ene moment is precies wat deze
    kleuren vertellen. */
 .vnu { font-size: 17px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 2px; }
-.dstaat { font-size: 11px; color: var(--mut); margin: 0 0 9px; }
+.dstaat { font-size: 11px; color: var(--mut); margin: 5px 0 9px; }
 .vensterrij { display: flex; gap: 6px; align-items: flex-start; }
 .vstap {
   flex: 1 1 0; min-width: 0; border: 0; background: none; padding: 0;

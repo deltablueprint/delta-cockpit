@@ -243,7 +243,6 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
       <div class="paneelbody">
         <div class="deel">
           <div class="deelkop"><span class="dtitel">Instap venster</span></div>
-          <div class="vnu">${ontsnap(labelVenster(toonVenster))}</div>
           <div class="dstaat">${vensteronder()}</div>
           <div class="vensterrij">${vensters().map(vakje).join("")}</div>
           ${dagstrook("venster")}
@@ -513,7 +512,7 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     }).join("");
 
     return `<section class="paneel">
-      <div class="paneelkop">Looptijd<span class="meta">${
+      <div class="paneelkop">Posities in looptijd<span class="meta">${
         (data.events || []).length} ${(data.events || []).length === 1 ? "event" : "events"}</span></div>
       <div class="tijdblok breed">${as.asHtml}${balken}</div>
     </section>`;
@@ -550,7 +549,7 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     const ijk = (data.posities.find((p) => p.ijk && p.open) || {}).ijk || null;
 
     return `<section class="paneel">
-      <div class="paneelkop">Posities</div>
+      <div class="paneelkop">Gezondheid posities</div>
       ${data.posities.length ? regels : `<p class="wbleeg">Deze cyclus heeft nog geen positie.</p>`}
       ${data.posities.length ? schaalHtml(VAKKEN, ijk) : ""}
       ${data.zwakste ? `<div class="zwakste"><b>${ontsnap(data.zwakste.contract || "")}</b> is de zwakste en bepaalt de barometer: ask ${
