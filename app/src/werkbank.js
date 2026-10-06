@@ -145,34 +145,37 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     const lopend = (data.cycli || []).find((c) => c.id === data.actief) || null;
     const nu = data.cyclus ? data.cyclus.id : null;
 
-    const tegels = (data.afgelopen || []).map((c) => {
+    // Elke tegel is hetzelfde opgebouwd: naam, periode, status. Alleen het
+    // uiterlijk verschilt — de lopende cyclus staat wit met een blauwe rand, de
+    // afgelopen staan zacht en randloos. Ze zijn naslag; ze horen de blik niet
+    // te trekken. Het resultaat staat er niet op: dat verhaal hoort in een
+    // post-analyse, niet in een keuzebalk.
+    const STATUS = { afgesloten: "Afgerond", geannuleerd: "Geannuleerd" };
+    const status = (c) => STATUS[c.status]
+      || String(c.status || "").charAt(0).toUpperCase() + String(c.status || "").slice(1);
+
+    const tegel = (c, { actief = false, url }) => {
       const periode = [c.geopend_op, c.gesloten_op || c.doelexpiratie]
         .filter(Boolean).map(kortedatum).join(" – ");
-      const res = c.resultaat === null || c.resultaat === undefined ? null : Number(c.resultaat);
-      return `<a class="cbtegel${c.id === nu ? " aan" : ""}" href="#/werkbank?cyclus=${c.id}">
-        <b>${ontsnap(c.label || `Cyclus ${c.id}`)}</b>
+      return `<a class="cbtegel${actief ? " actief" : ""}${c.id === nu ? " aan" : ""}" href="${url}">
+        <span class="cbnaam">${ontsnap(c.label || `Cyclus ${c.id}`)}</span>
         <span class="cbper">${ontsnap(periode || "—")}</span>
-        <span class="cbuit">${c.tranches || 0} ${c.tranches === 1 ? "tranche" : "tranches"}${
-          res === null ? "" : ` · <i class="${res < 0 ? "verlies" : "winst"}">${getalMet(res)}</i>`}</span>
+        <span class="cbst">${ontsnap(status(c))}</span>
       </a>`;
-    }).join("");
+    };
+
+    const tegels = (data.afgelopen || [])
+      .map((c) => tegel(c, { url: `#/werkbank?cyclus=${c.id}` })).join("");
 
     return `<div class="cyclusbalk">
-      <div class="cbactief">
-        <span class="cblabel">Actieve cyclus</span>
-        ${lopend
-          ? `<a class="cbnaam${nu === data.actief ? " aan" : ""}" href="#/werkbank">${
-              ontsnap(lopend.label)}</a>`
-          : `<span class="cbnaam leeg">geen</span>`}
+      ${tegels ? `<button class="cbpijl" data-schuif="-1" aria-label="Naar links">&lsaquo;</button>` : ""}
+      <div class="cbstrook">
+        ${lopend ? tegel(lopend, { actief: true, url: "#/werkbank" })
+          : `<span class="cbgeen">Er loopt geen cyclus.</span>`}
+        ${tegels ? `<span class="cbscheiding"></span>` : ""}
+        ${tegels}
       </div>
-      <div class="cbafgelopen">
-        <span class="cblabel">Afgelopen cycli</span>
-        ${tegels ? `
-          <button class="cbpijl" data-schuif="-1" aria-label="Naar links">&lsaquo;</button>
-          <div class="cbstrook">${tegels}</div>
-          <button class="cbpijl" data-schuif="1" aria-label="Naar rechts">&rsaquo;</button>`
-          : `<span class="cbgeen">Er is er nog geen afgerond.</span>`}
-      </div>
+      ${tegels ? `<button class="cbpijl" data-schuif="1" aria-label="Naar rechts">&rsaquo;</button>` : ""}
     </div>`;
   }
 

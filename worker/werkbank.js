@@ -166,7 +166,7 @@ export async function kaarten(env, cyclusId, { nu = null } = {}) {
 // ------------------------------------------------------------- het hele beeld
 export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
   const cycli = (await env.DB.prepare(
-    `select id, label, status, geopend_op from cyclus
+    `select id, label, status, geopend_op, doelexpiratie from cyclus
       where archief = 0 and status not in ('afgesloten', 'geannuleerd')
       -- Dispatch gaat over de cyclus die in de markt staat: die hoort bovenaan,
       -- ook als er daarna een nieuwe geopend is die nog in de pre-analyse zit.

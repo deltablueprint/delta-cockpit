@@ -622,37 +622,35 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
 /* Naast elkaar zodra er plaats is, eronder zodra die er niet is. Op een iPad in
    landscape (1024 px, min het menu) houdt een kolom van 320 px rechts te weinig
    over voor de meter en zijn standenlijst: die viel dan buiten beeld. */
-/* Welke cyclus je bekijkt. Links de lopende, rechts de tegels van wat erop zit:
-   een afgelopen cyclus is een terugblik, geen werkvoorraad, dus staat hij klein
-   en op afstand. De strook schuift met de pijlen; een scrollbalk zou de tegels
-   een halve regel hoger duwen. */
+/* Welke cyclus je bekijkt. Eén rij tegels: links de lopende, na een scheiding de
+   afgelopen. Alle tegels dragen dezelfde drie regels — naam, periode, status —
+   zodat je ze leest zonder te hoeven kijken wát er staat. Het verschil zit in
+   het uiterlijk: de lopende is wit met een blauwe rand, de afgelopen zijn zacht
+   en randloos. Ze zijn naslag en vragen niets. */
 .cyclusbalk {
-  display: flex; align-items: center; gap: 16px; min-width: 0;
-  padding: 9px var(--gutter); margin-bottom: var(--gutter);
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+  padding: 10px 14px; margin-bottom: var(--gutter);
   background: #fff; border: 1px solid var(--b1); border-radius: 10px;
 }
-.cblabel { font-size: 9.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
-.cbactief { flex: 0 0 auto; display: flex; flex-direction: column; gap: 1px; padding-right: 16px; border-right: 1px solid var(--b1); }
-.cbnaam { font-size: 14px; font-weight: 700; color: var(--ink); text-decoration: none; white-space: nowrap; }
-.cbnaam.aan { color: var(--blue); }
-.cbnaam.leeg { color: var(--faint); font-weight: 600; }
-.cbafgelopen { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 8px; }
-.cbafgelopen .cblabel { flex: 0 0 auto; }
-.cbgeen { font-size: 11.5px; color: var(--faint); }
-.cbstrook { flex: 1 1 auto; min-width: 0; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.cbstrook { flex: 1 1 auto; min-width: 0; display: flex; align-items: stretch; gap: 8px; overflow-x: auto; scrollbar-width: none; }
 .cbstrook::-webkit-scrollbar { display: none; }
+.cbscheiding { flex: 0 0 auto; width: 1px; align-self: stretch; background: var(--b1); margin: 0 4px; }
+.cbgeen { font-size: 12px; color: var(--faint); align-self: center; }
 .cbtegel {
-  flex: 0 0 188px; display: flex; flex-direction: column; gap: 1px;
-  padding: 6px 10px; border: 1px solid var(--b1); border-radius: 8px;
+  flex: 0 0 180px; display: flex; flex-direction: column; gap: 1px;
+  padding: 8px 11px; border: 1px solid transparent; border-radius: 9px;
   background: var(--soft); text-decoration: none;
 }
-.cbtegel:hover { background: #fff; border-color: var(--dim); }
-.cbtegel.aan { border-color: var(--blue); background: var(--bluebg); }
-.cbtegel b { font-size: 12.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cbper, .cbuit { font-size: 10.5px; color: var(--mut); white-space: nowrap; }
-.cbuit i { font-style: normal; font-weight: 600; }
-.cbuit i.winst { color: var(--grn); }
-.cbuit i.verlies { color: var(--red); }
+.cbtegel:hover { background: #fff; border-color: var(--b1); }
+.cbnaam { font-size: 13px; font-weight: 600; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cbper { font-size: 10.5px; color: var(--mut); white-space: nowrap; }
+.cbst { font-size: 9.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.cbtegel.actief { background: #fff; border-color: var(--blue); box-shadow: 0 1px 3px rgba(19, 98, 137, .18); }
+.cbtegel.actief .cbnaam { color: var(--blue); font-weight: 700; }
+.cbtegel.actief .cbst { color: var(--blue); }
+/* De cyclus die je op dit moment bekijkt. */
+.cbtegel.aan { border-color: var(--dim); background: #fff; }
+.cbtegel.actief.aan { border-color: var(--blue); }
 .cbpijl {
   flex: 0 0 auto; width: 26px; height: 26px; border: 1px solid var(--b1); background: #fff;
   border-radius: 50%; color: var(--ink2); font-size: 16px; line-height: 1; cursor: pointer;
