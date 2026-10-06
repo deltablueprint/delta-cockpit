@@ -613,6 +613,11 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     // dagen waarop wij al meer wisten staan open, met onze kleur als rand. Zo
     // zie je in één blik hoeveel dagen zij achterlopen.
     const vakje = (d) => {
+      // Een dag die nog moet komen: grijs, en de hover zegt het ook. Zo zie je
+      // hoeveel dagen deze cyclus nog loopt, net als bij een tranche.
+      if (d.toekomst) {
+        return `<i class="komt" data-tip="${ontsnap(`${kortedatum(d.dag)} · moet nog komen`)}"></i>`;
+      }
       if (wat === "venster") {
         const verloop = data.venster.verloop || [];
         const iZij = verloop.indexOf(d.gemeld_venster);

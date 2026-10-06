@@ -545,18 +545,23 @@ export async function dagstanden(env, cyclusId, { nu = null, maxdagen = 90 } = {
   if (!standen.length) return [];
 
   const cyclusrij = await env.DB.prepare(
-    "select geopend_op, status, afgesloten_op from cyclus where id = ?"
+    "select geopend_op, status, afgesloten_op, doelexpiratie from cyclus where id = ?"
   ).bind(cyclusId).first();
   const eerste = String(cyclusrij && cyclusrij.geopend_op ? cyclusrij.geopend_op : standen[0].vastgesteld_op).slice(0, 10);
 
   // Een afgelopen cyclus stopt op de dag dat hij afliep, niet vandaag. Een cyclus
   // die afgerond is wordt gesloten; hij kan dus niet weken lang vakjes blijven
   // verzamelen in 'afgerond', en een maand zou er een half jaar uitzien.
+  //
+  // Een lopende cyclus loopt juist dóór tot zijn doelexpiratie: de dagen die nog
+  // moeten komen staan grijs in de strook, zodat je ziet hoeveel er nog te gaan
+  // zijn — net als bij een tranche.
   const vandaag = (nu ? new Date(nu) : new Date()).toISOString().slice(0, 10);
   const dicht = cyclusrij && ["afgesloten", "geannuleerd"].includes(cyclusrij.status);
+  const doel = cyclusrij && cyclusrij.doelexpiratie ? String(cyclusrij.doelexpiratie).slice(0, 10) : null;
   const eind = dicht
     ? String(cyclusrij.afgesloten_op || standen[standen.length - 1].vastgesteld_op).slice(0, 10)
-    : vandaag;
+    : (doel && doel > vandaag ? doel : vandaag);
   const laatste = eind < eerste ? eerste : eind;
 
   const uit = (await handelsdagen(env, eerste, laatste, maxdagen)).map((d) => {
@@ -573,10 +578,17 @@ export async function dagstanden(env, cyclusId, { nu = null, maxdagen = 90 } = {
     for (const s of standen) {
       if (s.gepubliceerd_op && String(s.gepubliceerd_op).slice(0, 10) <= d.dag) bij = s; else if (!s.gepubliceerd_op) continue; else break;
     }
+    // Een dag die nog moet komen draagt geen stand: wat wij morgen vinden weten
+    // we vandaag niet, en een vakje dat de stand van vandaag doortrekt naar de
+    // toekomst leest als een voorspelling.
+    const toekomst = d.dag > vandaag;
     return {
       ...d,
-      stand: gold ? Number(gold.stand) : null, venster: gold ? gold.venster : null,
-      gemeld_stand: bij ? Number(bij.stand) : null, gemeld_venster: bij ? bij.venster : null,
+      toekomst: toekomst ? 1 : 0,
+      stand: toekomst || !gold ? null : Number(gold.stand),
+      venster: toekomst || !gold ? null : gold.venster,
+      gemeld_stand: toekomst || !bij ? null : Number(bij.stand),
+      gemeld_venster: toekomst || !bij ? null : bij.venster,
     };
   });
   // De laatste dagen zijn de interessante; bij een lange cyclus valt het begin af.

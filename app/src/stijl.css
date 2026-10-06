@@ -1870,6 +1870,8 @@ body.sleept .lijsttabel { pointer-events: none; }
 
 /* Een dag waarop de leden achterliepen: open vakje met onze kleur als rand. */
 .strook i.open { background: #fff; border: 1.5px solid var(--b1); }
+/* Een handelsdag die nog moet komen. */
+.strook i.komt { background: #EFEDE8; }
 .wbtop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .wbcyclus { font-size: 13px; color: var(--ink2); }
 .wbcyclus b { color: var(--ink); }
