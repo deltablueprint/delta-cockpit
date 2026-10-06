@@ -499,10 +499,10 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     const pil = (n) => `<span class="standpil" style="background:${KLEUR[Number(n) - 1] || "var(--dim)"}">${
       ontsnap(labelStand(Number(n)))}</span>`;
 
-    if (b.voorstel === zij) {
-      return `<div class="eens goed"><span class="eensvk"></span><span>
-        Het systeem meet ${pil(b.voorstel)} — dat is wat de leden kennen${waarom}.</span></div>`;
-    }
+    // Zijn ze het eens, dan is er niets te melden. Een regel die zegt dat alles
+    // in orde is, staat er elke dag — en wat er elke dag staat, lees je niet
+    // meer. De stilte is het bericht.
+    if (b.voorstel === zij) return "";
     // Loopt het uit elkaar, dan hangt het ervan af of er al iets van ons klaar
     // ligt. Zo ja, dan is de handeling niet 'kies een stand' maar 'stuur dat
     // bericht'.
