@@ -52,7 +52,7 @@ export async function drempelscherm(inhoud, kruimel) {
         <span class="dkomt">komt</span>
         ${VOORBEELDEN.map((v) => `<span class="dvoorbeeld">= ask ${getal(askVan(d, v.premie))}<i>${
           getal(keer(d, v.premie))}× de premie</i></span>`).join("")}
-        ${vast ? `<span class="dvastlabel">break-even</span>` : ""}
+        <span class="dvastlabel">${vast ? "break-even" : ""}</span>
       </div>`;
     }).join("");
 
@@ -72,7 +72,15 @@ export async function drempelscherm(inhoud, kruimel) {
       <section class="paneel">
         <div class="paneelkop">De vijf standen</div>
         <div class="paneelbody">
-          <div class="drijen">${rijen}</div>
+          <div class="drijen">
+            <div class="dkoprij">
+              <span class="dkoplinks">bij een ontvangen premie van</span>
+              ${VOORBEELDEN.map((v) => `<span class="dvoorbeeld kop">${getal(v.premie)} punten<i>${
+                ontsnap(v.naam)}</i></span>`).join("")}
+              <span class="dvastlabel"></span>
+            </div>
+            ${rijen}
+          </div>
           <p class="dvoet">De twee kolommen rechts zijn voorbeelden: een tranche met een ontvangen premie van
             ${getal(VOORBEELDEN[0].premie)} punten en een van ${getal(VOORBEELDEN[1].premie)} punten.
             Elke tranche rekent met haar eigen premie. Een grens in punten staat voor allebei op hetzelfde
