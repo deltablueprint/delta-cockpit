@@ -242,16 +242,15 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
 
       <div class="paneelbody">
         <div class="deel">
-          <div class="deelkop"><span class="dtitel">Instap venster</span>
-            <span class="dkent">${v.gepubliceerd ? `Leden kennen: ${ontsnap(labelVenster(v.gepubliceerd))}` : "Nog niets gemeld"}</span></div>
+          <div class="deelkop"><span class="dtitel">Instap venster</span></div>
           <div class="vnu">${ontsnap(labelVenster(toonVenster))}</div>
+          <div class="dstaat">${vensteronder()}</div>
           <div class="vensterrij">${vensters().map(vakje).join("")}</div>
           ${dagstrook("venster")}
         </div>
 
         <div class="deel${b.wakker ? "" : " uit"}">
-          <div class="deelkop"><span class="dtitel">Positie Barometer</span>
-            <span class="dkent">${b.leden ? `Leden kennen: ${ontsnap(b.leden.stand.label)}` : "Nog niets gemeld"}</span></div>
+          <div class="deelkop"><span class="dtitel">Positie Barometer</span></div>
           <div class="meterrij">
             <div class="gauge">${meter(toonStand, standTip)}
               <div class="gaugetekst">
@@ -295,12 +294,30 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     return s ? s.label : String(n);
   };
 
+  // Wat er onder de meter staat is één zin over twee dingen: welke stand wij
+  // vastlegden, en wat de leden daarvan weten. Die stonden eerst los van elkaar
+  // — een label met de stand van de leden naast een wijzer die onze stand
+  // aanwees, met 'nog niet gepubliceerd' eronder — en dan moest je zelf
+  // uitzoeken welke van de twee de leden nu zien. De wijzer is van ons; de leden
+  // lopen achter tot wij melden, en dat staat er nu in één adem bij.
   function gaugeonder() {
     const b = data.barometer;
     if (!b.wakker) return "nog niet van toepassing";
-    if (kiesStand !== null) return "gekozen — nog niet gepubliceerd";
+    if (kiesStand !== null) return "gekozen — nog niet gemeld";
     if (!b.wij) return "nog niet vastgesteld";
-    return b.gelijk ? "de leden weten dit" : "nog niet gepubliceerd";
+    if (b.gelijk) return "de leden weten dit";
+    return b.leden
+      ? `nog niet gemeld · de leden kennen ${ontsnap(b.leden.stand.label)}`
+      : "nog niet gemeld";
+  }
+
+  // Hetzelfde voor het venster.
+  function vensteronder() {
+    const v = data.venster;
+    if (kiesVenster !== null) return "gekozen — nog niet gemeld";
+    if (!v.gepubliceerd) return "nog niet gemeld";
+    if (v.gepubliceerd === v.nu) return "de leden weten dit";
+    return `nog niet gemeld · de leden kennen ${ontsnap(labelVenster(v.gepubliceerd))}`;
   }
 
   // De meter. Vijf vakjes met lucht ertussen: aaneengesloten lezen ze als één
