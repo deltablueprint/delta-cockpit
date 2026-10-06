@@ -1906,7 +1906,6 @@ body.sleept .lijsttabel { pointer-events: none; }
    wijzerplaat. */
 .gaugetekst { text-align: center; margin-top: -10px; }
 .gaugenaam { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
-.gaugeonder { font-size: 11px; color: var(--mut); }
 
 .legenda { display: flex; flex-direction: column; gap: 4px; }
 .lreg { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 3px;
@@ -1917,9 +1916,13 @@ body.sleept .lijsttabel { pointer-events: none; }
 .lreg .nm { font-weight: 600; }
 .lreg.nu { border-color: var(--blue); border-style: solid; background: var(--bluebg); }
 .lreg.nu .nm { color: var(--blue); }
-.lreg.tip { border-color: var(--amb); border-style: dashed; }
-.lreg.gekozen { border-color: var(--grn); border-style: solid; background: var(--grnbg); }
-.lreg.gekozen .nm { color: var(--grn); font-weight: 700; }
+/* Het voorstel van het systeem: rood gestippeld. Wat wij ervan vinden en nog
+   niet gemeld hebben: blauw gestippeld. De doorlopende blauwe rand blijft voor
+   wat de leden kennen — dat is ook waar de wijzer staat. */
+.lreg.tip { border-color: var(--red); border-style: dashed; }
+.lreg.tip .nm { color: var(--red); }
+.lreg.gekozen { border-color: var(--blue); border-style: dashed; background: var(--bluebg); }
+.lreg.gekozen .nm { color: var(--blue); font-weight: 700; }
 
 /* De reden staat op het scherm en niet in een systeemvenster. Een prompt() is
    geen scherm: hij staat buiten de app, je kunt er niets naast lezen, en wat je

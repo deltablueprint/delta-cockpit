@@ -82,13 +82,6 @@ select id, 4, 'gesloten', 'OESX 18SEP26 5050 PUT', 5050, date('now', '-17 days')
        'waardeloos geexpireerd', 22.0, date('now', '-45 days'), date('now', '-17 days')
   from cyclus where label = 'DEMO · dispatch';
 
--- ---------- de barometerstand die nu vastligt ----------
--- Comfortabel, terwijl de zwakste tranche onder druk staat: dan toont het scherm
--- het voorstel als stippellijn en kun je publiceren uitproberen.
-insert into barometerstand (cyclus, stand, venster, reden, herkomst, vastgesteld_op, vastgesteld_door)
-select id, 4, 'in_positie', 'Demo: stand met de hand gezet.', 'mens', datetime('now', '-2 hours'), 'simon'
-  from cyclus where label = 'DEMO · dispatch';
-
 -- ---------- drie kaarten ----------
 -- 1. een opening die nog niet gemeld is
 insert into gebeurtenis (cyclus, moment, bron, soort, titel, detail, positie, feiten)
@@ -175,7 +168,10 @@ select p.id,
   from positie p join cyclus c on c.id = p.cyclus join v
  where c.label = 'DEMO · dispatch' and p.tranche = 4;
 
--- Een paar standwisselingen, zodat de geschiedenis rechts niet leeg is.
+-- De standen die wij achter elkaar vastlegden. De laatste is nog niet gemeld:
+-- de wijzer van de barometer blijft dus op Veilig staan (dat kennen de leden) en
+-- Comfortabel krijgt een blauwe stippellijn, met rechts de keten die zegt waar
+-- het bericht ligt.
 insert into barometerstand (cyclus, stand, venster, reden, herkomst, vastgesteld_op, vastgesteld_door, gepubliceerd_op)
 select id, 2, 'opent_binnenkort', 'Demo: het venster gaat open.', 'mens', datetime('now', '-17 days'), 'simon', datetime('now', '-17 days')
   from cyclus where label = 'DEMO · dispatch';
@@ -185,6 +181,57 @@ select id, 5, 'in_positie', 'Demo: wij zitten erin.', 'mens', datetime('now', '-
 insert into barometerstand (cyclus, stand, venster, reden, herkomst, vastgesteld_op, vastgesteld_door)
 select id, 4, 'in_positie', 'Demo: de 5600 liep op.', 'voorstel', datetime('now', '-26 hours'), 'jacqueline'
   from cyclus where label = 'DEMO · dispatch';
+
+-- ---------- de berichten die bij die standen horen ----------
+-- Eén bericht dat verstuurd is (dat is wat de leden kennen: de wijzer van de
+-- barometer staat daarop) en één concept dat nog bij een nalezer ligt. Zo toont
+-- de keten rechts van de meter waar het vastzit, en staat de stand die wij al
+-- weten als blauwe stippellijn om zijn vak.
+insert into lid (naam, email, status, aangemeld_op)
+  select 'Demo lid 1', 'demo1@delta-historie.test', 'actief', date('now', '-200 days')
+   where not exists (select 1 from lid where email = 'demo1@delta-historie.test');
+insert into lid (naam, email, status, aangemeld_op)
+  select 'Demo lid 2', 'demo2@delta-historie.test', 'actief', date('now', '-180 days')
+   where not exists (select 1 from lid where email = 'demo2@delta-historie.test');
+insert into lid (naam, email, status, aangemeld_op)
+  select 'Demo lid 3', 'demo3@delta-historie.test', 'actief', date('now', '-90 days')
+   where not exists (select 1 from lid where email = 'demo3@delta-historie.test');
+
+-- het verstuurde bericht bij de stand van twaalf dagen geleden
+insert into publicatie (cyclus, soort, status, titel, kanaal, tekst,
+                        verstuurd_op, verstuurd_door, aangemaakt_door, aangemaakt_op)
+select id, 'barometer', 'verstuurd', 'De barometer gaat naar Veilig', 'leden',
+       'De barometer staat vanaf vandaag op Veilig. De drie tranches staan ruim boven hun grens.',
+       datetime('now', '-12 days'), 'simon', 'simon', datetime('now', '-12 days')
+  from cyclus where label = 'DEMO · dispatch';
+update barometerstand
+   set publicatie = (select max(id) from publicatie where cyclus in
+         (select id from cyclus where label = 'DEMO · dispatch'))
+ where cyclus in (select id from cyclus where label = 'DEMO · dispatch')
+   and stand = 5 and gepubliceerd_op is not null;
+insert into publicatie_ontvanger (publicatie, lid, reden, bezorgd_op)
+  select (select max(id) from publicatie where cyclus in
+            (select id from cyclus where label = 'DEMO · dispatch')),
+         l.id, 'demo', datetime('now', '-12 days')
+    from lid l where l.email like '%@delta-historie.test';
+
+-- het concept dat nog bij een nalezer ligt
+insert into publicatie (cyclus, soort, status, titel, kanaal, tekst, nalezer,
+                        aangemaakt_door, aangemaakt_op)
+select id, 'barometer', 'nalezen', 'De barometer gaat naar Comfortabel', 'leden',
+       'De barometer staat vanaf vandaag op Comfortabel (was Veilig). Waarom: de 5600 liep op tot vlak onder de waarschuwing.',
+       'jacqueline', 'simon', datetime('now', '-25 hours')
+  from cyclus where label = 'DEMO · dispatch';
+update barometerstand
+   set publicatie = (select max(id) from publicatie where cyclus in
+         (select id from cyclus where label = 'DEMO · dispatch'))
+ where cyclus in (select id from cyclus where label = 'DEMO · dispatch')
+   and stand = 4 and gepubliceerd_op is null;
+insert into publicatie_ontvanger (publicatie, lid, reden)
+  select (select max(id) from publicatie where cyclus in
+            (select id from cyclus where label = 'DEMO · dispatch')),
+         l.id, 'demo'
+    from lid l where l.email like '%@delta-historie.test';
 
 -- ---------- een paar events in de looptijd ----------
 delete from cyclus_event where cyclus in (select id from cyclus where label = 'DEMO · dispatch');

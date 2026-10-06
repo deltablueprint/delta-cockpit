@@ -246,18 +246,27 @@ eis("het verloop is één reeks blauw, van licht naar donker",
     /const VENSTERKLEUR = \[(?:[^\]]*,){5}[^\]]*\]/.test(wbjs));
 eis("de strook vakjes gebruikt diezelfde reeks, en geen eigen kleuren",
     wbjs.includes("VENSTERKLEUR[iZij]") && !wbjs.includes("VENSTERBLAUW"));
-eis("en dat geldt ook voor de regels naast de meter",
-    /\.lreg\.nu \{[^}]*var\(--blue\)/.test(wbcss) && /\.lreg\.gekozen \{[^}]*var\(--grn\)/.test(wbcss));
-eis("het systeemvoorstel blijft een stippellijn, en geen van beide kleuren",
-    /\.lreg\.tip \{[^}]*dashed/.test(wbcss));
+// De barometer wijst aan wat de léden kennen. Wat wij ervan vinden is een
+// stippellijn: rood zolang het een voorstel van het systeem is, blauw zodra wij
+// het aanklikken of vastleggen. Pas als het bericht weg is draait de wijzer mee.
+eis("de regel van de leden is een doorlopende blauwe rand",
+    /\.lreg\.nu \{[^}]*var\(--blue\)[^}]*solid|\.lreg\.nu \{[^}]*solid[^}]*var\(--blue\)/.test(wbcss)
+    || /\.lreg\.nu \{[^}]*var\(--blue\)/.test(wbcss));
+eis("wat wij ervan vinden staat blauw gestippeld",
+    /\.lreg\.gekozen \{[^}]*var\(--blue\)/.test(wbcss) && /\.lreg\.gekozen \{[^}]*dashed/.test(wbcss));
+eis("het systeemvoorstel staat rood gestippeld",
+    /\.lreg\.tip \{[^}]*dashed/.test(wbcss) && /\.lreg\.tip \{[^}]*var\(--red\)/.test(wbcss));
 // Het venster krijgt geen voorstel: het is een oordeel over de markt, en juist
 // dat is voor een lid het meeste waard (BOUWSPEC §13a). Daarom staat er ook
 // geen stippellijn op een venstervakje.
 eis("het venster stelt zichzelf niet voor", !/vensterTip/.test(readFileSync("app/src/werkbank.js", "utf8")));
 
 const wbtekst = readFileSync("app/src/werkbank.js", "utf8");
-eis("de meter tekent het gekozen vak groen, niet blauw",
-    /if \(gekozen\) svg \+=[^;]*stroke="#1F5E45"/.test(wbtekst));
+eis("de wijzer staat op wat de leden kennen, niet op onze eigen stand",
+    /const toonStand = b\.leden/.test(wbtekst));
+eis("de meter stippelt ons eigen oordeel blauw en het voorstel rood",
+    /if \(onsHier\) svg \+=[^;]*stroke="#136289"[^;]*stroke-dasharray/.test(wbtekst)
+    && /if \(voorgesteld\) svg \+=[^;]*stroke="#9A3227"[^;]*stroke-dasharray/.test(wbtekst));
 
 // ------------------------------------- de hoverkaart ligt boven de tabellen
 //

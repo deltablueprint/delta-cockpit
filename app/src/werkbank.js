@@ -212,7 +212,13 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     const b = data.barometer;
     const v = data.venster;
     const toonVenster = kiesVenster ?? v.nu;
-    const toonStand = kiesStand ?? (b.wij ? Number(b.wij.stand.waarde) : null);
+    // De wijzer staat op wat de léden kennen, altijd. Hij stond op onze eigen
+    // vastlegging, en dan wijst het scherm een stand aan die buiten dit scherm
+    // nog nergens bestaat. Wat wij ervan vinden is een stippellijn: het systeem
+    // stelt er een voor (rood), wij kiezen er een (blauw), en pas als het
+    // bericht weg is draait de wijzer mee.
+    const toonStand = b.leden ? Number(b.leden.stand.waarde) : null;
+    const onzeStand = kiesStand ?? (b.wij ? Number(b.wij.stand.waarde) : null);
 
     // Het venster krijgt geen systeemvoorstel. Het is een oordeel over de markt,
     // en juist dat is voor een lid het meeste waard — een systeem dat het zelf
@@ -265,10 +271,9 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
         <div class="deel${b.wakker ? "" : " uit"}">
           <div class="deelkop"><span class="dtitel">Positie Barometer</span></div>
           <div class="meterrij">
-            <div class="gauge">${meter(toonStand, standTip)}
+            <div class="gauge">${meter(toonStand, standTip, onzeStand)}
               <div class="gaugetekst">
-                <div class="gaugenaam">${toonStand ? ontsnap(labelStand(toonStand)) : "—"}</div>
-                <div class="gaugeonder">${gaugeonder()}</div>
+                <div class="gaugenaam">${toonStand ? ontsnap(labelStand(toonStand)) : "nog niets gemeld"}</div>
               </div>
             </div>
             <div class="legenda">${legenda(standTip)}</div>
@@ -370,23 +375,6 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     return s ? s.label : String(n);
   };
 
-  // Wat er onder de meter staat is één zin over twee dingen: welke stand wij
-  // vastlegden, en wat de leden daarvan weten. Die stonden eerst los van elkaar
-  // — een label met de stand van de leden naast een wijzer die onze stand
-  // aanwees, met 'nog niet gepubliceerd' eronder — en dan moest je zelf
-  // uitzoeken welke van de twee de leden nu zien. De wijzer is van ons; de leden
-  // lopen achter tot wij melden, en dat staat er nu in één adem bij.
-  function gaugeonder() {
-    const b = data.barometer;
-    if (!b.wakker) return "nog niet van toepassing";
-    if (kiesStand !== null) return "gekozen — nog niet gemeld";
-    if (!b.wij) return "nog niet vastgesteld";
-    if (b.gelijk) return "de leden weten dit";
-    return b.leden
-      ? `nog niet gemeld · de leden kennen ${ontsnap(b.leden.stand.label)}`
-      : "nog niet gemeld";
-  }
-
   // Hetzelfde voor het venster.
   function vensteronder() {
     const v = data.venster;
@@ -398,7 +386,7 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
 
   // De meter. Vijf vakjes met lucht ertussen: aaneengesloten lezen ze als één
   // verloop, los lezen ze als vijf standen — en dat zijn het.
-  function meter(toon, tip) {
+  function meter(toon, tip, ons) {
     const CX = 160, CY = 158, RO = 132, RI = 74, LUCHT = 2.2;
     const punt = (h, r) => [CX + r * Math.cos((h * Math.PI) / 180), CY - r * Math.sin((h * Math.PI) / 180)];
     const sector = (a0, a1, ro, ri) => {
@@ -412,14 +400,16 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     for (let i = 0; i < 5; i++) {
       const stand = i + 1;
       const a0 = 180 - i * 36 - LUCHT, a1 = a0 - 36 + 2 * LUCHT;
-      const gekozen = kiesStand === stand;
-      const voorgesteld = tip === stand && kiesStand === null;
+      // Wat wij ervan vinden staat als stippellijn om het vak. Rood zolang het
+      // alleen een voorstel van het systeem is, blauw zodra wij het aanklikken
+      // of vastleggen. Staat onze stand gelijk aan die van de leden, dan is er
+      // niets onderweg en hoeft er geen lijn te staan.
+      const onsHier = ons === stand && ons !== toon;
+      const voorgesteld = tip === stand && !onsHier;
       svg += `<path class="seg" data-stand="${stand}" d="${sector(a0, a1, RO, RI)}" fill="${KLEUR[stand - 1]}"
-        opacity="${gekozen || voorgesteld || (kiesStand === null && stand === toon) ? 1 : 0.72}"></path>`;
-      if (voorgesteld) svg += `<path d="${sector(a0, a1, RO + 5, RI - 5)}" fill="none" stroke="#8A5A12" stroke-width="2.5" stroke-dasharray="6 4"></path>`;
-      // Groen: dit is wat je net koos en wat nog niet weg is. De blauwe regel
-      // ernaast blijft zeggen wat de leden kennen.
-      if (gekozen) svg += `<path d="${sector(a0, a1, RO + 5, RI - 5)}" fill="none" stroke="#1F5E45" stroke-width="3"></path>`;
+        opacity="${stand === toon ? 1 : onsHier || voorgesteld ? 0.85 : 0.72}"></path>`;
+      if (voorgesteld) svg += `<path d="${sector(a0, a1, RO + 5, RI - 5)}" fill="none" stroke="#9A3227" stroke-width="2.5" stroke-dasharray="6 4"></path>`;
+      if (onsHier) svg += `<path d="${sector(a0, a1, RO + 5, RI - 5)}" fill="none" stroke="#136289" stroke-width="3" stroke-dasharray="6 4"></path>`;
     }
     if (toon) {
       const h = 180 - (toon - 0.5) * 36;
@@ -434,10 +424,16 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
   // Alleen de standen zelf. De ask-grenzen staan al onder de posities; ze hier
   // herhalen maakte van een keuzelijst een tabel.
   function legenda(tip) {
-    const nu = data.barometer.wij ? Number(data.barometer.wij.stand.waarde) : null;
+    const b = data.barometer;
+    // 'nu' is wat de leden kennen — hetzelfde als waar de wijzer op staat.
+    // 'gekozen' is wat wij ervan vinden en nog niet gemeld is, 'tip' wat het
+    // systeem voorstelt. Dezelfde drie betekenissen als op de meter.
+    const nu = b.leden ? Number(b.leden.stand.waarde) : null;
+    const ons = kiesStand ?? (b.wij ? Number(b.wij.stand.waarde) : null);
     return [1, 2, 3, 4, 5].map((stand) => {
-      const kl = [stand === nu ? "nu" : "", tip === stand && kiesStand === null ? "tip" : "",
-                  kiesStand === stand ? "gekozen" : ""].filter(Boolean).join(" ");
+      const onsHier = ons === stand && ons !== nu;
+      const kl = [stand === nu ? "nu" : "", tip === stand && !onsHier ? "tip" : "",
+                  onsHier ? "gekozen" : ""].filter(Boolean).join(" ");
       return `<button class="lreg ${kl}" data-stand="${stand}">
         <span class="vlak" style="background:${KLEUR[stand - 1]}"></span>
         <span class="nm">${ontsnap(labelStand(stand))}</span></button>`;
