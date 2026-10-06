@@ -1960,6 +1960,13 @@ body.sleept .lijsttabel { pointer-events: none; }
 .werkbank .vreg .kern b { display: block; font-weight: 600; color: var(--ink); font-size: 13px; }
 .werkbank .vreg .kern span { color: var(--mut); }
 .werkbank .vreg .tijd { font-size: 11px; color: var(--faint); white-space: nowrap; }
+/* Een verstuurd bericht is aanklikbaar: het overzicht hiernaast verving de
+   losse geschiedenis, en wie een regel leest wil het bericht zelf kunnen zien. */
+a.vreg { text-decoration: none; color: inherit; }
+a.vreg:hover { background: var(--hov, #F6F4F0); }
+.werkbank .vchips { display: flex; flex-wrap: wrap; gap: 10px; margin: 3px 0 2px; color: var(--ink2); }
+.werkbank .vchips .gstuk { color: var(--ink2); }
+.werkbank .vvoet { display: block; margin-top: 3px; font-size: 11px; color: var(--faint); }
 
 /* Tot een iPad in landscape blijft alles staan zoals het staat; alleen de zes
    cijfers onder een positie gaan naar twee rijen, want zes naast elkaar worden

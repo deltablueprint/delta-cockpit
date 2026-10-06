@@ -109,7 +109,6 @@ export async function werkbankscherm(inhoud, kruimel) {
           ${positievak()}
           ${ledenvak()}
         </div>
-        ${geschiedenisvak()}
       </div>
     </div>`;
 
@@ -118,66 +117,6 @@ export async function werkbankscherm(inhoud, kruimel) {
     plaatsTijdkaarten(inhoud);
   }
 
-  // ------------------------------------------------------- de geschiedenis
-  //
-  // Rechts staat wat er gebeurd is: welke standen wij achter elkaar zetten, en
-  // hoe elke tranche zich ondertussen ontwikkelde. Een scherm dat alleen het nu
-  // toont beantwoordt de vraag niet die een lid stelt — wordt het beter of
-  // slechter?
-  function geschiedenisvak() {
-    const g = data.geschiedenis || { standen: [], verloop: {} };
-
-    const standen = g.standen.map((r, i) => {
-      const vorige = g.standen[i + 1] || null;
-      const stuk = [];
-      if (!vorige || vorige.venster !== r.venster) {
-        stuk.push(`<span class="gstuk">venster <b>${ontsnap(labelVenster(r.venster))}</b></span>`);
-      }
-      if (!vorige || Number(vorige.stand) !== Number(r.stand)) {
-        stuk.push(`<span class="gstuk"><span class="gvlak" style="background:${
-          KLEUR[Number(r.stand) - 1] || "var(--dim)"}"></span><b>${ontsnap(labelStand(Number(r.stand)))}</b></span>`);
-      }
-      // Een rij waarin niets veranderde is een bevestiging; die zeggen we zo.
-      if (!stuk.length) stuk.push(`<span class="gstuk gstil">bevestigd</span>`);
-
-      return `<li class="greg">
-        <span class="gtijd">${ontsnap(String(r.vastgesteld_op || "").slice(0, 16))}</span>
-        <span class="gwat">${stuk.join("")}</span>
-        ${r.reden ? `<span class="greden">${ontsnap(r.reden)}</span>` : ""}
-      </li>`;
-    }).join("");
-
-    return `<aside class="wbzij">
-      <section class="paneel">
-        <div class="paneelkop">Geschiedenis</div>
-        <div class="paneelbody">
-          ${g.standen.length ? `<ul class="glijst">${standen}</ul>`
-            : `<p class="wbleeg">Er is nog geen stand vastgelegd.</p>`}
-        </div>
-      </section>
-    </aside>`;
-  }
-
-  // ------------------------------------------------------------------- kop
-  function kop() {
-    const w = data.wacht;
-    const wacht = w.kaarten > 0 || w.stand_anders || w.voorstel;
-    const wat = [
-      w.kaarten ? `${w.kaarten} ${w.kaarten === 1 ? "verandering" : "veranderingen"}` : null,
-      w.stand_anders ? "een stand die zij niet kennen" : null,
-      w.voorstel ? "een voorstel" : null,
-    ].filter(Boolean).join(" · ");
-
-    // Er loopt er één. Een keuzelijst met één regel erin is geen keuze maar een
-    // vraag die je elke keer opnieuw moet beantwoorden; de naam volstaat.
-    return `<div class="wbtop">
-      <span class="wbcyclus">Lopende cyclus: <b>${ontsnap(data.cyclus.label)}</b></span>
-      <span class="wbachter ${wacht ? "wacht" : "bij"}"><span class="stip"></span><span>${
-        wacht ? `Wacht op de leden: ${ontsnap(wat)}` : "De leden zijn bij"}</span></span>
-    </div>`;
-  }
-
-  // --------------------------------------------- het venster en de barometer
   function standvak() {
     const b = data.barometer;
     const v = data.venster;
@@ -551,6 +490,37 @@ export async function werkbankscherm(inhoud, kruimel) {
     </div>`;
   }
 
+  // Eén verstuurd bericht in het overzicht. Dit stond vroeger rechts als een
+  // aparte geschiedenis van standen, los van de berichten waarin die standen
+  // naar de leden gingen — twee lijsten over hetzelfde. Wat de leden weten staat
+  // in wat zij gekregen hebben, dus staat het hier: de stand die erin stond, naar
+  // hoeveel leden het ging, wie het verstuurde, en één klik naar het bericht.
+  function berichtregel(v) {
+    const chips = [];
+    if (v.venster) {
+      chips.push(`<span class="gstuk">venster <b>${ontsnap(labelVenster(v.venster))}</b></span>`);
+    }
+    if (v.stand) {
+      chips.push(`<span class="gstuk"><span class="gvlak" style="background:${
+        KLEUR[Number(v.stand) - 1] || "var(--dim)"}"></span><b>${
+        ontsnap(labelStand(Number(v.stand)))}</b></span>`);
+    }
+    const voet = [
+      v.leden ? `${v.leden} ${v.leden === 1 ? "lid" : "leden"}` : null,
+      v.wie ? ontsnap(v.wie) : null,
+    ].filter(Boolean).join(" · ");
+
+    return `<a class="vreg" href="#/bericht/${v.id}?van=werkbank">
+      <span class="vink">✓</span>
+      <span class="kern">
+        <b>${ontsnap(v.titel || v.soort)}</b>
+        ${chips.length ? `<span class="vchips">${chips.join("")}</span>` : ""}
+        <span>${ontsnap(String(v.tekst || "").replace(/\s+/g, " ").slice(0, 90))}</span>
+        ${voet ? `<span class="vvoet">${voet}</span>` : ""}
+      </span>
+      <span class="tijd">${ontsnap(String(v.verstuurd_op || "").slice(0, 16))}</span></a>`;
+  }
+
   // ------------------------------------------------- kaarten en verstuurd
   function ledenvak() {
     const kaartjes = data.kaarten.map((k) => `<div class="kaart">
@@ -585,11 +555,9 @@ export async function werkbankscherm(inhoud, kruimel) {
           ${kaartjes || `<p class="wbleeg">Geen openstaande kaarten. Er is geen positie veranderd.</p>`}
         </div>
         <div class="kol">
-          <div class="kolkop">Verstuurd naar de leden<span class="n">deze cyclus</span></div>
-          ${data.verstuurd.length ? data.verstuurd.map((v) => `<div class="vreg">
-            <span class="vink">✓</span>
-            <span class="kern"><b>${ontsnap(v.titel || v.soort)}</b><span>${ontsnap(String(v.tekst || "").slice(0, 90))}</span></span>
-            <span class="tijd">${ontsnap(String(v.verstuurd_op || "").slice(0, 16))}</span></div>`).join("")
+          <div class="kolkop">Geposte berichten<span class="n">${
+            data.verstuurd.length} deze cyclus</span></div>
+          ${data.verstuurd.length ? data.verstuurd.map((v) => berichtregel(v)).join("")
             : `<p class="wbleeg">Er is nog niets naar de leden gegaan.</p>`}
         </div>
       </div>

@@ -1702,7 +1702,7 @@ Nu is de ketting rond: **vastleggen → concept → versturen → bij de leden.*
 
 **De looptijd draagt de lopende tranches.** Onder de tijdas staat elke open tranche als een balk, van de dag dat ze geplaatst werd tot haar expiratie, in de kleur van haar stand, met een dunne lijn op vandaag. De vraag bij een event is altijd dezelfde — raakt dit een positie die we nog hebben? — en die lees je nu af in plaats van hem uit te rekenen.
 
-**In de geschiedenis staat geen voetregel meer.** Wie de stand vastlegde en of hij gemeld is, staat op de vastlegging zelf; onder elke regel herhalen maakte de kolom druk zonder dat iemand ernaar keek.
+**De geschiedenis is het overzicht van wat er gepost is.** De aparte kolom rechts met vastgelegde standen is weg: dat was een tweede lijst over hetzelfde, naast de berichten waarin die standen naar de leden gingen. Wat de leden weten staat in wat zij gekregen hebben, dus staat het onder *Publicaties*, als **Geposte berichten**: per bericht de titel, de stand en het venster die erin stonden, de eerste regels tekst, naar hoeveel leden het ging en wie het verstuurde — en één klik naar het bericht zelf.
 
 **Onder elk bericht staat dezelfde voet**, uit `instelling.bericht_voettekst`: *kennis en de eigen posities van de oprichters, geen individueel beleggingsadvies*. Hij wordt ingebakken bij het opstellen, niet bij het versturen — verandert de tekst later, dan verandert een verstuurd bericht niet mee.
 

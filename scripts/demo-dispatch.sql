@@ -19,44 +19,33 @@
 -- Alles wat aan de demo-cyclus hangt moet mee, en in deze volgorde. Liep je op
 -- de demo een concept op (Dispatch maakt er een bij publiceren), dan wees er een
 -- rij in publicatie naar de positie en de gebeurtenis, en weigerde het opruimen
--- met FOREIGN KEY constraint failed. Verwijzingen náár een rij worden eerst
--- losgemaakt; verwijzingen die de rij zelf uitdeelt hinderen een delete niet.
-create temp table demo_cyclus as
-  select id from cyclus where label = 'DEMO · dispatch';
-create temp table demo_positie as
-  select id from positie where cyclus in (select id from demo_cyclus);
-create temp table demo_publicatie as
-  select id from publicatie
-   where cyclus in (select id from demo_cyclus)
-      or positie in (select id from demo_positie)
-      or gebeurtenis in (select id from gebeurtenis where cyclus in (select id from demo_cyclus));
+-- met FOREIGN KEY constraint failed. Verwijzingen náár een rij worden daarom
+-- eerst losgemaakt; verwijzingen die een rij zelf uitdeelt hinderen een delete
+-- niet.
+--
+-- Geen tijdelijke tabellen en geen pragma's: D1 staat die niet toe en antwoordt
+-- met 'not authorized: SQLITE_AUTH'. Elke regel zoekt de demo dus opnieuw op via
+-- het label, en de volgorde zorgt dat die zoektocht nog iets vindt.
+update gebeurtenis    set publicatie = null where publicatie in (select id from publicatie where cyclus in (select id from cyclus where label = 'DEMO · dispatch') or positie in (select id from positie where cyclus in (select id from cyclus where label = 'DEMO · dispatch')) or gebeurtenis in (select id from gebeurtenis where cyclus in (select id from cyclus where label = 'DEMO · dispatch')));
+update barometerstand set publicatie = null where publicatie in (select id from publicatie where cyclus in (select id from cyclus where label = 'DEMO · dispatch') or positie in (select id from positie where cyclus in (select id from cyclus where label = 'DEMO · dispatch')) or gebeurtenis in (select id from gebeurtenis where cyclus in (select id from cyclus where label = 'DEMO · dispatch')));
+update positie        set doorgerold_naar = null where cyclus in (select id from cyclus where label = 'DEMO · dispatch');
 
-update gebeurtenis   set publicatie = null where publicatie in (select id from demo_publicatie);
-update barometerstand set publicatie = null where publicatie in (select id from demo_publicatie);
-update positie set doorgerold_naar = null where id in (select id from demo_positie);
-
-delete from publicatie_ontvanger where publicatie in (select id from demo_publicatie);
-delete from publicatie   where id in (select id from demo_publicatie);
-delete from barometerstand where cyclus in (select id from demo_cyclus);
-delete from gebeurtenis    where cyclus in (select id from demo_cyclus)
-                              or positie in (select id from demo_positie);
-delete from positiemeting  where positie in (select id from demo_positie);
-delete from positievolger  where positie in (select id from demo_positie);
-delete from exitregel      where positie in (select id from demo_positie);
-delete from voornemen      where positie in (select id from demo_positie)
-                              or opvolger in (select id from demo_positie);
-delete from positie        where id in (select id from demo_positie);
-delete from voorwaarde         where cyclus in (select id from demo_cyclus);
-delete from chartlezing        where cyclus in (select id from demo_cyclus);
-delete from beoordelingsmoment where cyclus in (select id from demo_cyclus);
-delete from inzending          where cyclus in (select id from demo_cyclus);
-delete from cyclus_event       where cyclus in (select id from demo_cyclus);
+delete from publicatie_ontvanger where publicatie in (select id from publicatie where cyclus in (select id from cyclus where label = 'DEMO · dispatch') or positie in (select id from positie where cyclus in (select id from cyclus where label = 'DEMO · dispatch')) or gebeurtenis in (select id from gebeurtenis where cyclus in (select id from cyclus where label = 'DEMO · dispatch')));
+delete from publicatie   where cyclus in (select id from cyclus where label = 'DEMO · dispatch') or positie in (select id from positie where cyclus in (select id from cyclus where label = 'DEMO · dispatch')) or gebeurtenis in (select id from gebeurtenis where cyclus in (select id from cyclus where label = 'DEMO · dispatch'));
+delete from barometerstand where cyclus in (select id from cyclus where label = 'DEMO · dispatch');
+delete from gebeurtenis    where cyclus in (select id from cyclus where label = 'DEMO · dispatch') or positie in (select id from positie where cyclus in (select id from cyclus where label = 'DEMO · dispatch'));
+delete from positiemeting  where positie in (select id from positie where cyclus in (select id from cyclus where label = 'DEMO · dispatch'));
+delete from positievolger  where positie in (select id from positie where cyclus in (select id from cyclus where label = 'DEMO · dispatch'));
+delete from exitregel      where positie in (select id from positie where cyclus in (select id from cyclus where label = 'DEMO · dispatch'));
+delete from voornemen      where positie in (select id from positie where cyclus in (select id from cyclus where label = 'DEMO · dispatch')) or opvolger in (select id from positie where cyclus in (select id from cyclus where label = 'DEMO · dispatch'));
+delete from positie        where cyclus in (select id from cyclus where label = 'DEMO · dispatch');
+delete from voorwaarde         where cyclus in (select id from cyclus where label = 'DEMO · dispatch');
+delete from chartlezing        where cyclus in (select id from cyclus where label = 'DEMO · dispatch');
+delete from beoordelingsmoment where cyclus in (select id from cyclus where label = 'DEMO · dispatch');
+delete from inzending          where cyclus in (select id from cyclus where label = 'DEMO · dispatch');
+delete from cyclus_event       where cyclus in (select id from cyclus where label = 'DEMO · dispatch');
 delete from brokerpositie where conid like '9900%';
-delete from cyclus        where id in (select id from demo_cyclus);
-
-drop table demo_publicatie;
-drop table demo_positie;
-drop table demo_cyclus;
+delete from cyclus        where label = 'DEMO · dispatch';
 
 -- ---------- de cyclus ----------
 insert into cyclus (label, status, geopend_op, doelexpiratie, toelichting)

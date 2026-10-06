@@ -184,11 +184,20 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
       // Alleen wat naar de leden ging. Een interne publicatie onder het kopje
       // 'verstuurd naar de leden' is precies de stilte-fout waar dit scherm
       // voor bestaat: je denkt dat ze het weten, en ze weten het niet.
-      `select id, titel, soort, tekst, verstuurd_op
-         from publicatie
-        where cyclus = ? and archief = 0 and status = 'verstuurd'
-          and coalesce(kanaal, 'leden') <> 'intern'
-        order by verstuurd_op desc, id desc limit 20`
+      // Wat erbij staat is wat je van een verstuurd bericht wilt weten zonder
+      // het te openen: welke stand erin stond, naar hoeveel leden het ging, en
+      // wie het de deur uit deed.
+      `select p.id, p.titel, p.soort, p.tekst, p.verstuurd_op, p.positie,
+              b.stand, b.venster,
+              (select count(*) from publicatie_ontvanger o
+                where o.publicatie = p.id and o.archief = 0) as leden,
+              coalesce(g.korte_naam, g.naam, p.verstuurd_door) as wie
+         from publicatie p
+         left join barometerstand b on b.publicatie = p.id and b.archief = 0
+         left join gebruiker g on g.id = p.verstuurd_door
+        where p.cyclus = ? and p.archief = 0 and p.status = 'verstuurd'
+          and coalesce(p.kanaal, 'leden') <> 'intern'
+        order by p.verstuurd_op desc, p.id desc limit 20`
     ).bind(id).all().then((r) => r.results).catch(() => []),
     stroom(env, id, 8).catch(() => []),
   ]);
@@ -201,18 +210,6 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
        from cyclus_event ce join event e on e.id = ce.event
       where ce.cyclus = ? order by e.datum, e.tijdstip`
   ).bind(id).all().then((r) => r.results).catch(() => []);
-
-  // De geschiedenis: wat wij achter elkaar besloten, en hoe elke tranche zich
-  // ondertussen ontwikkelde. Zonder dat is elk scherm een momentopname — en de
-  // vraag die een lid stelt is juist: wordt het beter of slechter?
-  const standen = (await env.DB.prepare(
-    `select b.stand, b.venster, b.reden, b.herkomst, b.vastgesteld_op, b.gepubliceerd_op,
-            coalesce(g.korte_naam, g.naam, b.vastgesteld_door) as wie
-       from barometerstand b
-       left join gebruiker g on g.id = b.vastgesteld_door
-      where b.cyclus = ? and b.archief = 0
-      order by b.vastgesteld_op desc, b.id desc limit 40`
-  ).bind(id).all().then((r) => r.results).catch(() => []));
 
   // Per tranche één vakje per dag, met de stand waarop hij die dag sloot. Niet
   // de laagste of het gemiddelde van de dag: waar hij aan het eind van de dag
@@ -292,7 +289,7 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
     verstuurd,
     stroom: gebeurtenissen,
     events,
-    geschiedenis: { standen, verloop, dagen: await dagstanden(env, id, { nu }) },
+    geschiedenis: { verloop, dagen: await dagstanden(env, id, { nu }) },
     // Wacht er iets op de leden? Drie dingen kunnen dat zijn, en ze staan los
     // van elkaar: een kaart, een stand die wij wel kennen en zij niet, of een
     // voorstel dat nog niet overgenomen is.
