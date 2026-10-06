@@ -14,6 +14,8 @@
 // voor het vastleggen van een uitvoering is dat genoeg, voor het bewaken van
 // een stoploss niet — dat is een andere bron.
 
+import { huisContract, huisSymbool } from "./positie.js";
+
 // IBKR heeft twee adressen voor dezelfde dienst; welke werkt verschilt per
 // account. We proberen de nieuwe en vallen terug op de oude, in plaats van te
 // gokken welke het bij jou is.
@@ -170,8 +172,8 @@ export function leesPosities(xml) {
 
       return {
         conid: p.conid,
-        contract: p.description
-          || `${p.underlyingSymbol || p.symbol || ""} ${datum(p.expiry) || ""} ${p.strike || ""} ${(p.putCall || "").toUpperCase() === "P" ? "PUT" : (p.putCall || "")}`.replace(/\s+/g, " ").trim(),
+        contract: huisContract(p.description
+          || `${p.underlyingSymbol || p.symbol || ""} ${datum(p.expiry) || ""} ${p.strike || ""} ${(p.putCall || "").toUpperCase() === "P" ? "PUT" : (p.putCall || "")}`.replace(/\s+/g, " ").trim()),
         strike: getal(p.strike),
         expiratiedatum: datum(p.expiry),
         aantal: Math.abs(getal(p.position) ?? getal(p.quantity) ?? 0) || null,
@@ -201,8 +203,8 @@ export function leesTransacties(xml) {
                   : (t.openCloseIndicator || "").toUpperCase().startsWith("O") ? "openend" : null;
       return {
         conid: t.conid,
-        contract: t.description || `${t.underlyingSymbol || t.symbol || ""} ${datum(t.expiry) || ""} ${t.strike || ""} ${(t.putCall || "").toUpperCase()}`.replace(/\s+/g, " ").trim(),
-        onderliggend: t.underlyingSymbol || t.symbol || null,
+        contract: huisContract(t.description || `${t.underlyingSymbol || t.symbol || ""} ${datum(t.expiry) || ""} ${t.strike || ""} ${(t.putCall || "").toUpperCase()}`.replace(/\s+/g, " ").trim()),
+        onderliggend: huisSymbool(t.underlyingSymbol || t.symbol),
         strike: getal(t.strike),
         expiratiedatum: datum(t.expiry),
         putcall: (t.putCall || "").toUpperCase() || null,

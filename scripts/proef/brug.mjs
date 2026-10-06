@@ -101,3 +101,43 @@ console.log("na 2 minuten stilte — live:", s.live, "| stil:", s.stil_seconden,
   console.log(`twee rekeningen: ${f === 0 ? "klopt" : f + " fout(en)"}`);
   if (f) process.exit(1);
 }
+
+// --------------------------------------- één contract, twee namen en één schaal
+//
+// Eurex noemt de optie op de Euro Stoxx 50 OESX, IBKR stuurt hem door als
+// ESTX50. En IBKR rekent de gemiddelde kostprijs van een optie per contract:
+// bij multiplier 10 staat er 133,50 waar wij 13,35 punten bedoelen. Allebei
+// stil fout: het ene geeft een naam die een lid nergens anders ziet, het andere
+// een premie die tien keer te hoog is — in een bericht dat de deur uit gaat.
+{
+  const { huisContract, huisSymbool } = await import("../../worker/positie.js");
+  const { brugPosities } = await import("../../worker/brug.js");
+
+  let f = 0;
+  const e = (wat, goed) => { if (!goed) { f++; console.log(`FOUT  ${wat}`); } };
+
+  e("ESTX50 heet bij ons OESX", huisSymbool("ESTX50") === "OESX");
+  e("en een hele contractnaam gaat mee",
+    huisContract("ESTX50 30OKT26 5825 PUT") === "OESX 30OKT26 5825 PUT");
+  e("een naam die we niet kennen blijft staan", huisContract("AEX 20NOV26 900 PUT").startsWith("AEX"));
+
+  await neemStand(env, {
+    verbonden: true, rekening: "DUR234269", kapitaal: 999984,
+    posities: [{
+      conid: "778899", contract: "ESTX50 30OKT26 5825 PUT", onderliggend: "ESTX50",
+      soort: "OPT", strike: 5825, expiratiedatum: "2026-10-30", putcall: "P",
+      multiplier: 10, aantal: -1, gem_kostprijs: 133.50, marktprijs: 14.91,
+    }],
+    gebeurtenissen: [],
+  });
+
+  const rij = (await q("select contract, onderliggend from brokerpositie where conid = '778899'"))[0];
+  e("de brug zet de huisnaam in de database", rij && rij.contract === "OESX 30OKT26 5825 PUT");
+  e("ook het onderliggende", rij && rij.onderliggend === "OESX");
+
+  const [bp] = (await brugPosities(env)).filter((x) => String(x.conid) === "778899");
+  e("de premie komt in punten bij de herkenning aan", bp && Math.abs(bp.gem_kostprijs - 13.35) < 0.001);
+
+  console.log(`naam en schaal: ${f === 0 ? "klopt" : f + " fout(en)"}`);
+  if (f) process.exit(1);
+}

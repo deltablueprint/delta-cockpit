@@ -133,6 +133,32 @@ export async function volgendeTranche(env, cyclusId) {
 
 const MAAND = ["JAN", "FEB", "MRT", "APR", "MEI", "JUN", "JUL", "AUG", "SEP", "OKT", "NOV", "DEC"];
 
+// Eén contract, twee namen. Eurex noemt de optie op de Euro Stoxx 50 **OESX**;
+// IBKR stuurt hem door als **ESTX50**. Dezelfde optie, hetzelfde contractnummer,
+// een andere letterreeks — en zonder vertaling staat er in het ene scherm iets
+// anders dan in het andere, en leest een lid in zijn bericht een naam die hij
+// bij ons nergens anders ziet.
+//
+// Daarom vertalen we aan de deur, op de plek waar de brug en het Flex-rapport
+// binnenkomen, en spreekt de rest van de cockpit één naam: de onze.
+const HUISNAAM = { ESTX50: "OESX", ESTX: "OESX", SX5E: "OESX" };
+
+export function huisSymbool(s) {
+  const k = String(s || "").trim().toUpperCase();
+  return HUISNAAM[k] || (k || null);
+}
+
+// Dezelfde vertaling op een hele contractnaam: 'ESTX50 30OKT26 5825 PUT' wordt
+// 'OESX 30OKT26 5825 PUT'. Staat er een naam die we niet kennen, dan laten we
+// hem met rust — verzinnen is erger dan overnemen.
+export function huisContract(naam) {
+  const t = String(naam || "").trim();
+  if (!t) return naam ?? null;
+  const [eerste, ...rest] = t.split(/\s+/);
+  const huis = huisSymbool(eerste);
+  return [huis, ...rest].join(" ");
+}
+
 export function contractnaam(rij) {
   if (!rij || !rij.expiratiedatum || rij.strike === null || rij.strike === undefined || rij.strike === "") {
     return null;

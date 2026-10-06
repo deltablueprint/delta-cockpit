@@ -5,7 +5,18 @@
 // schermen hoe vers het is. Eén kant op: er gaat niets terug naar de broker.
 
 import { legVerloopVast } from "./meting.js";
+import { huisContract, huisSymbool } from "./positie.js";
 import { spiegel } from "./spiegel.js";
+
+// De premie in punten. IBKR rekent de gemiddelde kostprijs van een optie per
+// contract (prijs × multiplier); wij rekenen in punten, overal.
+function premieInPunten(kostprijs, multiplier) {
+  const k = Number(kostprijs);
+  if (!Number.isFinite(k)) return null;
+  const m = Number(multiplier);
+  const deel = Number.isFinite(m) && m > 1 ? m : 1;
+  return Math.round((k / deel) * 100) / 100;
+}
 
 const getal = (w) => (Number.isFinite(Number(w)) ? Number(w) : null);
 const kort = (w, n = 200) => (w === null || w === undefined ? null : String(w).slice(0, n));
@@ -103,7 +114,7 @@ export async function neemStand(env, pakket = {}) {
          gerealiseerd = excluded.gerealiseerd, biedprijs = excluded.biedprijs,
          laatprijs = excluded.laatprijs, gewijzigd_op = datetime('now')`
     ).bind(
-      String(p.conid), kort(p.contract), kort(p.onderliggend, 40), kort(p.soort, 20),
+      String(p.conid), kort(huisContract(p.contract)), kort(huisSymbool(p.onderliggend), 40), kort(p.soort, 20),
       getal(p.strike), kort(p.expiratiedatum, 10), kort(p.putcall, 4), getal(p.multiplier),
       getal(p.aantal) ?? 0, getal(p.gem_kostprijs), getal(p.marktprijs), getal(p.waarde),
       getal(p.ongerealiseerd), getal(p.gerealiseerd), getal(p.biedprijs), getal(p.laatprijs)
@@ -118,7 +129,7 @@ export async function neemStand(env, pakket = {}) {
          (soort, conid, contract, richting, aantal, van, naar, prijs, uitvoering_id, moment)
        values (?,?,?,?,?,?,?,?,?,?)`
     ).bind(
-      kort(g.soort, 20) || "positie", kort(g.conid, 20), kort(g.contract),
+      kort(g.soort, 20) || "positie", kort(g.conid, 20), kort(huisContract(g.contract)),
       kort(g.richting, 10), getal(g.aantal), getal(g.van), getal(g.naar),
       getal(g.prijs), kort(g.uitvoering_id, 60), kort(g.moment, 40)
     ));
@@ -169,13 +180,20 @@ export async function neemStand(env, pakket = {}) {
 
 export async function brugPosities(env) {
   const r = await env.DB.prepare(
-    `select conid, contract, onderliggend, strike, expiratiedatum, aantal
+    `select conid, contract, onderliggend, strike, expiratiedatum, aantal,
+            gem_kostprijs, multiplier
        from brokerpositie where aantal <> 0`
   ).all();
   return r.results.map((p) => ({
     conid: p.conid, contract: p.contract, onderliggend: p.onderliggend,
     strike: p.strike, expiratiedatum: p.expiratiedatum,
     aantal: Math.abs(Number(p.aantal) || 0) || null,
+    // De gemiddelde kostprijs van IBKR is per contract: bij een multiplier van
+    // 10 staat er 133,50 waar wij 13,35 punten bedoelen. Alles in de cockpit
+    // rekent in punten — de balk, de barometer, het bericht aan de leden — dus
+    // delen we hier, één keer, aan de bron. Eén tranche met een premie van
+    // 133,50 in een bericht is een fout die je niet terugneemt.
+    gem_kostprijs: premieInPunten(p.gem_kostprijs, p.multiplier),
   }));
 }
 
