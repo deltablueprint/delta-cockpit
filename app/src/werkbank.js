@@ -357,10 +357,36 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
   function ketenvak() {
     const o = data.onderweg;
 
+    // Is er niets onderweg, dan is de ketting rond, en dat hoort te staan als een
+    // ketting die rond is — vier groene stappen — en niet als een leeg vakje.
+    // Pas als je een andere stand aanklikt begint het opnieuw.
     if (!o) {
-      return `<aside class="keten klaar">
+      const g = data.gemeld;
+      if (!g) {
+        return `<aside class="keten">
+          <div class="ketenkop">Onderweg naar de leden</div>
+          <p class="ketenleeg">Er is nog niets vastgelegd voor deze cyclus.</p>
+        </aside>`;
+      }
+      const af = [
+        { naam: "Stand vastgelegd",
+          noot: `${g.venster ? labelVenster(g.venster) : ""}${g.venster && g.stand ? " · " : ""}${
+            g.stand ? labelStand(Number(g.stand)) : ""} · ${klok(g.vastgesteld_op)}${g.wie ? ` · ${g.wie}` : ""}` },
+        { naam: "Bericht geschreven", noot: g.titel || "—" },
+        { naam: "Nagelezen en verstuurd",
+          noot: `${klok(g.verstuurd_op || g.gepubliceerd_op)}${g.verstuurder ? ` · ${g.verstuurder}` : ""}` },
+        { naam: "Bij de leden",
+          noot: g.leden ? `${g.leden} ${g.leden === 1 ? "lid" : "leden"} hebben dit` : "verstuurd" },
+      ];
+      return `<aside class="keten">
         <div class="ketenkop">Onderweg naar de leden</div>
-        <p class="ketenleeg">Er ligt niets klaar. Wat wij weten, weten de leden.</p>
+        ${af.map((x, i) => `<div class="kstap">
+          <div class="kspoor"><span class="kbol klaar"></span>${
+            i < af.length - 1 ? `<span class="klijn klaar"></span>` : ""}</div>
+          <div class="kinh"><div class="knaam klaar">${ontsnap(x.naam)}</div>
+            <div class="knoot">${ontsnap(x.noot)}</div></div>
+        </div>`).join("")}
+        <div class="ketenrond">Rond. Wat wij weten, weten de leden.</div>
       </aside>`;
     }
 

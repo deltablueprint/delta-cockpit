@@ -281,25 +281,35 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
     verloop[p.id] = rijen;
   }
 
-  // Wat er onderweg is naar de leden. Tussen 'wij hebben iets vastgelegd' en 'de
-  // leden weten het' zit een bericht, en dat bericht kan blijven liggen — bij de
-  // opsteller, of bij een nalezer. Zolang dat zo is lopen de leden achter, en
-  // dat is precies het ding dat dit scherm niet mag verzwijgen. Eén vraag: de
-  // laatste vastlegging die nog niet gemeld is, met het bericht dat eraan hangt.
-  const onderweg = await env.DB.prepare(
-    `select b.id, b.stand, b.venster, b.reden, b.vastgesteld_op,
+  // Wat er onderweg is naar de leden, of — als er niets onderweg is — wat er het
+  // laatst gemeld werd. Tussen 'wij hebben iets vastgelegd' en 'de leden weten
+  // het' zit een bericht, en dat kan blijven liggen bij de opsteller of bij een
+  // nalezer. Zolang dat zo is lopen de leden achter.
+  //
+  // Het gaat om de láátste vastlegging, niet om de laatste die toevallig nog
+  // niet gemeld is: een oude vastlegging waar nooit een bericht van gekomen is
+  // bleef anders eeuwig als 'onderweg' staan, ook nadat er daarna wél iets naar
+  // de leden ging.
+  const laatsteStand = await env.DB.prepare(
+    `select b.id, b.stand, b.venster, b.reden, b.vastgesteld_op, b.gepubliceerd_op,
             coalesce(gv.korte_naam, gv.naam, b.vastgesteld_door) as wie,
             p.id as publicatie, p.titel, p.status as bericht_status, p.aangemaakt_op,
+            p.verstuurd_op,
             coalesce(gn.korte_naam, gn.naam, p.nalezer) as nalezer,
+            coalesce(gs.korte_naam, gs.naam, p.verstuurd_door) as verstuurder,
             (select count(*) from publicatie_ontvanger o
               where o.publicatie = p.id and o.archief = 0) as leden
        from barometerstand b
        left join publicatie p on p.id = b.publicatie and p.archief = 0
        left join gebruiker gv on gv.id = b.vastgesteld_door
        left join gebruiker gn on gn.id = p.nalezer
-      where b.cyclus = ? and b.archief = 0 and b.gepubliceerd_op is null
+       left join gebruiker gs on gs.id = p.verstuurd_door
+      where b.cyclus = ? and b.archief = 0
       order by b.vastgesteld_op desc, b.id desc limit 1`
   ).bind(id).first().catch(() => null);
+
+  const onderweg = laatsteStand && !laatsteStand.gepubliceerd_op ? laatsteStand : null;
+  const gemeld = laatsteStand && laatsteStand.gepubliceerd_op ? laatsteStand : null;
 
   // Niet alleen uit de lopende cycli: wie een afgelopen cyclus opent moet zijn
   // naam en status zien en niet 'er loopt geen cyclus'.
@@ -320,6 +330,7 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
   return {
     cycli, afgelopen, actief, cyclus: cyclusrij,
     onderweg: onderweg || null,
+    gemeld: gemeld || null,
     barometer: {
       ...baro,
       wakker,
