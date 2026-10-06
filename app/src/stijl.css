@@ -580,7 +580,10 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
    tussen de weken: zo tel je weken zonder dat er een label bij hoeft. */
 /* Het vak krimpt mee met de strook, zodat de datum rechts onder het laatste
    vakje staat en niet aan de rand van het paneel. */
-.strookvak { display: inline-block; min-width: 180px; margin-top: 14px; }
+/* Het vak is precies zo breed als de rij vakjes: dan staat de einddatum onder
+   het laatste vakje in plaats van ergens rechts in het paneel. Past de rij niet,
+   dan breekt hij af op de volle breedte en staat de datum alsnog rechts. */
+.strookvak { display: inline-block; width: max-content; max-width: 100%; min-width: 180px; margin-top: 14px; }
 .strooklab { display: flex; align-items: baseline; gap: 8px; font-size: 10.5px; font-weight: 700;
   letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin-bottom: 5px; }
 .strook { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
