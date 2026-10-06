@@ -25,6 +25,12 @@ import { ontsnap } from "./veld.js";
 import { KLEUR, DIEPROOD, balkHtml, schaalHtml, metriekHtml } from "./positiebalk.js";
 import { tijdas, plaatsTijdkaarten } from "./tijdas.js";
 
+// Het instap venster in zes tinten blauw, van licht naar donker. Eén reeks voor
+// het hele scherm: de balkjes boven en de vakjes van de strook eronder horen
+// dezelfde taal te spreken. Stond er voor de laatste stand groen, dan leek dat
+// een oordeel — groen is goed — terwijl het gewoon het eind van het verloop is.
+const VENSTERKLEUR = ["#DCE7EE", "#C3D9E5", "#A3C3D6", "#7FA8C2", "#4A83A6", "#0E4E70"];
+
 // Elk bezoek krijgt een nummer. Klik je weg terwijl de peiling loopt, dan tekent
 // het antwoord dat daarna binnenkomt niet meer over het scherm waar je inmiddels
 // bent. Dat is een keer misgegaan en kostte iemand zijn halve formulier.
@@ -217,14 +223,18 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     // segment blijft staan terwijl je kiest — zo zie je naast elkaar wat
     // vastligt en wat je ervan wil maken; staat de keuze op hetzelfde segment,
     // dan wint groen (die regel staat in de opmaak).
-    const vakje = (x) => {
+    // Het venster loopt van lichtblauw naar donkerblauw: de kleur zegt hóe ver je
+    // in het verloop zit, en dat is voor elke cyclus hetzelfde. Waar we nu staan
+    // zegt de dikte van het balkje, niet de kleur — anders betekent donkerblauw
+    // de ene keer 'afgerond' en de andere keer 'hier staan we'.
+    const vakje = (x, i) => {
       const kl = [
         v.verloop.indexOf(x.waarde) < v.verloop.indexOf(v.nu) ? "gehad" : "",
         x.waarde === v.nu ? "nu" : "",
         kiesVenster === x.waarde ? "gekozen" : "",
       ].filter(Boolean).join(" ");
       return `<button class="vstap ${kl}" data-venster="${x.waarde}">
-        <span class="vbalk"></span>
+        <span class="vbalk" style="background:${VENSTERKLEUR[i] || VENSTERKLEUR[VENSTERKLEUR.length - 1]}"></span>
         <span class="nm">${ontsnap(x.label)}</span></button>`;
     };
 
@@ -439,9 +449,6 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     const dagen = (data.geschiedenis && data.geschiedenis.dagen) || [];
     if (!dagen.length) return "";
 
-    // Blauw voor het venster: hoe verder in het verloop, hoe donkerder. Voor de
-    // barometer de kleuren van de standen zelf.
-    const VENSTERBLAUW = ["#DCE7EE", "#BBD2DF", "#93B8CC", "#6A9CB7", "#136289", "#1F5E45"];
 
     const weken = [];
     for (const d of dagen) {
@@ -462,12 +469,12 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
         const iZij = verloop.indexOf(d.gemeld_venster);
         const iWij = verloop.indexOf(d.venster);
         const achter = iWij >= 0 && iWij !== iZij;
-        const kleur = iZij < 0 ? "var(--b2)" : VENSTERBLAUW[iZij];
+        const kleur = iZij < 0 ? "var(--b2)" : VENSTERKLEUR[iZij];
         const tip = `${kortedatum(d.dag)} · de leden: ${
           d.gemeld_venster ? labelVenster(d.gemeld_venster) : "nog niets gemeld"}${
           achter ? ` · wij: ${labelVenster(d.venster)}` : ""}`;
         return achter
-          ? `<i class="open" style="border-color:${iWij < 0 ? "var(--b1)" : VENSTERBLAUW[iWij]}" data-tip="${ontsnap(tip)}"></i>`
+          ? `<i class="open" style="border-color:${iWij < 0 ? "var(--b1)" : VENSTERKLEUR[iWij]}" data-tip="${ontsnap(tip)}"></i>`
           : `<i style="background:${kleur}" data-tip="${ontsnap(tip)}"></i>`;
       }
       // De barometer slaapt tot wij in positie zitten: op die dagen is er geen

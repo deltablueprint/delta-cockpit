@@ -1874,17 +1874,23 @@ body.sleept .lijsttabel { pointer-events: none; }
   flex: 1 1 0; min-width: 0; border: 0; background: none; padding: 0;
   cursor: pointer; text-align: left; font-family: inherit;
 }
-.vbalk { display: block; height: 9px; border-radius: 2px; background: var(--b1); }
+/* De kleur komt uit de reeks in werkbank.js: licht naar donker, altijd dezelfde
+   volgorde. Waar we staan zegt de dikte. */
+/* Het dikkere balkje groeit naar bóven: zo blijven de namen eronder op één
+   lijn staan. */
+.vbalk { display: block; height: 7px; margin-top: 8px; border-radius: 2px; background: var(--b1);
+  transition: height .12s ease, margin-top .12s ease; }
 .vstap .nm {
   display: block; margin-top: 7px; font-size: 11.5px; font-weight: 600; color: var(--faint);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .vstap:hover .vbalk { outline: 1px solid var(--blue); outline-offset: 1px; }
-.vstap.gehad .vbalk { background: #9DC0D5; }
 .vstap.gehad .nm { color: var(--mut); }
-.vstap.nu .vbalk { background: var(--blue); }
-.vstap.nu .nm { color: var(--blue); font-weight: 700; }
-.vstap.gekozen .vbalk { background: var(--grn); }
+/* Hier staan we: een dikker balkje met een randje eronder. Niet een andere
+   kleur — die is al vergeven aan 'hoe ver in het verloop'. */
+.vstap.nu .vbalk { height: 15px; margin-top: 0; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
+.vstap.nu .nm { color: var(--ink); font-weight: 700; }
+.vstap.gekozen .vbalk { height: 15px; margin-top: 0; box-shadow: inset 0 0 0 2px var(--grn); }
 .vstap.gekozen .nm { color: var(--grn); font-weight: 700; }
 
 /* De barometer slaapt tot wij in positie zitten: dan staat hij er grijs bij. */
