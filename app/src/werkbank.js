@@ -293,11 +293,6 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
 
     return `<section class="paneel">
       <div class="paneelkop">Stand naar de leden</div>
-      ${standTip !== null && kiesStand === null && !terugblik() ? `<div class="suggestie"><span class="vk"></span><span>
-        Barometer: het systeem stelt <b>${ontsnap(labelStand(standTip))}</b> voor${
-          data.zwakste ? ` — ${ontsnap(data.zwakste.contract || "de zwakste positie")} staat op ${
-            getal(data.zwakste.ask)} van een stoploss op ${getal(data.zwakste.stoploss)}` : ""
-        }. Klik de omstippelde stand en publiceer.</span></div>` : ""}
 
       <div class="paneelbody standbody">
         <div class="standlinks">
@@ -322,6 +317,11 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
           ${b.voorstel_waarom_niet ? `<p class="wbnoot">Het systeem meet niet: ${ontsnap(b.voorstel_waarom_niet)}.</p>` : ""}
           ${(b.ongemeten || []).length ? `<p class="wbnoot wblet">Niet meegewogen, want niet te meten: ${
             ontsnap(b.ongemeten.map((p) => p.contract || `positie ${p.id}`).join(", "))}.</p>` : ""}
+          ${standTip !== null && kiesStand === null && !terugblik() ? `<div class="suggestie"><span class="vk"></span><span>
+            Het systeem stelt <b>${ontsnap(labelStand(standTip))}</b> voor${
+              data.zwakste ? ` — ${ontsnap(data.zwakste.contract || "de zwakste positie")} staat op ${
+                getal(data.zwakste.ask)} van een stoploss op ${getal(data.zwakste.stoploss)}` : ""
+            }. Klik de omstippelde stand en publiceer.</span></div>` : ""}
         </div>
         </div>
         ${ketenvak()}
