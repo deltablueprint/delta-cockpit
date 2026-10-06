@@ -216,7 +216,8 @@ export function plaatsStrooktips(wortel) {
   // dezelfde reden. Een native 'title' werkte niet overal even betrouwbaar —
   // binnen een opengeklapte positie bleef hij weg — en werd geknipt door de
   // kolom waarin het scherm scrolt.
-  for (const vak of wortel.querySelectorAll(".strook i[data-tip], .spoorbalk .z[data-tip]")) {
+  for (const vak of wortel.querySelectorAll(
+    ".strook i[data-tip], .spoorbalk .z[data-tip], [data-tip].tijd")) {
     vak.addEventListener("mouseenter", () => toon(vak));
     vak.addEventListener("mouseleave", verberg);
   }

@@ -254,8 +254,9 @@ eis("de regel van de leden is een doorlopende blauwe rand",
     || /\.lreg\.nu \{[^}]*var\(--blue\)/.test(wbcss));
 eis("wat wij ervan vinden staat blauw gestippeld",
     /\.lreg\.gekozen \{[^}]*var\(--blue\)/.test(wbcss) && /\.lreg\.gekozen \{[^}]*dashed/.test(wbcss));
-eis("het systeemvoorstel staat rood gestippeld",
-    /\.lreg\.tip \{[^}]*dashed/.test(wbcss) && /\.lreg\.tip \{[^}]*var\(--red\)/.test(wbcss));
+eis("het systeemvoorstel pulseert, in rood",
+    /\.lreg\.tip \{[^}]*animation/.test(wbcss) && /\.lreg\.tip \{[^}]*var\(--red\)/.test(wbcss)
+    && /\.gauge \.seg\.puls \{[^}]*animation/.test(wbcss));
 // Het venster krijgt geen voorstel: het is een oordeel over de markt, en juist
 // dat is voor een lid het meeste waard (BOUWSPEC §13a). Daarom staat er ook
 // geen stippellijn op een venstervakje.
@@ -264,9 +265,9 @@ eis("het venster stelt zichzelf niet voor", !/vensterTip/.test(readFileSync("app
 const wbtekst = readFileSync("app/src/werkbank.js", "utf8");
 eis("de wijzer staat op wat de leden kennen, niet op onze eigen stand",
     /const toonStand = b\.leden/.test(wbtekst));
-eis("de meter stippelt ons eigen oordeel blauw en het voorstel rood",
+eis("de meter stippelt ons eigen oordeel blauw, en laat het voorstel pulseren",
     /if \(onsHier\) svg \+=[^;]*stroke="#136289"[^;]*stroke-dasharray/.test(wbtekst)
-    && /if \(voorgesteld\) svg \+=[^;]*stroke="#9A3227"[^;]*stroke-dasharray/.test(wbtekst));
+    && /voorgesteld \? " puls" : ""/.test(wbtekst));
 
 // ------------------------------------- de hoverkaart ligt boven de tabellen
 //

@@ -636,7 +636,8 @@ td.zojuist { background: var(--grnbg); transition: background 1s; }
 }
 .cbstrook { flex: 1 1 auto; min-width: 0; display: flex; align-items: stretch; gap: 8px; overflow-x: auto; scrollbar-width: none; }
 .cbstrook::-webkit-scrollbar { display: none; }
-.cbscheiding { flex: 0 0 auto; width: 1px; align-self: stretch; background: var(--b1); margin: 0 4px; }
+.cbscheiding { flex: 0 0 auto; width: 1px; align-self: stretch; background: var(--b1); margin: 0 2px; }
+.cyclusbalk > .cbtegel { flex: 0 0 180px; }
 .cbgeen { font-size: 12px; color: var(--faint); align-self: center; }
 .cbtegel {
   flex: 0 0 180px; display: flex; flex-direction: column; gap: 1px;
@@ -1928,23 +1929,36 @@ body.sleept .lijsttabel { pointer-events: none; }
 /* Het voorstel van het systeem: rood gestippeld. Wat wij ervan vinden en nog
    niet gemeld hebben: blauw gestippeld. De doorlopende blauwe rand blijft voor
    wat de leden kennen — dat is ook waar de wijzer staat. */
-/* Het voorstel van het systeem pulseert van rood naar oranje: het is het enige
-   op dit scherm dat om een handeling vraagt, en een stille stippellijn tussen
-   vijf andere regels zie je over het hoofd. */
-@keyframes voorstelpuls {
-  0%, 100% { border-color: #9A3227; }
-  50%      { border-color: #E8742A; }
+/* Het voorstel van het systeem: het hele vak pulseert, en de regel ernaast ook.
+   Het is het enige op dit scherm dat om een handeling vraagt, en een stille
+   stippellijn tussen vijf andere regels zie je over het hoofd. */
+@keyframes vakpuls {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .28; }
 }
-@keyframes voorstelringpuls {
-  0%, 100% { stroke: #9A3227; opacity: 1; }
-  50%      { stroke: #E8742A; opacity: .7; }
+@keyframes regelpuls {
+  0%, 100% { background: var(--redbg); border-color: #9A3227; }
+  50%      { background: #fff; border-color: #E8A48A; }
 }
-.lreg.tip { border-color: var(--red); border-style: dashed; animation: voorstelpuls 1.5s ease-in-out infinite; }
+.gauge .seg.puls { animation: vakpuls 1.3s ease-in-out infinite; }
+.lreg.tip { border-color: var(--red); border-style: solid; animation: regelpuls 1.3s ease-in-out infinite; }
 .lreg.tip .nm { color: var(--red); }
-.gauge .tipring { animation: voorstelringpuls 1.5s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .lreg.tip, .gauge .tipring { animation: none; }
+  .lreg.tip, .gauge .seg.puls { animation: none; }
 }
+
+/* Staat het systeem op dezelfde stand als de leden, dan is er niets te doen en
+   zegt een groene balk dat. Lopen ze uit elkaar, dan is er wél iets te doen, en
+   staat er oranje wat en waarom. */
+.eens {
+  display: flex; align-items: center; gap: 10px; margin: 0 0 12px;
+  padding: 9px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 600;
+}
+.eens .eensvk { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.eens.goed { background: var(--grnbg); border: 1px solid #C2DCCB; color: var(--grn); }
+.eens.goed .eensvk { background: var(--grn); }
+.eens.let { background: var(--ambbg); border: 1px solid #E6D3A8; color: var(--amb); }
+.eens.let .eensvk { background: var(--amb); }
 .lreg.gekozen { border-color: var(--blue); border-style: dashed; background: #fff; }
 .lreg.gekozen .nm { color: var(--blue); font-weight: 700; }
 
@@ -2083,6 +2097,9 @@ body.sleept .lijsttabel { pointer-events: none; }
 .werkbank .vreg .tijd { font-size: 11px; color: var(--faint); white-space: nowrap; }
 /* Een verstuurd bericht is aanklikbaar: het overzicht hiernaast verving de
    losse geschiedenis, en wie een regel leest wil het bericht zelf kunnen zien. */
+/* De lijst groeit niet eindeloos mee: na een handvol berichten scrol je. De
+   kop blijft staan, zodat je weet waar je in zit. */
+.berichtenlijst { max-height: 420px; overflow-y: auto; }
 a.vreg { text-decoration: none; color: inherit; }
 a.vreg:hover { background: var(--hov, #F6F4F0); }
 .werkbank .vchips { display: flex; flex-wrap: wrap; gap: 10px; margin: 3px 0 2px; color: var(--ink2); }

@@ -174,14 +174,15 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     const tegels = (data.afgelopen || [])
       .map((c) => tegel(c, { url: `#/werkbank?cyclus=${c.id}` })).join("");
 
+    // De lopende cyclus staat vast aan de linkerkant en schuift niet mee: dat is
+    // waar je werkt. De pijl naar links hoort dus niet links daarvan maar tussen
+    // die tegel en de historie, want hij bladert door de historie.
     return `<div class="cyclusbalk">
-      ${tegels ? `<button class="cbpijl" data-schuif="-1" aria-label="Naar links">&lsaquo;</button>` : ""}
-      <div class="cbstrook">
-        ${lopend ? tegel(lopend, { actief: true, url: "#/werkbank" })
-          : `<span class="cbgeen">Er loopt geen cyclus.</span>`}
-        ${tegels ? `<span class="cbscheiding"></span>` : ""}
-        ${tegels}
-      </div>
+      ${lopend ? tegel(lopend, { actief: true, url: "#/werkbank" })
+        : `<span class="cbgeen">Er loopt geen cyclus.</span>`}
+      ${tegels ? `<span class="cbscheiding"></span>
+        <button class="cbpijl" data-schuif="-1" aria-label="Naar links">&lsaquo;</button>` : ""}
+      <div class="cbstrook">${tegels}</div>
       ${tegels ? `<button class="cbpijl" data-schuif="1" aria-label="Naar rechts">&rsaquo;</button>` : ""}
     </div>`;
   }
@@ -208,7 +209,6 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     // Er loopt er één. Een keuzelijst met één regel erin is geen keuze maar een
     // vraag die je elke keer opnieuw moet beantwoorden; de naam volstaat.
     return `<div class="wbtop">
-      <span class="wbcyclus">Lopende cyclus: <b>${ontsnap(data.cyclus.label)}</b></span>
       <span class="wbachter ${wacht ? "wacht" : "bij"}"><span class="stip"></span><span>${
         wacht ? `Wacht op de leden: ${ontsnap(wat)}` : "De leden zijn bij"}</span></span>
     </div>`;
@@ -305,6 +305,7 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
 
         <div class="deel${b.wakker ? "" : " uit"}">
           <div class="deelkop"><span class="dtitel">Positie Barometer</span></div>
+          ${eensgezind(standTip)}
           <div class="meterrij">
             <div class="gauge">${meter(toonStand, standTip, onzeStand)}
               <div class="gaugetekst">
@@ -317,11 +318,6 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
           ${b.voorstel_waarom_niet ? `<p class="wbnoot">Het systeem meet niet: ${ontsnap(b.voorstel_waarom_niet)}.</p>` : ""}
           ${(b.ongemeten || []).length ? `<p class="wbnoot wblet">Niet meegewogen, want niet te meten: ${
             ontsnap(b.ongemeten.map((p) => p.contract || `positie ${p.id}`).join(", "))}.</p>` : ""}
-          ${standTip !== null && kiesStand === null && !terugblik() ? `<div class="suggestie"><span class="vk"></span><span>
-            Het systeem stelt <b>${ontsnap(labelStand(standTip))}</b> voor${
-              data.zwakste ? ` — ${ontsnap(data.zwakste.contract || "de zwakste positie")} staat op ${
-                getal(data.zwakste.ask)} van een stoploss op ${getal(data.zwakste.stoploss)}` : ""
-            }. Klik de omstippelde stand en publiceer.</span></div>` : ""}
         </div>
         </div>
         ${ketenvak()}
@@ -434,6 +430,51 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
 
   const klok = (t) => String(t || "").slice(0, 16).replace("T", " ");
 
+  // Hoe lang geleden, zoals je dat bij berichten gewend bent: 3m, 2u, 4d. Een
+  // tijdstip van vanmorgen zegt je niets over hoe vers het is; 'net' en '3m'
+  // wel. Na vijf dagen is het geen nieuws meer en staat er gewoon de datum.
+  function geleden(t) {
+    if (!t) return "—";
+    const toen = Date.parse(String(t).replace(" ", "T") + (String(t).length <= 19 ? "Z" : ""));
+    if (!Number.isFinite(toen)) return kortedatum(String(t).slice(0, 10));
+    const sec = Math.max(0, (Date.now() - toen) / 1000);
+    if (sec < 60) return "net";
+    if (sec < 3600) return `${Math.floor(sec / 60)}m`;
+    if (sec < 86400) return `${Math.floor(sec / 3600)}u`;
+    const dagen = Math.floor(sec / 86400);
+    if (dagen <= 5) return `${dagen}d`;
+    return kortedatum(String(t).slice(0, 10));
+  }
+
+  // Zijn het systeem en de leden het eens? Groen als wat het systeem meet
+  // hetzelfde is als wat de leden kennen: dan staat de barometer waar hij hoort
+  // en hoeft er niets. Oranje als ze uit elkaar lopen — dan moet er iets, en
+  // staat erbij wat en waarom.
+  function eensgezind(standTip = null) {
+    const b = data.barometer;
+    if (!b.wakker || terugblik()) return "";
+    if (b.voorstel === null) return "";
+    const zij = b.leden ? Number(b.leden.stand.waarde) : null;
+    const waarom = data.zwakste
+      ? ` — ${ontsnap(data.zwakste.contract || "de zwakste positie")} staat op ${
+          getal(data.zwakste.ask)} van een stoploss op ${getal(data.zwakste.stoploss)}`
+      : "";
+
+    if (b.voorstel === zij) {
+      return `<div class="eens goed"><span class="eensvk"></span><span>
+        Het systeem meet <b>${ontsnap(labelStand(b.voorstel))}</b> — dat is wat de leden kennen${waarom}.</span></div>`;
+    }
+    // Loopt het uit elkaar, dan hangt het ervan af of er al iets van ons klaar
+    // ligt. Zo ja, dan is de handeling niet 'kies een stand' maar 'stuur dat
+    // bericht'.
+    const onsKlaar = kiesStand === null && standTip === null && data.onderweg;
+    return `<div class="eens let"><span class="eensvk"></span><span>
+      Het systeem meet <b>${ontsnap(labelStand(b.voorstel))}</b>, de leden kennen <b>${
+        zij ? ontsnap(labelStand(zij)) : "nog niets"}</b>${waarom}. ${
+        onsKlaar ? "Er ligt al een stand klaar die nog niet gemeld is."
+          : "Klik het pulserende vak aan en publiceer."}</span></div>`;
+  }
+
   const vensters = () => (data.barometer.vensters || []).length
     ? data.barometer.vensters
     : data.venster.verloop.map((w) => ({ waarde: w, label: w }));
@@ -474,9 +515,11 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
       // niets onderweg en hoeft er geen lijn te staan.
       const onsHier = ons === stand && ons !== toon;
       const voorgesteld = tip === stand && !onsHier;
-      svg += `<path class="seg" data-stand="${stand}" d="${sector(a0, a1, RO, RI)}" fill="${KLEUR[stand - 1]}"
-        opacity="${stand === toon ? 1 : onsHier || voorgesteld ? 0.85 : 0.72}"></path>`;
-      if (voorgesteld) svg += `<path class="tipring" d="${sector(a0, a1, RO + 5, RI - 5)}" fill="none" stroke="#9A3227" stroke-width="2.5" stroke-dasharray="6 4"></path>`;
+      // Het voorgestelde vak pulseert zelf. Een stippellijntje eromheen zag je
+      // over het hoofd; dit is het enige op het scherm dat om een handeling
+      // vraagt, dus mag het bewegen.
+      svg += `<path class="seg${voorgesteld ? " puls" : ""}" data-stand="${stand}" d="${sector(a0, a1, RO, RI)}" fill="${KLEUR[stand - 1]}"
+        opacity="${stand === toon ? 1 : onsHier ? 0.85 : voorgesteld ? 1 : 0.72}"></path>`;
       if (onsHier) svg += `<path d="${sector(a0, a1, RO + 5, RI - 5)}" fill="none" stroke="#136289" stroke-width="3" stroke-dasharray="6 4"></path>`;
     }
     if (toon) {
@@ -790,7 +833,8 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
         <span>${ontsnap(String(v.tekst || "").replace(/\s+/g, " ").slice(0, 90))}</span>
         ${voet ? `<span class="vvoet">${voet}</span>` : ""}
       </span>
-      <span class="tijd">${ontsnap(String(v.verstuurd_op || "").slice(0, 16))}</span></a>`;
+      <span class="tijd" data-tip="${ontsnap(klok(v.verstuurd_op))}">${
+        ontsnap(geleden(v.verstuurd_op))}</span></a>`;
   }
 
   // ------------------------------------------------- kaarten en verstuurd
@@ -829,7 +873,8 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
         <div class="kol">
           <div class="kolkop">Geposte berichten<span class="n">${
             data.verstuurd.length} deze cyclus</span></div>
-          ${data.verstuurd.length ? data.verstuurd.map((v) => berichtregel(v)).join("")
+          ${data.verstuurd.length
+            ? `<div class="berichtenlijst">${data.verstuurd.map((v) => berichtregel(v)).join("")}</div>`
             : `<p class="wbleeg">Er is nog niets naar de leden gegaan.</p>`}
         </div>
       </div>
