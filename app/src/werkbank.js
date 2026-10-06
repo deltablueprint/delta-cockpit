@@ -353,6 +353,35 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
   function ketenvak() {
     const o = data.onderweg;
 
+    // Klik je een stand aan, dan begint het proces opnieuw — en dat hoort hier
+    // meteen te staan. Anders kijk je naar de keten van het vorige bericht
+    // terwijl je al met het volgende bezig bent.
+    if (kiesStand !== null || kiesVenster !== null) {
+      const b = data.barometer;
+      const v = data.venster;
+      const stukjes = [
+        kiesVenster !== null ? `venster ${labelVenster(kiesVenster)}` : null,
+        kiesStand !== null ? labelStand(kiesStand) : null,
+      ].filter(Boolean).join(" · ");
+      const nieuw = [
+        { naam: "Stand gekozen", noot: `${stukjes} — nog niet vastgelegd` },
+        { naam: "Bericht schrijven", noot: "komt er zodra je publiceert" },
+        { naam: "Nalezen", noot: "—" },
+        { naam: "Bij de leden", noot: `${
+          (b.leden || v.gepubliceerd) ? "zij kennen nu nog de vorige stand" : "nog niets gemeld"}` },
+      ];
+      return `<aside class="keten">
+        <div class="ketenkop">Onderweg naar de leden</div>
+        ${nieuw.map((x, i) => `<div class="kstap">
+          <div class="kspoor"><span class="kbol ${i === 0 ? "nu" : ""}"></span>${
+            i < nieuw.length - 1 ? `<span class="klijn"></span>` : ""}</div>
+          <div class="kinh"><div class="knaam ${i === 0 ? "nu" : ""}">${ontsnap(x.naam)}</div>
+            <div class="knoot">${ontsnap(x.noot)}</div></div>
+        </div>`).join("")}
+        <div class="ketenlet"><span>!</span><span>Vul de reden in en publiceer; dan staat het concept klaar.</span></div>
+      </aside>`;
+    }
+
     // Is er niets onderweg, dan is de ketting rond, en dat hoort te staan als een
     // ketting die rond is — vier groene stappen — en niet als een leeg vakje.
     // Pas als je een andere stand aanklikt begint het opnieuw.
@@ -460,17 +489,20 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
           getal(data.zwakste.ask)} van een stoploss op ${getal(data.zwakste.stoploss)}`
       : "";
 
+    const pil = (n) => `<span class="standpil" style="background:${KLEUR[Number(n) - 1] || "var(--dim)"}">${
+      ontsnap(labelStand(Number(n)))}</span>`;
+
     if (b.voorstel === zij) {
       return `<div class="eens goed"><span class="eensvk"></span><span>
-        Het systeem meet <b>${ontsnap(labelStand(b.voorstel))}</b> — dat is wat de leden kennen${waarom}.</span></div>`;
+        Het systeem meet ${pil(b.voorstel)} — dat is wat de leden kennen${waarom}.</span></div>`;
     }
     // Loopt het uit elkaar, dan hangt het ervan af of er al iets van ons klaar
     // ligt. Zo ja, dan is de handeling niet 'kies een stand' maar 'stuur dat
     // bericht'.
     const onsKlaar = kiesStand === null && standTip === null && data.onderweg;
-    return `<div class="eens let"><span class="eensvk"></span><span>
-      Het systeem meet <b>${ontsnap(labelStand(b.voorstel))}</b>, de leden kennen <b>${
-        zij ? ontsnap(labelStand(zij)) : "nog niets"}</b>${waarom}. ${
+    return `<div class="eens let"><span class="eensvk puls"></span><span>
+      Het systeem meet ${pil(b.voorstel)}, de leden kennen ${
+        zij ? pil(zij) : `<span class="standpil leeg">nog niets</span>`}${waarom}. ${
         onsKlaar ? "Er ligt al een stand klaar die nog niet gemeld is."
           : "Klik het pulserende vak aan en publiceer."}</span></div>`;
   }
