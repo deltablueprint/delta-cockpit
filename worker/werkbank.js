@@ -21,6 +21,10 @@ import { leesMoment } from "./tijd.js";
 // De vensterstand waarin de barometer iets te zeggen heeft. Daarvoor zitten wij
 // er niet in en vragen we de leden niets; daarna is de cyclus uit.
 export const IN_POSITIE = "in_positie";
+// Vanaf hier staat er een tranche in de markt. Dat is de stand waarin de
+// barometer wakker wordt: een positie die loopt moet bewaakt worden, ook als de
+// volgende tranche nog moet komen (0156).
+export const INNEMEN = "posities_innemen";
 
 // Hoe ruim het doorrolvenster is voor déze sluiting. Staat er alleen een datum
 // op — wat spiegel.js schrijft bij een waardeloze expiratie — dan is het
@@ -308,8 +312,10 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
   const venster = baro.wij ? baro.wij.venster.waarde : "pre_analyse";
 
   // De barometer slaapt tot wij erin zitten. Daarvoor is er geen positie om een
-  // stand over te hebben, en daarna is de cyclus uit.
-  const wakker = venster === IN_POSITIE;
+  // stand over te hebben, en daarna is de cyclus uit. 'Posities innemen' telt
+  // mee: daarin staat de eerste tranche al in de markt terwijl de volgende nog
+  // moet komen, en juist die eerste moet bewaakt worden.
+  const wakker = venster === IN_POSITIE || venster === INNEMEN;
 
   return {
     cycli, afgelopen, actief, cyclus: cyclusrij,
@@ -319,7 +325,7 @@ export async function werkbank(env, ik, { cyclus = null, nu = null } = {}) {
       wakker,
       slaapt_waarom: wakker ? null
         : VENSTERS.indexOf(venster) > VENSTERS.indexOf(IN_POSITIE)
-          ? "de cyclus is afgerond" : "wij zitten er nog niet in",
+          ? "de cyclus is afgerond" : "er staat nog geen tranche in de markt",
       // Het systeem stelt alleen voor als het gemeten heeft. Kan het niet meten,
       // dan zegt het waarom in plaats van een stand te gokken.
       voorstel: wakker ? meet.voorstel : null,
@@ -368,7 +374,7 @@ export async function publiceer(env, ik, { cyclus, stand = null, venster = null,
 
   // De barometer kan alleen verzet worden als hij wakker is. Anders zou je een
   // stand kunnen publiceren over een positie die er niet is.
-  if (stand !== null && naarVenster !== IN_POSITIE) {
+  if (stand !== null && naarVenster !== IN_POSITIE && naarVenster !== INNEMEN) {
     return { fout: "De barometer zegt pas iets zodra het venster op 'In positie' staat.", status: 409 };
   }
 

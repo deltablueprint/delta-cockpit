@@ -29,7 +29,7 @@ eis("de schaal heeft vijf standen", nu.schaal.length === 5);
 // veiliger staat.
 eis("1 is onder druk", nu.schaal[0].waarde === "1" && nu.schaal[0].label === "Onder druk");
 eis("5 is het veiligst", nu.schaal[4].label === "Veilig");
-eis("het venster is een verloop van zes standen", nu.vensters.length === 6);
+eis("het venster is een verloop van zeven standen", nu.vensters.length === 7);
 eis("de namen komen uit beheer, niet uit de code",
     (await q("select count(*) n from db_choice where tabel='barometerstand' and kolom='stand'"))[0].n === 5);
 
@@ -164,7 +164,7 @@ eis("alleen de gemelde stand is gepubliceerd",
 const volgorde = nu.vensters.map((v) => v.waarde);
 eis("de standen staan in de goede volgorde",
     JSON.stringify(volgorde) === JSON.stringify(
-      ["pre_analyse", "besluit", "opent_binnenkort", "open", "in_positie", "afgerond"]));
+      ["pre_analyse", "besluit", "opent_binnenkort", "open", "posities_innemen", "in_positie", "afgerond"]));
 eis("'gemist' is geen venstertoestand", !volgorde.includes("gemist"));
 
 // Twee standen zijn een oordeel van ons en worden nooit door het systeem

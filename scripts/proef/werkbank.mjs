@@ -318,7 +318,7 @@ await stelVast(env, ik, { cyclus: CYCLUS, stand: 1, venster: "besluit", reden: "
 let w = await werkbank(env, ik, { cyclus: CYCLUS, nu: "2026-10-19T12:00:00Z" });
 eis("voor we erin zitten slaapt de barometer", w.barometer.wakker === false);
 eis("en wordt er niets voorgesteld", w.barometer.voorstel === null);
-eis("het scherm weet waarom hij slaapt", w.barometer.slaapt_waarom === "wij zitten er nog niet in");
+eis("het scherm weet waarom hij slaapt", w.barometer.slaapt_waarom === "er staat nog geen tranche in de markt");
 
 let uit = await publiceer(env, ik, { cyclus: CYCLUS, stand: 3, reden: "Ruim." });
 eis("een slapende barometer kan niet gezet worden", !!uit.fout);
@@ -555,7 +555,7 @@ eis("en opent op een cyclus", w.cyclus && w.cyclus.id === CYCLUS);
 eis("met de posities erbij", w.posities.length === 2);
 eis("de kaarten erbij", Array.isArray(w.kaarten));
 eis("en wat er verstuurd is", w.verstuurd.some((v) => v.soort === "opening" || v.titel));
-eis("het venster draagt zijn verloop", w.venster.verloop.length === 6);
+eis("het venster draagt zijn verloop", w.venster.verloop.length === 7);
 eis("de drempels gaan mee naar het scherm, zodat de legende ze kan tonen",
     w.drempels.grenzen[1].waarde === 60 && w.drempels.grenzen[2].waarde === 50);
 eis("en de vakken van de balk ook, zodat de balk niet iets anders toont dan de meter rekent",

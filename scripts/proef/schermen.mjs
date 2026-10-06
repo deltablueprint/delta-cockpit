@@ -214,7 +214,7 @@ eis("en hij heeft opmaak", opmaak.includes("tr.nieuwregel > td") && opmaak.inclu
 // positie' staat. Eén handeling, één weg. De werkbank doet het nu.
 const b = await huidig(env, CYCLUS);
 eis("het scherm krijgt de schaal mee", b.schaal.length === 5);
-eis("en de vensters", b.vensters.length === 6);
+eis("en de vensters", b.vensters.length === 7);
 const wb = readFileSync("app/src/werkbank.js", "utf8");
 eis("de werkbank bouwt de namen uit wat ze kreeg, niet uit een eigen lijst",
     wb.includes("data.barometer.schaal") && wb.includes("data.venster.verloop"));

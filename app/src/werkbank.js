@@ -29,7 +29,7 @@ import { tijdas, plaatsTijdkaarten, plaatsStrooktips } from "./tijdas.js";
 // het hele scherm: de balkjes boven en de vakjes van de strook eronder horen
 // dezelfde taal te spreken. Stond er voor de laatste stand groen, dan leek dat
 // een oordeel — groen is goed — terwijl het gewoon het eind van het verloop is.
-const VENSTERKLEUR = ["#DCE7EE", "#C3D9E5", "#A3C3D6", "#7FA8C2", "#4A83A6", "#0E4E70"];
+const VENSTERKLEUR = ["#DCE7EE", "#C9DCE7", "#ACC8D9", "#8CB0C7", "#6693B2", "#3D7598", "#0E4E70"];
 
 // Elk bezoek krijgt een nummer. Klik je weg terwijl de peiling loopt, dan tekent
 // het antwoord dat daarna binnenkomt niet meer over het scherm waar je inmiddels
@@ -520,7 +520,8 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
       }
       // De barometer slaapt tot wij in positie zitten: op die dagen is er geen
       // stand, en dan hoort er ook geen kleur te staan.
-      const inPositie = d.gemeld_venster === "in_positie" || d.venster === "in_positie";
+      const leeft = (w) => w === "in_positie" || w === "posities_innemen";
+      const inPositie = leeft(d.gemeld_venster) || leeft(d.venster);
       const zij = inPositie && d.gemeld_stand >= 1 && d.gemeld_stand <= 5 ? Number(d.gemeld_stand) : null;
       const wij = inPositie && d.stand >= 1 && d.stand <= 5 ? Number(d.stand) : null;
       const achter = wij !== null && wij !== zij;
@@ -841,8 +842,10 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     if (seg && data.barometer.wakker) {
       const n = Number(seg.dataset.stand);
       const staat = data.barometer.wij ? Number(data.barometer.wij.stand.waarde) : null;
+      // Klikken op de stand die al vastligt doet niets — maar dan hoor je wel
+      // waarom, anders voelt de meter kapot.
+      melding = n === staat && kiesStand !== n ? "Die stand ligt al vast." : null;
       kiesStand = kiesStand === n || n === staat ? null : n;
-      melding = null;
       return teken();
     }
     const vh = e.target.closest("[data-venster]");
@@ -852,8 +855,8 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
       // weigert hem, en 'In positie → In positie' is ook geen bericht waard.
       // Klikken op wat er al staat betekent dus: toch maar niet.
       const staat = data.barometer.wij ? data.barometer.wij.venster.waarde : data.venster.nu;
+      melding = w === staat && kiesVenster !== w ? "Die stand ligt al vast." : null;
       kiesVenster = kiesVenster === w || w === staat ? null : w;
-      melding = null;
       return teken();
     }
     if (e.target.closest("[data-afbreken]")) {

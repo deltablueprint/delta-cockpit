@@ -24,7 +24,9 @@ import { log } from "./stroom.js";
 // en niet over het venster, dat tegen iedereen hetzelfde zegt. Het hoort op de
 // ledenkant, en die bestaat nog niet.
 export const VENSTERS = [
-  "pre_analyse", "besluit", "opent_binnenkort", "open", "in_positie", "afgerond",
+  // 'posities innemen' zit tussen open en in positie: daarin staat er minstens
+  // één tranche in de markt en kunnen er nog bij komen (0156).
+  "pre_analyse", "besluit", "opent_binnenkort", "open", "posities_innemen", "in_positie", "afgerond",
 ];
 
 async function labels(env, kolom) {
