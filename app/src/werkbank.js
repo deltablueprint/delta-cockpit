@@ -438,22 +438,23 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
         noot: o.leden ? `${o.leden} ${o.leden === 1 ? "lid" : "leden"} krijgen dit` : "nog niemand" },
     ];
 
+    // De knop staat bij de stap waar het ligt, niet onderaan de hele keten: daar
+    // is de handeling, dus hoort de knop daar.
     const rijen = stappen.map((x, i) => {
       const kl = i < stap ? "klaar" : i === stap ? "nu" : "";
+      const knop = i === 2 && o.publicatie
+        ? `<a class="knop ketenknop" href="#/bericht/${o.publicatie}?van=werkbank">Concept openen</a>` : "";
       return `<div class="kstap">
         <div class="kspoor"><span class="kbol ${kl}"></span>${
           i < stappen.length - 1 ? `<span class="klijn"></span>` : ""}</div>
         <div class="kinh"><div class="knaam ${kl}">${ontsnap(x.naam)}</div>
-          <div class="knoot">${ontsnap(x.noot)}</div></div>
+          <div class="knoot">${ontsnap(x.noot)}</div>${knop}</div>
       </div>`;
     }).join("");
 
     return `<aside class="keten">
       <div class="ketenkop">Onderweg naar de leden</div>
       ${rijen}
-      ${o.publicatie ? `<div class="ketenknoppen">
-        <a class="knop" href="#/bericht/${o.publicatie}?van=werkbank">Concept openen</a>
-      </div>` : ""}
       <div class="ketenlet"><span>!</span><span>${o.publicatie
         ? "Dit bericht moet eerst weg. Zolang het ligt, kennen de leden de oude stand."
         : "Er is een stand vastgelegd zonder bericht. De leden horen er niets van tot er een bericht uitgaat."}</span></div>
