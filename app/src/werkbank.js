@@ -230,7 +230,16 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
     // Het venster krijgt geen systeemvoorstel. Het is een oordeel over de markt,
     // en juist dat is voor een lid het meeste waard — een systeem dat het zelf
     // zet, zet het een keer verkeerd (BOUWSPEC §13a).
-    const standTip = b.voorstel !== null && b.wij && Number(b.wij.stand.waarde) !== b.voorstel
+    //
+    // En er staan er nooit drie tegelijk. In de praktijk lopen er twee standen
+    // uit elkaar: wat de leden kennen en wat eraan komt. Ligt er al iets van ons
+    // klaar dat nog niet gemeld is, dan zwijgt het systeem tot dat bericht weg
+    // is — anders kijk je naar een voorstel over een stand die de leden nog niet
+    // eens hebben. Klik je het voorstel aan, dan wordt de rode stippellijn
+    // blauw: hetzelfde vak, nu van ons.
+    const ietsOnderweg = onzeStand !== null && onzeStand !== toonStand;
+    const standTip = !ietsOnderweg && b.voorstel !== null
+      && b.wij && Number(b.wij.stand.waarde) !== b.voorstel
       ? b.voorstel : null;
 
     // Het venster is een verloop, en dus leest het als een balk die volloopt:
