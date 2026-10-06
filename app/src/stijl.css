@@ -1952,12 +1952,15 @@ body.sleept .lijsttabel { pointer-events: none; }
    gekleurde balk eromheen: de standen zelf dragen de kleur, als pillen, net als
    in de publiceerbalk. */
 .eens {
-  display: flex; align-items: baseline; gap: 9px; margin: 0 0 14px;
+  display: flex; align-items: baseline; gap: 9px; margin: 0 0 10px;
   font-size: 12.5px; line-height: 1.7; color: var(--ink2);
 }
 .eens .eensvk { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
   position: relative; top: 2px; }
 .eens.goed .eensvk { background: var(--grn); }
+/* Een mededeling zonder handeling: zelfde vorm, grijs bolletje, geen puls. */
+.eens.stil { color: var(--mut); }
+.eens.stil .eensvk { background: var(--dim); }
 .eens.let .eensvk { background: #9A3227; }
 .eens .standpil {
   display: inline-block; padding: 2px 9px; border-radius: 9px; color: #fff;

@@ -315,9 +315,12 @@ export async function werkbankscherm(inhoud, kruimel, opties = {}) {
             <div class="legenda">${legenda(standTip)}</div>
           </div>
           ${dagstrook("barometer")}
-          ${b.voorstel_waarom_niet ? `<p class="wbnoot">Het systeem meet niet: ${ontsnap(b.voorstel_waarom_niet)}.</p>` : ""}
-          ${(b.ongemeten || []).length ? `<p class="wbnoot wblet">Niet meegewogen, want niet te meten: ${
-            ontsnap(b.ongemeten.map((p) => p.contract || `positie ${p.id}`).join(", "))}.</p>` : ""}
+          ${b.voorstel_waarom_niet ? `<div class="eens stil"><span class="eensvk"></span><span>
+            Het systeem meet niet: ${ontsnap(b.voorstel_waarom_niet)}. Een stand vastleggen kan nog
+            altijd — dat is ons oordeel, niet dat van de meter.</span></div>` : ""}
+          ${(b.ongemeten || []).length ? `<div class="eens stil"><span class="eensvk"></span><span>
+            Niet meegewogen, want niet te meten: ${
+              ontsnap(b.ongemeten.map((p) => p.contract || `positie ${p.id}`).join(", "))}.</span></div>` : ""}
         </div>
         </div>
         ${ketenvak()}
